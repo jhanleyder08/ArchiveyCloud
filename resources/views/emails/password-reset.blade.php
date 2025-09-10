@@ -3,175 +3,345 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restablece tu contraseña - Archivey Cloud</title>
+    <title>Restablecer Contraseña - Archivey Cloud</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8fafc;
+        /* Inter font fallback */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .container {
-            max-width: 600px;
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            margin: 0;
+            padding: 24px;
+            line-height: 1.6;
+        }
+        
+        .email-container {
+            max-width: 560px;
             margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e2e8f0;
             overflow: hidden;
         }
+        
+        /* Header con gradiente institucional */
         .header {
-            background: linear-gradient(135deg, #2a3d83, #3d4fb8);
-            color: white;
-            padding: 30px;
+            background: linear-gradient(135deg, #2a3d83 0%, #1e40af 50%, #3730a3 100%);
+            padding: 48px 32px;
             text-align: center;
+            position: relative;
         }
-        .logo-container {
-            text-align: center;
-            margin-bottom: 15px;
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="%23ffffff" opacity="0.05"/><circle cx="80" cy="40" r="1" fill="%23ffffff" opacity="0.05"/><circle cx="40" cy="80" r="1" fill="%23ffffff" opacity="0.05"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            pointer-events: none;
         }
-        .logo-img {
-            max-width: 120px;
-            height: auto;
-            margin: 0 auto;
-            display: block;
+        
+        .brand {
+            position: relative;
+            z-index: 1;
         }
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            margin-top: 15px;
+        
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            margin: 0 auto 24px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
         }
-        .content {
-            padding: 40px 30px;
+        
+        .brand-title {
+            color: #ffffff;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.025em;
         }
-        .reset-icon {
-            text-align: center;
-            font-size: 64px;
-            margin-bottom: 20px;
+        
+        .brand-subtitle {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
         }
+        
+        /* Contenido principal */
+        .main-content {
+            padding: 48px 32px;
+        }
+        
+        .security-badge {
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            border-radius: 18px;
+            margin: 0 auto 32px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.25);
+        }
+        
         .title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2a3d83;
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            letter-spacing: -0.025em;
         }
+        
+        .subtitle {
+            font-size: 18px;
+            color: #64748b;
+            text-align: center;
+            margin-bottom: 32px;
+            font-weight: 500;
+        }
+        
+        .greeting {
+            font-size: 16px;
+            color: #334155;
+            margin-bottom: 24px;
+        }
+        
         .message {
             font-size: 16px;
-            line-height: 1.6;
-            color: #374151;
-            margin-bottom: 30px;
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 40px;
         }
-        .reset-button {
-            text-align: center;
-            margin: 30px 0;
+        
+        .message p {
+            margin-bottom: 16px;
         }
-        .reset-button a {
-            background: linear-gradient(135deg, #dc2626, #ef4444);
-            color: white !important;
-            text-decoration: none;
-            padding: 15px 30px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 16px;
-            display: inline-block;
-            transition: all 0.3s ease;
+        
+        .message p:last-child {
+            margin-bottom: 0;
         }
-        .reset-button a:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-        }
+        
+        /* Alerta de seguridad */
         .security-notice {
-            background-color: #fef2f2;
+            background: linear-gradient(135deg, #fef2f2 0%, #fde8e8 100%);
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 32px 0;
             border-left: 4px solid #dc2626;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
         }
-        .security-notice h4 {
-            margin: 0 0 10px 0;
+        
+        .security-title {
+            font-size: 14px;
+            font-weight: 600;
             color: #dc2626;
-            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .security-notice p {
+        
+        .security-text {
+            font-size: 14px;
+            color: #7f1d1d;
             margin: 0;
-            font-size: 14px;
-            color: #6b7280;
         }
-        .expiration-notice {
-            background-color: #fffbeb;
-            border-left: 4px solid #f59e0b;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .expiration-notice h4 {
-            margin: 0 0 10px 0;
-            color: #f59e0b;
-            font-size: 14px;
-        }
-        .expiration-notice p {
-            margin: 0;
-            font-size: 14px;
-            color: #6b7280;
-        }
-        .footer {
-            background-color: #f8fafc;
-            padding: 20px 30px;
+        
+        /* Botón principal - estilo shadcn */
+        .cta-button {
             text-align: center;
-            font-size: 14px;
-            color: #6b7280;
+            margin: 40px 0;
         }
+        
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 16px 32px;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.25), 0 2px 4px -1px rgba(220, 38, 38, 0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 48px;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px -5px rgba(220, 38, 38, 0.35);
+        }
+        
+        /* Sección alternativa */
+        .alternative-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 32px 0;
+        }
+        
+        .alternative-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        
         .alternative-link {
             font-size: 14px;
             color: #6b7280;
-            margin-top: 20px;
-            text-align: center;
+            word-break: break-all;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         }
+        
         .alternative-link a {
             color: #dc2626;
             text-decoration: none;
         }
+        
+        .alternative-link a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #f1f5f9;
+            padding: 32px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .footer-brand {
+            font-weight: 600;
+            color: #374151;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .footer-subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .footer-note {
+            font-size: 12px;
+            color: #9ca3af;
+            padding: 16px;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: 16px;
+            }
+            
+            .email-container {
+                border-radius: 12px;
+            }
+            
+            .header {
+                padding: 32px 24px;
+            }
+            
+            .main-content {
+                padding: 32px 24px;
+            }
+            
+            .brand-title {
+                font-size: 28px;
+            }
+            
+            .title {
+                font-size: 24px;
+            }
+            
+            .btn-primary {
+                padding: 14px 24px;
+                font-size: 15px;
+            }
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
+    <div class="email-container">
+        <!-- Header con branding -->
         <div class="header">
-            <div class="logo-container">
-                <img src="{{ config('app.url') }}/images/Logo2.PNG" alt="Archivey Cloud SGDEA" class="logo-img">
+            <div class="brand">
+                <div class="logo-icon">📁</div>
+                <h1 class="brand-title">Archivey Cloud</h1>
+                <p class="brand-subtitle">Sistema de Gestión Documental Empresarial Avanzado</p>
             </div>
-            <div class="logo">Archivey Cloud SGDEA</div>
-            <p style="margin: 0; font-size: 16px; opacity: 0.9;">Sistema de Gestión Documental Empresarial Avanzado</p>
         </div>
-
-        <div class="content">
-            <div class="reset-icon">🔐</div>
-            <div class="title">Restablece tu contraseña</div>
-
+        
+        <!-- Contenido principal -->
+        <div class="main-content">
+            <div class="security-badge">🔑</div>
+            
+            <h2 class="title">Restablecer contraseña</h2>
+            <p class="subtitle">Solicitud de cambio de contraseña</p>
+            
+            <div class="greeting">
+                ¡Hola <strong>{{ $user->name }}</strong>! 👋
+            </div>
+            
             <div class="message">
-                <p>¡Hola <strong>{{ $user->name }}</strong>!</p>
+                <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en <strong>Archivey Cloud SGDEA</strong>.</p>
                 
-                <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong>Archivey Cloud SGDEA</strong>. Si fuiste tú quien solicitó este cambio, haz clic en el botón de abajo para crear una nueva contraseña.</p>
-                
-                <p>Si no solicitaste este restablecimiento, puedes ignorar este correo y tu contraseña permanecerá sin cambios.</p>
+                <p>Si fuiste tú quien hizo esta solicitud, haz clic en el botón de abajo para crear una nueva contraseña:</p>
             </div>
-
-            <div class="reset-button">
-                <a href="{{ $resetUrl }}" target="_blank">🔒 Restablecer mi contraseña</a>
+            
+            <div class="cta-button">
+                <a href="{{ $resetUrl }}" class="btn-primary">
+                    🔒 Restablecer mi contraseña
+                </a>
             </div>
-
-            <div class="expiration-notice">
-                <h4>⏰ Tiempo de expiración</h4>
-                <p>Este enlace es válido por 60 minutos por razones de seguridad. Si no lo usas dentro de este tiempo, deberás solicitar un nuevo restablecimiento.</p>
-            </div>
-
+            
             <div class="security-notice">
-                <h4>🚨 Importante para tu seguridad</h4>
-                <p>• Nunca compartas este enlace con nadie<br>
-                • Si no solicitaste este cambio, ignora este correo<br>
-                • Si tienes dudas sobre la seguridad de tu cuenta, contacta al administrador del sistema</p>
+                <div class="security-title">
+                    ⚠️ Aviso de seguridad importante
+                </div>
+                <p class="security-text">Si no solicitaste este cambio de contraseña, puedes ignorar este correo de forma segura. Tu contraseña actual seguirá siendo válida.</p>
             </div>
-
+            
+            <div class="alternative-section">
+                <div class="alternative-title">¿El botón no funciona?</div>
+                <div class="alternative-link">
+                    <a href="{{ $resetUrl }}">{{ $resetUrl }}</a>
+                </div>
             <div class="alternative-link">
                 <p>¿No puedes hacer clic en el botón? Copia y pega este enlace en tu navegador:</p>
                 <a href="{{ $resetUrl }}">{{ $resetUrl }}</a>
