@@ -121,7 +121,7 @@
     <div class="container">
         <div class="header">
             <div class="logo-container">
-                <img src="{{ asset('images/Logo2.PNG') }}" alt="Archivey Cloud SGDEA" class="logo-img">
+                <img src="{{ config('app.url') }}/images/Logo2.PNG" alt="Archivey Cloud SGDEA" class="logo-img">
             </div>
             <div class="logo">Archivey Cloud SGDEA</div>
             <p style="margin: 0; font-size: 16px; opacity: 0.9;">Sistema de Gestión Documental Empresarial Avanzado</p>
