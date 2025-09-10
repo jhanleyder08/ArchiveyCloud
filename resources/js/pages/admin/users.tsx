@@ -1,6 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Users, Plus, Search, Filter, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useState } from 'react';
 
 const breadcrumbItems = [
@@ -65,7 +72,11 @@ interface Props {
 export default function AdminUsers({ users, stats, filters }: Props) {
     const { flash } = usePage<{flash: {success?: string, error?: string}}>().props;
     const [search, setSearch] = useState(filters.search || '');
-    const [showDeleteDialog, setShowDeleteDialog] = useState<User | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState<User | null>(null);
+    const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'user', password: '' });
+    const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user' });
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -85,7 +96,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
         router.delete(`/admin/users/${user.id}`, {
             preserveState: true,
         });
-        setShowDeleteDialog(null);
+        setShowDeleteModal(null);
     };
 
     const formatDate = (dateString: string) => {
@@ -123,13 +134,93 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                             Gestión de Usuarios
                         </h1>
                     </div>
-                    <Link
-                        href="/admin/users/create"
-                        className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Nuevo Usuario
-                    </Link>
+                    <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+                        <DialogTrigger asChild>
+                            <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
+                                <Plus className="h-4 w-4" />
+                                Nuevo Usuario
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-semibold text-gray-900">Crear Nuevo Usuario</DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
+                                    Complete los siguientes datos para crear un nuevo usuario en el sistema.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                router.post('/admin/users', createForm, {
+                                    onSuccess: () => {
+                                        setShowCreateModal(false);
+                                        setCreateForm({ name: '', email: '', role: 'user', password: '' });
+                                    }
+                                });
+                            }} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-name">Nombre Completo</Label>
+                                    <Input
+                                        id="create-name"
+                                        type="text"
+                                        value={createForm.name}
+                                        onChange={(e) => setCreateForm({...createForm, name: e.target.value})}
+                                        placeholder="Nombre completo del usuario"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-email">Email</Label>
+                                    <Input
+                                        id="create-email"
+                                        type="email"
+                                        value={createForm.email}
+                                        onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
+                                        placeholder="usuario@ejemplo.com"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-password">Contraseña</Label>
+                                    <Input
+                                        id="create-password"
+                                        type="password"
+                                        value={createForm.password}
+                                        onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
+                                        placeholder="Contraseña temporal"
+                                        required
+                                        minLength={8}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-role">Rol</Label>
+                                    <Select value={createForm.role} onValueChange={(value) => setCreateForm({...createForm, role: value})}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecciona un rol" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="user">Usuario</SelectItem>
+                                            <SelectItem value="admin">Administrador</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowCreateModal(false);
+                                            setCreateForm({ name: '', email: '', role: 'user', password: '' });
+                                        }}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button type="submit" className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
+                                        Crear Usuario
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
 
                 {/* Stats Cards */}
@@ -259,42 +350,66 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                                 </td>
                                                 <td className="py-4 px-6 text-gray-600">{formatDate(user.created_at)}</td>
                                                 <td className="py-4 px-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <Link
-                                                            href={`/admin/users/${user.id}/edit`}
-                                                            className="inline-flex items-center gap-1 text-[#2a3d83] hover:text-[#1e2b5f] text-sm font-medium"
-                                                        >
-                                                            <Edit className="h-3 w-3" />
-                                                            Editar
-                                                        </Link>
-                                                        <button
-                                                            onClick={() => handleToggleStatus(user)}
-                                                            className={`inline-flex items-center gap-1 text-sm font-medium ${
-                                                                user.active 
-                                                                    ? 'text-orange-600 hover:text-orange-800' 
-                                                                    : 'text-green-600 hover:text-green-800'
-                                                            }`}
-                                                        >
-                                                            {user.active ? (
-                                                                <>
-                                                                    <UserX className="h-3 w-3" />
-                                                                    Desactivar
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <UserCheck className="h-3 w-3" />
-                                                                    Activar
-                                                                </>
-                                                            )}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setShowDeleteDialog(user)}
-                                                            className="inline-flex items-center gap-1 text-red-600 hover:text-red-800 text-sm font-medium"
-                                                        >
-                                                            <Trash2 className="h-3 w-3" />
-                                                            Eliminar
-                                                        </button>
-                                                    </div>
+                                                    <TooltipProvider>
+                                                        <div className="flex items-center gap-2">
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setEditForm({ 
+                                                                                name: user.name, 
+                                                                                email: user.email, 
+                                                                                role: typeof user.role === 'object' ? user.role.name : user.role 
+                                                                            });
+                                                                            setShowEditModal(user);
+                                                                        }}
+                                                                        className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Editar usuario</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                            
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        onClick={() => handleToggleStatus(user)}
+                                                                        className={`p-2 rounded-md transition-colors ${
+                                                                            user.active 
+                                                                                ? 'text-orange-600 hover:text-orange-800 hover:bg-orange-50' 
+                                                                                : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                                                                        }`}
+                                                                    >
+                                                                        {user.active ? (
+                                                                            <UserX className="h-4 w-4" />
+                                                                        ) : (
+                                                                            <UserCheck className="h-4 w-4" />
+                                                                        )}
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{user.active ? 'Desactivar usuario' : 'Activar usuario'}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                            
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        onClick={() => setShowDeleteModal(user)}
+                                                                        className="p-2 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Eliminar usuario</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </div>
+                                                    </TooltipProvider>
                                                 </td>
                                             </tr>
                                         );
@@ -374,7 +489,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                 )}
 
                 {/* Delete Confirmation Dialog */}
-                {showDeleteDialog && (
+                {showDeleteModal && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                             <div className="flex items-center gap-3 mb-4">
@@ -387,18 +502,18 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                             </div>
                             <p className="text-gray-600 mb-6">
                                 ¿Estás seguro de que deseas eliminar al usuario{' '}
-                                <span className="font-medium">{showDeleteDialog.name}</span>?{' '}
+                                <span className="font-medium">{showDeleteModal.name}</span>?{' '}
                                 Esta acción no se puede deshacer.
                             </p>
                             <div className="flex items-center gap-3 justify-end">
                                 <button
-                                    onClick={() => setShowDeleteDialog(null)}
+                                    onClick={() => setShowDeleteModal(null)}
                                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
                                     Cancelar
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(showDeleteDialog)}
+                                    onClick={() => handleDelete(showDeleteModal)}
                                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                                 >
                                     Eliminar
@@ -407,6 +522,81 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                         </div>
                     </div>
                 )}
+
+                {/* Edit User Modal */}
+                <Dialog open={!!showEditModal} onOpenChange={(open) => !open && setShowEditModal(null)}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-semibold text-gray-900">
+                                Editar Usuario
+                            </DialogTitle>
+                            <DialogDescription className="text-sm text-gray-600">
+                                Modifique los datos del usuario según sea necesario.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {showEditModal && (
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                router.put(`/admin/users/${showEditModal.id}`, editForm, {
+                                    onSuccess: () => {
+                                        setShowEditModal(null);
+                                        setEditForm({ name: '', email: '', role: 'user' });
+                                    }
+                                });
+                            }} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-name">Nombre Completo</Label>
+                                    <Input
+                                        id="edit-name"
+                                        type="text"
+                                        value={editForm.name}
+                                        onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                        placeholder="Nombre completo del usuario"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-email">Email</Label>
+                                    <Input
+                                        id="edit-email"
+                                        type="email"
+                                        value={editForm.email}
+                                        onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                                        placeholder="usuario@ejemplo.com"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-role">Rol</Label>
+                                    <Select value={editForm.role} onValueChange={(value) => setEditForm({...editForm, role: value})}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecciona un rol" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="user">Usuario</SelectItem>
+                                            <SelectItem value="admin">Administrador</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowEditModal(null);
+                                            setEditForm({ name: '', email: '', role: 'user' });
+                                        }}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button type="submit" className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
+                                        Guardar Cambios
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        )}
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );
