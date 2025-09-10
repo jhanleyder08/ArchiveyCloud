@@ -516,7 +516,12 @@ export default function AdminUsers({ users, stats, filters }: Props) {
 
 
                 {/* Edit User Modal */}
-                <Dialog open={!!showEditModal} onOpenChange={(open) => !open && setShowEditModal(null)}>
+                <Dialog open={!!showEditModal} onOpenChange={(open) => {
+                    if (!open) {
+                        setShowEditModal(null);
+                        setEditForm({ name: '', email: '', role: 'user' });
+                    }
+                }}>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
                             <DialogTitle className="text-xl font-semibold text-gray-900">
@@ -526,16 +531,16 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                 Modifique los datos del usuario según sea necesario.
                             </DialogDescription>
                         </DialogHeader>
-                        {showEditModal && (
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            if (showEditModal) {
                                 router.put(`/admin/users/${showEditModal.id}`, editForm, {
                                     onSuccess: () => {
                                         setShowEditModal(null);
-                                        setEditForm({ name: '', email: '', role: 'user' });
                                     }
                                 });
-                            }} className="space-y-4">
+                            }
+                        }} className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-name">Nombre Completo</Label>
                                     <Input
@@ -574,10 +579,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => {
-                                            setShowEditModal(null);
-                                            setEditForm({ name: '', email: '', role: 'user' });
-                                        }}
+                                        onClick={() => setShowEditModal(null)}
                                     >
                                         Cancelar
                                     </Button>
@@ -585,13 +587,16 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                         Guardar Cambios
                                     </Button>
                                 </DialogFooter>
-                            </form>
-                        )}
+                        </form>
                     </DialogContent>
                 </Dialog>
 
                 {/* Delete Confirmation Modal */}
-                <Dialog open={!!showDeleteModal} onOpenChange={() => setShowDeleteModal(null)}>
+                <Dialog open={!!showDeleteModal} onOpenChange={(open) => {
+                    if (!open) {
+                        setShowDeleteModal(null);
+                    }
+                }}>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
                             <DialogTitle className="text-xl font-semibold text-gray-900">Eliminar Usuario</DialogTitle>
@@ -599,16 +604,14 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                 Esta acción no se puede deshacer. El usuario será eliminado permanentemente del sistema.
                             </DialogDescription>
                         </DialogHeader>
-                        {showDeleteModal && (
-                            <div className="py-4">
-                                <p className="text-gray-700">
-                                    ¿Estás seguro de que deseas eliminar al usuario <strong>{showDeleteModal.name}</strong>?
-                                </p>
-                                <p className="text-gray-600 mt-2">
-                                    Email: <strong>{showDeleteModal.email}</strong>
-                                </p>
-                            </div>
-                        )}
+                        <div className="py-4">
+                            <p className="text-gray-700">
+                                ¿Estás seguro de que deseas eliminar al usuario <strong>{showDeleteModal?.name}</strong>?
+                            </p>
+                            <p className="text-gray-600 mt-2">
+                                Email: <strong>{showDeleteModal?.email}</strong>
+                            </p>
+                        </div>
                         <DialogFooter>
                             <Button
                                 type="button"
