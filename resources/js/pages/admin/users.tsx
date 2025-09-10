@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const breadcrumbItems = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -75,15 +75,29 @@ export default function AdminUsers({ users, stats, filters }: Props) {
     const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState<User | null>(null);
-    const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'user', password: '' });
+    const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'user', password: '', password_confirmation: '' });
     const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user' });
+    const [searchQuery, setSearchQuery] = useState(filters.search || '');
+    const [statusFilter, setStatusFilter] = useState(filters.status || '');
+
+    // Reactive search with debounce
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            router.get('/admin/users', {
+                search: searchQuery || undefined,
+                status: statusFilter || undefined
+            }, {
+                preserveState: true,
+                replace: true,
+            });
+        }, 500); // 500ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, statusFilter]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get('/admin/users', { search, status: filters.status }, {
-            preserveState: true,
-            replace: true,
-        });
+        // This is now handled by useEffect
     };
 
     const handleToggleStatus = (user: User) => {
@@ -92,12 +106,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
         });
     };
 
-    const handleDelete = (user: User) => {
-        router.delete(`/admin/users/${user.id}`, {
-            preserveState: true,
-        });
-        setShowDeleteModal(null);
-    };
+
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('es-ES');
@@ -150,10 +159,18 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                             </DialogHeader>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
-                                router.post('/admin/users', createForm, {
+                                const { role, ...formDataWithoutRole } = createForm;
+                                const formData = {
+                                    ...formDataWithoutRole,
+                                    role_id: role === 'admin' ? 1 : 2  // Mapeo correcto
+                                };
+                                router.post('/admin/users', formData, {
                                     onSuccess: () => {
                                         setShowCreateModal(false);
-                                        setCreateForm({ name: '', email: '', role: 'user', password: '' });
+                                        setCreateForm({ name: '', email: '', role: 'user', password: '', password_confirmation: '' });
+                                    },
+                                    onError: (errors) => {
+                                        console.error('Error al crear usuario:', errors);
                                     }
                                 });
                             }} className="space-y-4">
@@ -192,6 +209,18 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                     />
                                 </div>
                                 <div className="space-y-2">
+                                    <Label htmlFor="create-password-confirmation">Confirmar Contraseña</Label>
+                                    <Input
+                                        id="create-password-confirmation"
+                                        type="password"
+                                        value={createForm.password_confirmation}
+                                        onChange={(e) => setCreateForm({...createForm, password_confirmation: e.target.value})}
+                                        placeholder="Confirmar contraseña"
+                                        required
+                                        minLength={8}
+                                    />
+                                </div>
+                                <div className="space-y-2">
                                     <Label htmlFor="create-role">Rol</Label>
                                     <Select value={createForm.role} onValueChange={(value) => setCreateForm({...createForm, role: value})}>
                                         <SelectTrigger>
@@ -209,7 +238,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                         variant="outline"
                                         onClick={() => {
                                             setShowCreateModal(false);
-                                            setCreateForm({ name: '', email: '', role: 'user', password: '' });
+                                            setCreateForm({ name: '', email: '', role: 'user', password: '', password_confirmation: '' });
                                         }}
                                     >
                                         Cancelar
@@ -241,10 +270,10 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Usuarios Activos</p>
-                                <p className="text-2xl font-semibold text-green-600">{stats.active}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.active}</p>
                             </div>
-                            <div className="p-3 bg-green-100 rounded-full">
-                                <div className="h-6 w-6 bg-green-500 rounded-full flex items-center justify-center">
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
                                     <div className="h-2 w-2 bg-white rounded-full"></div>
                                 </div>
                             </div>
@@ -255,10 +284,10 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Pendientes</p>
-                                <p className="text-2xl font-semibold text-yellow-600">{stats.pending}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.pending}</p>
                             </div>
-                            <div className="p-3 bg-yellow-100 rounded-full">
-                                <div className="h-6 w-6 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
                                     <div className="h-2 w-2 bg-white rounded-full"></div>
                                 </div>
                             </div>
@@ -268,39 +297,33 @@ export default function AdminUsers({ users, stats, filters }: Props) {
 
                 {/* Search and Filters */}
                 <div className="bg-white rounded-lg border p-6">
-                    <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                         <div className="flex items-center gap-4 w-full sm:w-auto">
                             <div className="relative flex-1 sm:w-80">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
+                                <Input
                                     type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Buscar usuarios..."
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83]"
+                                    className="pl-10"
                                 />
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <select
-                                value={filters.status || ''}
-                                onChange={(e) => router.get('/admin/users', { search: filters.search, status: e.target.value || undefined }, { preserveState: true, replace: true })}
-                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83]"
-                            >
-                                <option value="">Todos los estados</option>
-                                <option value="active">Activos</option>
-                                <option value="inactive">Inactivos</option>
-                                <option value="pending">Pendientes</option>
-                            </select>
-                            <button
-                                type="submit"
-                                className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                <Search className="h-4 w-4" />
-                                Buscar
-                            </button>
+                            <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todos los estados" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los estados</SelectItem>
+                                    <SelectItem value="active">Activos</SelectItem>
+                                    <SelectItem value="inactive">Inactivos</SelectItem>
+                                    <SelectItem value="pending">Pendientes</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                    </form>
+                    </div>
                 </div>
 
                 {/* Users Table */}
@@ -359,7 +382,9 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                                                             setEditForm({ 
                                                                                 name: user.name, 
                                                                                 email: user.email, 
-                                                                                role: typeof user.role === 'object' ? user.role.name : user.role 
+                                                                                role: typeof user.role === 'object' ? 
+                                                                                    (user.role.name === 'Administrador' ? 'admin' : 'user') : 
+                                                                                    user.role 
                                                                             });
                                                                             setShowEditModal(user);
                                                                         }}
@@ -488,40 +513,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                     </div>
                 )}
 
-                {/* Delete Confirmation Dialog */}
-                {showDeleteModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-red-100 rounded-full">
-                                    <Trash2 className="h-5 w-5 text-red-600" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    Confirmar eliminación
-                                </h3>
-                            </div>
-                            <p className="text-gray-600 mb-6">
-                                ¿Estás seguro de que deseas eliminar al usuario{' '}
-                                <span className="font-medium">{showDeleteModal.name}</span>?{' '}
-                                Esta acción no se puede deshacer.
-                            </p>
-                            <div className="flex items-center gap-3 justify-end">
-                                <button
-                                    onClick={() => setShowDeleteModal(null)}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(showDeleteModal)}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                                >
-                                    Eliminar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Edit User Modal */}
                 <Dialog open={!!showEditModal} onOpenChange={(open) => !open && setShowEditModal(null)}>
@@ -595,6 +587,52 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                 </DialogFooter>
                             </form>
                         )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* Delete Confirmation Modal */}
+                <Dialog open={!!showDeleteModal} onOpenChange={() => setShowDeleteModal(null)}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-semibold text-gray-900">Eliminar Usuario</DialogTitle>
+                            <DialogDescription className="text-sm text-gray-600">
+                                Esta acción no se puede deshacer. El usuario será eliminado permanentemente del sistema.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {showDeleteModal && (
+                            <div className="py-4">
+                                <p className="text-gray-700">
+                                    ¿Estás seguro de que deseas eliminar al usuario <strong>{showDeleteModal.name}</strong>?
+                                </p>
+                                <p className="text-gray-600 mt-2">
+                                    Email: <strong>{showDeleteModal.email}</strong>
+                                </p>
+                            </div>
+                        )}
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowDeleteModal(null)}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    if (showDeleteModal) {
+                                        router.delete(`/admin/users/${showDeleteModal.id}`, {
+                                            onSuccess: () => {
+                                                setShowDeleteModal(null);
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                Eliminar Usuario
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>
