@@ -12,6 +12,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 
+    // Soporte Técnico (Modal)
+    Route::post('support', [App\Http\Controllers\SupportController::class, 'store'])->name('support.store');
+
     // Administración
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', App\Http\Controllers\Admin\AdminUserController::class);

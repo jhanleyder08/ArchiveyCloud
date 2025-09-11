@@ -5,8 +5,10 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle } from 'lucide-react';
 import AppLogo from './app-logo';
+import SupportModal from './support-modal';
+import { useState } from 'react';
 
 const mainNavItems: NavItem[] = [
     {
@@ -31,8 +33,11 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
+    const [showSupportModal, setShowSupportModal] = useState(false);
+
     return (
-        <Sidebar collapsible="icon" variant="inset">
+        <>
+            <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
@@ -51,8 +56,29 @@ export function AppSidebar() {
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />
+                
+                {/* Support Button */}
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={() => setShowSupportModal(true)}
+                            className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
+                        >
+                            <HelpCircle className="h-5 w-5" />
+                            <span>Soporte Técnico</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+                
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
+
+        {/* Support Modal */}
+        <SupportModal 
+            open={showSupportModal} 
+            onOpenChange={setShowSupportModal} 
+        />
+        </>
     );
 }
