@@ -136,7 +136,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                 )}
 
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-2">
                         <Users className="h-6 w-6 text-[#2a3d83]" />
                         <h1 className="text-2xl font-semibold text-gray-900">
