@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Settings, Users, FileText, Database, Upload } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -13,6 +13,28 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Gestión Documental',
+        href: '#', // No es clickeable directamente
+        icon: Database,
+        items: [
+            {
+                title: 'Tablas de Retención (TRD)',
+                href: '/trd',
+                icon: FileText,
+            },
+            {
+                title: 'Crear TRD',
+                href: '/trd/create',
+                icon: FileText,
+            },
+            {
+                title: 'Importar TRD',
+                href: '/trd/import/form',
+                icon: Upload,
+            },
+        ],
     },
     {
         title: 'Administración',
