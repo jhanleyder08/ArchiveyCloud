@@ -299,7 +299,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
                         <DialogTrigger asChild>
                             <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
-                                <Plus className="h-6 w-6" />
+                                <Plus className="h-4 w-4" />
                                 Nuevo CCD
                             </Button>
                         </DialogTrigger>
@@ -427,17 +427,16 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     </Dialog>
                 </div>
 
-                {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Total CCDs</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.total}</p>
-                                <p className="text-xs text-gray-400">Cuadros registrados</p>
+                                <p className="text-2xl font-semibold text-gray-900">{estadisticas.total}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
-                                <FileText className="h-6 w-6 text-[#2a3d83]" />
+                                <FolderTree className="h-6 w-6 text-[#2a3d83]" />
                             </div>
                         </div>
                     </div>
@@ -447,10 +446,11 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                             <div>
                                 <p className="text-sm text-gray-600">CCDs Activos</p>
                                 <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.activos}</p>
-                                <p className="text-xs text-gray-400">En funcionamiento</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
-                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
+                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-white rounded-full"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -460,130 +460,65 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                             <div>
                                 <p className="text-sm text-gray-600">Borradores</p>
                                 <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.borradores}</p>
-                                <p className="text-xs text-gray-400">En elaboración</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
-                                <AlertCircle className="h-6 w-6 text-[#2a3d83]" />
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg border p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Vigentes</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.vigentes}</p>
-                                <p className="text-xs text-gray-400">Estado activo</p>
-                            </div>
-                            <div className="p-3 bg-blue-100 rounded-full">
-                                <TrendingUp className="h-6 w-6 text-[#2a3d83]" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Filters Section */}
-                <div className="bg-white rounded-lg border p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Filter className="h-6 w-6 text-[#2a3d83]" />
-                        <h3 className="text-lg font-medium">Filtros de Búsqueda</h3>
-                    </div>
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div>
-                                <Label htmlFor="search">Búsqueda</Label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-3 h-6 w-6 text-gray-400" />
-                                    <Input
-                                        id="search"
-                                        placeholder="Código, nombre..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-9"
-                                    />
+                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-white rounded-full"></div>
                                 </div>
                             </div>
-                            
-                            <div>
-                                <Label htmlFor="filterEstado">Estado</Label>
-                                <Select value={filterEstado} onValueChange={setFilterEstado}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los estados</SelectItem>
-                                        {opciones.estados.map((estado) => (
-                                            <SelectItem key={estado.value} value={estado.value}>
-                                                {estado.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            
-                            <div>
-                                <Label htmlFor="filterNivel">Nivel</Label>
-                                <Select value={filterNivel} onValueChange={setFilterNivel}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los niveles</SelectItem>
-                                        {opciones.niveles.map((nivel) => (
-                                            <SelectItem key={nivel.value} value={nivel.value}>
-                                                {nivel.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            
-                            <div>
-                                <Label htmlFor="filterActivo">Estado de actividad</Label>
-                                <Select value={filterActivo} onValueChange={setFilterActivo}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos</SelectItem>
-                                        <SelectItem value="true">Solo activos</SelectItem>
-                                        <SelectItem value="false">Solo inactivos</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                            <Button onClick={handleSearch} className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
-                                <Search className="h-6 w-6 mr-2" />
-                                Buscar
-                            </Button>
-                            <Button variant="outline" onClick={resetFilters}>
-                                Limpiar filtros
-                            </Button>
                         </div>
                     </div>
                 </div>
 
-                {/* Main Table */}
-                <div className="bg-white rounded-lg border overflow-hidden">
-                    <div className="p-6 border-b">
-                        <h3 className="text-lg font-medium">Lista de Cuadros de Clasificación Documental</h3>
+                {/* Search and Filters */}
+                <div className="bg-white rounded-lg border p-6">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-80">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="Buscar CCDs..."
+                                    className="pl-10"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Select value={filterEstado || "all"} onValueChange={(value) => setFilterEstado(value === "all" ? "" : value)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todos los estados" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los estados</SelectItem>
+                                    {opciones.estados.map((estado) => (
+                                        <SelectItem key={estado.value} value={estado.value}>
+                                            {estado.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
+                </div>
+
+                {/* CCDs Table */}
+                <div className="bg-white rounded-lg border overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                                <thead>
-                                    <tr className="border-b bg-gray-50">
-                                        <th className="text-left p-4 font-medium">Código</th>
-                                        <th className="text-left p-4 font-medium">Nombre</th>
-                                        <th className="text-left p-4 font-medium">Nivel</th>
-                                        <th className="text-left p-4 font-medium">Estado</th>
-                                        <th className="text-left p-4 font-medium">Activo</th>
-                                        <th className="text-left p-4 font-medium">Creado</th>
-                                        <th className="text-right p-4 font-medium">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                            <thead className="bg-gray-50 border-b">
+                                <tr>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Código</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Nombre</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Nivel</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Estado</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Activo</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Creado</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
                                     {data.data.length > 0 ? (
                                         data.data.map((ccd) => (
                                             <tr key={ccd.id} className="border-b hover:bg-gray-50">
