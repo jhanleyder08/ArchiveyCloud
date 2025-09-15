@@ -23,10 +23,17 @@ interface User {
     email_verified_at: string | null;
     active: boolean;
     created_at: string;
-    role: {
+    role_id: number;
+    documento_identidad?: string;
+    tipo_documento?: string;
+    cargo?: string;
+    dependencia?: string;
+    fecha_ingreso?: string;
+    estado_cuenta?: string;
+    role?: {
         id: number;
         name: string;
-    };
+    } | null;
 }
 
 interface PaginatedUsers {
@@ -60,16 +67,23 @@ interface Stats {
     pending: number;
 }
 
+interface Role {
+    id: number;
+    name: string;
+    description: string;
+}
+
 interface Props {
     users: PaginatedUsers;
     stats: Stats;
+    roles: Role[];
     filters: {
         search?: string;
         status?: string;
     };
 }
 
-export default function AdminUsers({ users, stats, filters }: Props) {
+export default function AdminUsers({ users, stats, roles, filters }: Props) {
     const { flash } = usePage<{flash: {success?: string, error?: string}}>().props;
     const [search, setSearch] = useState(filters.search || '');
     const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
@@ -227,8 +241,11 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                             <SelectValue placeholder="Selecciona un rol" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="user">Usuario</SelectItem>
-                                            <SelectItem value="admin">Administrador</SelectItem>
+                                            {roles.map((role) => (
+                                                <SelectItem key={role.id} value={role.id.toString()}>
+                                                    {role.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -238,7 +255,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                         variant="outline"
                                         onClick={() => {
                                             setShowCreateModal(false);
-                                            setCreateForm({ name: '', email: '', role: 'user', password: '', password_confirmation: '' });
+                                            setCreateForm({ name: '', email: '', role: roles.length > 0 ? roles[roles.length - 1].id.toString() : '5', password: '', password_confirmation: '' });
                                         }}
                                     >
                                         Cancelar
@@ -363,7 +380,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                                 <td className="py-4 px-6 text-gray-600">{user.email}</td>
                                                 <td className="py-4 px-6">
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-[#2a3d83]">
-                                                        {user.role.name}
+                                                        {user.role?.name || 'Sin rol'}
                                                     </span>
                                                 </td>
                                                 <td className="py-4 px-6">
@@ -382,9 +399,7 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                                                             setEditForm({ 
                                                                                 name: user.name, 
                                                                                 email: user.email, 
-                                                                                role: typeof user.role === 'object' ? 
-                                                                                    (user.role.name === 'Administrador' ? 'admin' : 'user') : 
-                                                                                    user.role 
+                                                                                role: user.role?.id?.toString() || user.role_id?.toString() || '5'
                                                                             });
                                                                             setShowEditModal(user);
                                                                         }}
@@ -570,8 +585,11 @@ export default function AdminUsers({ users, stats, filters }: Props) {
                                             <SelectValue placeholder="Selecciona un rol" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="user">Usuario</SelectItem>
-                                            <SelectItem value="admin">Administrador</SelectItem>
+                                            {roles.map((role) => (
+                                                <SelectItem key={role.id} value={role.id.toString()}>
+                                                    {role.name}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                 </div>

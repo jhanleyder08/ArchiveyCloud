@@ -1,0 +1,298 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
+class PermisosSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        $permisos = [
+            // ADMINISTRACIÓN DEL SISTEMA
+            [
+                'nombre' => 'admin_sistema_total',
+                'descripcion' => 'Acceso total a la administración del sistema SGDEA',
+                'categoria' => 'Administración',
+                'subcategoria' => 'Sistema',
+                'recurso' => 'sistema',
+                'accion' => 'administrar',
+                'nivel_requerido' => 1,
+                'activo' => true,
+                'sistema' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'admin_usuarios_gestionar',
+                'descripcion' => 'Crear, editar y eliminar usuarios del sistema',
+                'categoria' => 'Administración',
+                'subcategoria' => 'Usuarios',
+                'recurso' => 'users',
+                'accion' => 'gestionar',
+                'nivel_requerido' => 2,
+                'activo' => true,
+                'sistema' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'admin_roles_gestionar',
+                'descripcion' => 'Administrar roles y permisos del sistema',
+                'categoria' => 'Administración',
+                'subcategoria' => 'Roles',
+                'recurso' => 'roles',
+                'accion' => 'gestionar',
+                'nivel_requerido' => 2,
+                'activo' => true,
+                'sistema' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+
+            // GESTIÓN DOCUMENTAL
+            [
+                'nombre' => 'documentos_crear',
+                'descripcion' => 'Crear nuevos documentos en el sistema',
+                'categoria' => 'Gestión Documental',
+                'subcategoria' => 'Documentos',
+                'recurso' => 'documentos',
+                'accion' => 'create',
+                'nivel_requerido' => 4,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'documentos_leer',
+                'descripcion' => 'Consultar y visualizar documentos',
+                'categoria' => 'Gestión Documental',
+                'subcategoria' => 'Documentos',
+                'recurso' => 'documentos',
+                'accion' => 'read',
+                'nivel_requerido' => 5,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'documentos_editar',
+                'descripcion' => 'Modificar documentos existentes',
+                'categoria' => 'Gestión Documental',
+                'subcategoria' => 'Documentos',
+                'recurso' => 'documentos',
+                'accion' => 'update',
+                'nivel_requerido' => 4,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'documentos_eliminar',
+                'descripcion' => 'Eliminar documentos del sistema',
+                'categoria' => 'Gestión Documental',
+                'subcategoria' => 'Documentos',
+                'recurso' => 'documentos',
+                'accion' => 'delete',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+
+            // EXPEDIENTES
+            [
+                'nombre' => 'expedientes_crear',
+                'descripcion' => 'Crear nuevos expedientes documentales',
+                'categoria' => 'Gestión Documental',
+                'subcategoria' => 'Expedientes',
+                'recurso' => 'expedientes',
+                'accion' => 'create',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'expedientes_leer',
+                'descripcion' => 'Consultar expedientes documentales',
+                'categoria' => 'Gestión Documental',
+                'subcategoria' => 'Expedientes',
+                'recurso' => 'expedientes',
+                'accion' => 'read',
+                'nivel_requerido' => 4,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'expedientes_gestionar',
+                'descripcion' => 'Administrar ciclo de vida de expedientes',
+                'categoria' => 'Gestión Documental',
+                'subcategoria' => 'Expedientes',
+                'recurso' => 'expedientes',
+                'accion' => 'gestionar',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+
+            // CLASIFICACIÓN DOCUMENTAL
+            [
+                'nombre' => 'trd_gestionar',
+                'descripcion' => 'Administrar Tablas de Retención Documental',
+                'categoria' => 'Clasificación',
+                'subcategoria' => 'TRD',
+                'recurso' => 'tablas_retencion_documental',
+                'accion' => 'gestionar',
+                'nivel_requerido' => 2,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'ccd_gestionar',
+                'descripcion' => 'Administrar Cuadros de Clasificación Documental',
+                'categoria' => 'Clasificación',
+                'subcategoria' => 'CCD',
+                'recurso' => 'cuadros_clasificacion_documental',
+                'accion' => 'gestionar',
+                'nivel_requerido' => 2,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'series_gestionar',
+                'descripcion' => 'Administrar Series Documentales',
+                'categoria' => 'Clasificación',
+                'subcategoria' => 'Series',
+                'recurso' => 'series_documentales',
+                'accion' => 'gestionar',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'tipologias_gestionar',
+                'descripcion' => 'Administrar Tipologías Documentales',
+                'categoria' => 'Clasificación',
+                'subcategoria' => 'Tipologías',
+                'recurso' => 'tipologias_documentales',
+                'accion' => 'gestionar',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+
+            // AUDITORÍA Y SEGURIDAD
+            [
+                'nombre' => 'auditoria_leer',
+                'descripcion' => 'Consultar pistas de auditoría del sistema',
+                'categoria' => 'Auditoría',
+                'subcategoria' => 'Consulta',
+                'recurso' => 'pistas_auditoria',
+                'accion' => 'read',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'auditoria_exportar',
+                'descripcion' => 'Exportar reportes de auditoría',
+                'categoria' => 'Auditoría',
+                'subcategoria' => 'Reportes',
+                'recurso' => 'pistas_auditoria',
+                'accion' => 'export',
+                'nivel_requerido' => 2,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+
+            // DISPOSICIÓN FINAL
+            [
+                'nombre' => 'disposicion_aplicar',
+                'descripcion' => 'Aplicar disposición final a documentos',
+                'categoria' => 'Disposición',
+                'subcategoria' => 'Aplicación',
+                'recurso' => 'documentos',
+                'accion' => 'disposicion',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'transferencia_ejecutar',
+                'descripcion' => 'Ejecutar transferencias documentales',
+                'categoria' => 'Disposición',
+                'subcategoria' => 'Transferencia',
+                'recurso' => 'expedientes',
+                'accion' => 'transferir',
+                'nivel_requerido' => 3,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+
+            // REPORTES
+            [
+                'nombre' => 'reportes_basicos',
+                'descripcion' => 'Generar reportes básicos del sistema',
+                'categoria' => 'Reportes',
+                'subcategoria' => 'Básicos',
+                'recurso' => 'reportes',
+                'accion' => 'generar_basicos',
+                'nivel_requerido' => 4,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nombre' => 'reportes_avanzados',
+                'descripcion' => 'Generar reportes avanzados y estadísticos',
+                'categoria' => 'Reportes',
+                'subcategoria' => 'Avanzados',
+                'recurso' => 'reportes',
+                'accion' => 'generar_avanzados',
+                'nivel_requerido' => 2,
+                'activo' => true,
+                'sistema' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ];
+
+        // Limpiar tabla antes de insertar para evitar duplicados (usando DELETE para evitar problemas de FK)
+        DB::table('permisos')->delete();
+        
+        // Insertar permisos en la tabla (usando DB directo para evitar eventos de modelo)
+        DB::table('permisos')->insert($permisos);
+    }
+}

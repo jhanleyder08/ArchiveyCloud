@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree } from 'lucide-react';
 import AppLogo from './app-logo';
 import SupportModal from './support-modal';
 import { useState } from 'react';
@@ -25,6 +25,26 @@ const mainNavItems: NavItem[] = [
                 title: 'Gestión de usuarios',
                 href: '/admin/users',
                 icon: Users,
+            },
+            {
+                title: 'Tablas de Retención Documental',
+                href: '/admin/trd',
+                icon: FileText,
+            },
+            {
+                title: 'Series Documentales',
+                href: '/admin/series',
+                icon: Folder,
+            },
+            {
+                title: 'Subseries Documentales',
+                href: '/admin/subseries',
+                icon: BookOpen,
+            },
+            {
+                title: 'Cuadros de Clasificación Documental',
+                href: '/admin/ccd',
+                icon: FolderTree,
             },
         ],
     },

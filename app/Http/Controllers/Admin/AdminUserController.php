@@ -41,9 +41,15 @@ class AdminUserController extends Controller
             'pending' => User::whereNull('email_verified_at')->count(),
         ];
 
+        // Obtener todos los roles disponibles para los formularios
+        $roles = Role::where('activo', true)
+            ->orderBy('nivel_jerarquico')
+            ->get(['id', 'name', 'description']);
+
         return Inertia::render('admin/users', [
             'users' => $users,
             'stats' => $stats,
+            'roles' => $roles,
             'filters' => request()->only(['search', 'status']),
         ]);
     }
