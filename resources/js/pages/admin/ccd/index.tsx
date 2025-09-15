@@ -432,7 +432,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Total CCDs</p>
+                                <p className="text-sm font-semibold text-gray-600">Total CCDs</p>
                                 <p className="text-2xl font-semibold text-gray-900">{estadisticas.total}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
@@ -444,13 +444,11 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">CCDs Activos</p>
+                                <p className="text-sm font-semibold text-gray-600">CCDs Activos</p>
                                 <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.activos}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
-                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
-                                    <div className="h-2 w-2 bg-white rounded-full"></div>
-                                </div>
+                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
                             </div>
                         </div>
                     </div>
@@ -458,13 +456,11 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">Borradores</p>
+                                <p className="text-sm font-semibold text-gray-600">Borradores</p>
                                 <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.borradores}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
-                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
-                                    <div className="h-2 w-2 bg-white rounded-full"></div>
-                                </div>
+                                <FileText className="h-6 w-6 text-[#2a3d83]" />
                             </div>
                         </div>
                     </div>
