@@ -91,7 +91,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
         trd_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
+        disposicion_final: 'conservacion_permanente',
         area_responsable: '',
         observaciones: '',
         activa: true
@@ -134,11 +134,10 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
     ];
 
     const disposicionesFinales = {
-        'conservacion_total': 'Conservación Total',
+        'conservacion_permanente': 'Conservación Permanente',
         'eliminacion': 'Eliminación',
         'seleccion': 'Selección',
-        'transferencia': 'Transferencia',
-        'migracion': 'Migración'
+        'microfilmacion': 'Microfilmación'
     };
 
     // Auto-search functionality
@@ -261,6 +260,21 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                             </DialogHeader>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
+                                
+                                // Validación del lado del cliente
+                                if (!createForm.trd_id) {
+                                    toast.error('Debe seleccionar una TRD asociada');
+                                    return;
+                                }
+                                if (!createForm.nombre.trim()) {
+                                    toast.error('El nombre es requerido');
+                                    return;
+                                }
+                                if (!createForm.descripcion.trim()) {
+                                    toast.error('La descripción es requerida');
+                                    return;
+                                }
+                                
                                 router.post('/admin/series', createForm, {
                                      onSuccess: () => {
                                         setShowCreateModal(false);

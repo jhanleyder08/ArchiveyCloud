@@ -435,9 +435,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                 <p className="text-sm font-semibold text-gray-600">Total CCDs</p>
                                 <p className="text-2xl font-semibold text-gray-900">{estadisticas.total}</p>
                             </div>
-                            <div className="p-3 bg-blue-100 rounded-full">
-                                <FolderTree className="h-6 w-6 text-[#2a3d83]" />
-                            </div>
+                            <FolderTree className="h-8 w-8 text-[#2a3d83]" />
                         </div>
                     </div>
                     
@@ -447,9 +445,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                 <p className="text-sm font-semibold text-gray-600">CCDs Activos</p>
                                 <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.activos}</p>
                             </div>
-                            <div className="p-3 bg-blue-100 rounded-full">
-                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
-                            </div>
+                            <CheckCircle className="h-8 w-8 text-[#2a3d83]" />
                         </div>
                     </div>
                     
@@ -459,9 +455,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                 <p className="text-sm font-semibold text-gray-600">Borradores</p>
                                 <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.borradores}</p>
                             </div>
-                            <div className="p-3 bg-blue-100 rounded-full">
-                                <FileText className="h-6 w-6 text-[#2a3d83]" />
-                            </div>
+                            <FileText className="h-8 w-8 text-[#2a3d83]" />
                         </div>
                     </div>
                 </div>

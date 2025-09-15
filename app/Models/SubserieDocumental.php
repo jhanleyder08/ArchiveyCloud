@@ -24,35 +24,32 @@ class SubserieDocumental extends Model
         'nombre',
         'descripcion',
         'serie_documental_id',
-        'tipologias_documentales',
-        'metadatos_heredables',
-        'metadatos_propios',
-        'palabras_clave',
         'tiempo_archivo_gestion',
         'tiempo_archivo_central',
         'disposicion_final',
-        'procedimiento_especifico',
+        'procedimiento',
         'activa',
-        'observaciones'
+        'metadatos_especificos',
+        'tipologias_documentales',
+        'observaciones',
+        'created_by',
+        'updated_by'
     ];
 
     protected $casts = [
+        'metadatos_especificos' => 'array',
         'tipologias_documentales' => 'array',
-        'metadatos_heredables' => 'array',
-        'metadatos_propios' => 'array',
-        'palabras_clave' => 'array',
         'activa' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime'
     ];
 
-    // Estados de disposición final
-    const DISPOSICION_CONSERVACION_TOTAL = 'conservacion_total';
+    // Estados de disposición final (según migración)
+    const DISPOSICION_CONSERVACION_PERMANENTE = 'conservacion_permanente';
     const DISPOSICION_ELIMINACION = 'eliminacion';
     const DISPOSICION_SELECCION = 'seleccion';
-    const DISPOSICION_TRANSFERENCIA = 'transferencia';
-    const DISPOSICION_MIGRACION = 'migracion';
+    const DISPOSICION_MICROFILMACION = 'microfilmacion';
 
     protected static function boot()
     {

@@ -23,8 +23,8 @@ class SerieDocumental extends Model
         'codigo',
         'nombre',
         'descripcion',
-        'tabla_retencion_id',
-        'cuadro_clasificacion_id',
+        'trd_id',
+        'ccd_id',
         'tiempo_archivo_gestion',
         'tiempo_archivo_central',
         'disposicion_final',
@@ -34,7 +34,9 @@ class SerieDocumental extends Model
         'usuario_responsable_id',
         'area_responsable',
         'activa',
-        'observaciones'
+        'observaciones',
+        'created_by',
+        'updated_by'
     ];
 
     protected $casts = [

@@ -207,7 +207,7 @@ class PistaAuditoria extends Model
             'timestamp' => now()->toISOString()
         ];
 
-        $this->hash_integridad = hash('sha256', json_encode($datos, JSON_SORT_KEYS));
+        $this->hash_integridad = hash('sha256', json_encode($datos, \JSON_SORT_KEYS));
     }
 
     /**
@@ -226,7 +226,7 @@ class PistaAuditoria extends Model
             'timestamp' => $this->created_at->toISOString()
         ];
 
-        $hashCalculado = hash('sha256', json_encode($datos, JSON_SORT_KEYS));
+        $hashCalculado = hash('sha256', json_encode($datos, \JSON_SORT_KEYS));
         return $hashCalculado === $this->hash_integridad;
     }
 

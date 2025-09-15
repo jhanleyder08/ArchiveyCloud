@@ -8,6 +8,7 @@ use App\Models\SerieDocumental;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -39,7 +40,7 @@ class AdminSubseriesController extends Controller
             }
 
             if ($serieId) {
-                $query->where('serie_id', $serieId);
+                $query->where('serie_documental_id', $serieId);
             }
 
             if ($estado) {
@@ -120,8 +121,10 @@ class AdminSubseriesController extends Controller
             'serie_id' => 'required|exists:series_documentales,id',
             'tiempo_archivo_gestion' => 'nullable|integer|min:0',
             'tiempo_archivo_central' => 'nullable|integer|min:0',
-            'disposicion_final' => 'nullable|string|in:conservacion_total,eliminacion,seleccion,transferencia,migracion',
-            'area_responsable' => 'nullable|string|max:255',
+            'disposicion_final' => 'nullable|string|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
+            'procedimiento' => 'nullable|string',
+            'metadatos_especificos' => 'nullable|array',
+            'tipologias_documentales' => 'nullable|array',
             'observaciones' => 'nullable|string',
             'activa' => 'boolean',
         ]);
@@ -135,12 +138,28 @@ class AdminSubseriesController extends Controller
         try {
             DB::beginTransaction();
 
-            $data = $validator->validated();
+            $validated = $validator->validated();
+
+            // Mapear campos del frontend a los de la base de datos
+            $data = [
+                'codigo' => $validated['codigo'],
+                'nombre' => $validated['nombre'],
+                'descripcion' => $validated['descripcion'],
+                'serie_documental_id' => $validated['serie_id'], // Mapeo correcto
+                'tiempo_archivo_gestion' => $validated['tiempo_archivo_gestion'],
+                'tiempo_archivo_central' => $validated['tiempo_archivo_central'],
+                'disposicion_final' => $validated['disposicion_final'],
+                'procedimiento' => $validated['procedimiento'] ?? null,
+                'metadatos_especificos' => $validated['metadatos_especificos'] ?? null,
+                'tipologias_documentales' => $validated['tipologias_documentales'] ?? null,
+                'observaciones' => $validated['observaciones'] ?? null,
+                'activa' => $validated['activa'] ?? true,
+            ];
 
             // Generar código automático si no se proporciona
             if (empty($data['codigo'])) {
-                $serie = SerieDocumental::find($data['serie_id']);
-                $lastSubserie = SubserieDocumental::where('serie_id', $data['serie_id'])
+                $serie = SerieDocumental::find($data['serie_documental_id']);
+                $lastSubserie = SubserieDocumental::where('serie_documental_id', $data['serie_documental_id'])
                     ->whereRaw("codigo REGEXP '^{$serie->codigo}-[0-9]+$'")
                     ->orderByRaw('CAST(SUBSTRING(codigo, LENGTH("' . $serie->codigo . '") + 2) AS UNSIGNED) DESC')
                     ->first();
@@ -156,19 +175,20 @@ class AdminSubseriesController extends Controller
             }
 
             // Heredar datos de la serie si no se proporcionan
-            $serie = SerieDocumental::find($data['serie_id']);
-            if (!isset($data['tiempo_archivo_gestion'])) {
+            $serie = SerieDocumental::find($data['serie_documental_id']);
+            if (empty($data['tiempo_archivo_gestion'])) {
                 $data['tiempo_archivo_gestion'] = $serie->tiempo_archivo_gestion;
             }
-            if (!isset($data['tiempo_archivo_central'])) {
+            if (empty($data['tiempo_archivo_central'])) {
                 $data['tiempo_archivo_central'] = $serie->tiempo_archivo_central;
             }
-            if (!isset($data['disposicion_final'])) {
+            if (empty($data['disposicion_final'])) {
                 $data['disposicion_final'] = $serie->disposicion_final;
             }
-            if (!isset($data['area_responsable'])) {
-                $data['area_responsable'] = $serie->area_responsable;
-            }
+
+            // Añadir campos de auditoría
+            $data['created_by'] = Auth::id();
+            $data['updated_by'] = Auth::id();
 
             $subserie = SubserieDocumental::create($data);
 
