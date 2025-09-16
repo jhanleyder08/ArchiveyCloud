@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AdminSubseriesController extends Controller
@@ -259,22 +260,27 @@ class AdminSubseriesController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, SubserieDocumental $subserie)
+    public function update(Request $request, SubserieDocumental $subseries)
     {
+        \Log::info('UPDATE SUBSERIE - ID: ' . ($subseries->id ?? 'NULL'));
+        \Log::info('UPDATE SUBSERIE - Datos recibidos:', $request->all());
+        \Log::info('UPDATE SUBSERIE - Subserie actual:', $subseries->toArray());
+        
         $validator = Validator::make($request->all(), [
-            'codigo' => 'required|string|max:50|unique:subseries_documentales,codigo,' . $subserie->id . ',id,deleted_at,NULL',
+            'codigo' => ['nullable', 'string', 'max:50', Rule::unique('subseries_documentales', 'codigo')->ignore($subseries->id)],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
             'serie_id' => 'required|exists:series_documentales,id',
             'tiempo_archivo_gestion' => 'nullable|integer|min:0',
             'tiempo_archivo_central' => 'nullable|integer|min:0',
-            'disposicion_final' => 'nullable|string|in:conservacion_total,eliminacion,seleccion,transferencia,migracion',
+            'disposicion_final' => 'nullable|string|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
             'area_responsable' => 'nullable|string|max:255',
             'observaciones' => 'nullable|string',
             'activa' => 'boolean',
         ]);
 
         if ($validator->fails()) {
+            \Log::error('UPDATE SUBSERIE - Errores de validación:', $validator->errors()->toArray());
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
@@ -283,8 +289,17 @@ class AdminSubseriesController extends Controller
         try {
             DB::beginTransaction();
 
-            $data = $validator->validated();
-            $subserie->update($data);
+            $validated = $validator->validated();
+            \Log::info('UPDATE SUBSERIE - Datos validados:', $validated);
+            
+            // Mapear serie_id a serie_documental_id
+            $data = $validated;
+            $data['serie_documental_id'] = $validated['serie_id'];
+            unset($data['serie_id']);
+            
+            \Log::info('UPDATE SUBSERIE - Datos finales para actualizar:', $data);
+            $result = $subseries->update($data);
+            \Log::info('UPDATE SUBSERIE - Resultado update: ' . ($result ? 'true' : 'false'));
 
             DB::commit();
 
@@ -302,26 +317,53 @@ class AdminSubseriesController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(SubserieDocumental $subserie)
+    public function destroy(SubserieDocumental $subseries)
     {
+        \Log::info('DESTROY SUBSERIE - ID: ' . ($subseries->id ?? 'NULL'));
+        \Log::info('DESTROY SUBSERIE - Subserie completa:', $subseries->toArray());
+        
         try {
             // Verificar si tiene expedientes asociados
-            if ($subserie->expedientes()->count() > 0) {
+            $expedientesCount = $subseries->expedientes()->count();
+            \Log::info('DESTROY SUBSERIE - Expedientes asociados: ' . $expedientesCount);
+            
+            if ($expedientesCount > 0) {
+                \Log::info('DESTROY SUBSERIE - Cancelado por expedientes asociados');
                 return redirect()->back()
                     ->with('error', 'No se puede eliminar la subserie documental porque tiene expedientes asociados.');
             }
 
             DB::beginTransaction();
+            \Log::info('DESTROY SUBSERIE - Iniciando transacción');
 
-            $subserie->delete();
+            try {
+                $result = $subseries->delete();
+                \Log::info('DESTROY SUBSERIE - Resultado delete: ' . ($result ? 'true' : 'false'));
+                if ($subseries->exists) {
+                    \Log::info('DESTROY SUBSERIE - Subserie después del delete (aún existe):', $subseries->toArray());
+                } else {
+                    \Log::info('DESTROY SUBSERIE - Subserie después del delete: NO EXISTE (eliminada correctamente)');
+                }
+            } catch (\Exception $deleteException) {
+                \Log::error('DESTROY SUBSERIE - Error en delete:', [
+                    'error' => $deleteException->getMessage(),
+                    'trace' => $deleteException->getTraceAsString()
+                ]);
+                throw $deleteException;
+            }
 
             DB::commit();
+            \Log::info('DESTROY SUBSERIE - Transacción commitada exitosamente');
 
             return redirect()->route('admin.subseries.index')
                 ->with('message', 'Subserie documental eliminada exitosamente.');
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('DESTROY SUBSERIE - Error general:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()->back()
                 ->with('error', 'Error al eliminar la subserie documental: ' . $e->getMessage());
         }

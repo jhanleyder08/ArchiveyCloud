@@ -31,12 +31,12 @@ interface SubserieDocumental {
     codigo: string;
     nombre: string;
     descripcion: string;
-    serie_id: number;
+    serie_documental_id: number;  // Campo real del backend
     serie?: Serie;
     tiempo_archivo_gestion: number;
     tiempo_archivo_central: number;
     disposicion_final: string;
-    area_responsable: string;
+    area_responsable?: string;  // Es nullable
     observaciones?: string;
     activa: boolean;
     expedientes_count?: number;
@@ -89,6 +89,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
         disposicion_final: 'conservacion_permanente',
+        area_responsable: '',  // Agregado para consistencia
         procedimiento: '',
         metadatos_especificos: null,
         tipologias_documentales: null,
@@ -104,6 +105,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
         disposicion_final: 'conservacion_permanente',
+        area_responsable: '',  // Agregado para evitar error
         procedimiento: '',
         metadatos_especificos: null,
         tipologias_documentales: null,
@@ -128,11 +130,14 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                 codigo: showEditModal.codigo || '',
                 nombre: showEditModal.nombre || '',
                 descripcion: showEditModal.descripcion || '',
-                serie_id: showEditModal.serie_id?.toString() || '',
+                serie_id: showEditModal.serie_documental_id?.toString() || '',
                 tiempo_archivo_gestion: showEditModal.tiempo_archivo_gestion || 0,
                 tiempo_archivo_central: showEditModal.tiempo_archivo_central || 0,
-                disposicion_final: showEditModal.disposicion_final || 'conservacion_total',
+                disposicion_final: showEditModal.disposicion_final || 'conservacion_permanente',
                 area_responsable: showEditModal.area_responsable || '',
+                procedimiento: '',  // Agregado para TypeScript
+                metadatos_especificos: null,  // Agregado para TypeScript
+                tipologias_documentales: null,  // Agregado para TypeScript
                 observaciones: showEditModal.observaciones || '',
                 activa: showEditModal.activa ?? true
             });
@@ -259,8 +264,11 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                                             serie_id: '',
                                             tiempo_archivo_gestion: 0,
                                             tiempo_archivo_central: 0,
-                                            disposicion_final: 'conservacion_total',
+                                            disposicion_final: 'conservacion_permanente',
                                             area_responsable: '',
+                                            procedimiento: '',
+                                            metadatos_especificos: null,
+                                            tipologias_documentales: null,
                                             observaciones: '',
                                             activa: true
                                         });
