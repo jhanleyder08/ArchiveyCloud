@@ -854,6 +854,69 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                         required
                                     />
                                 </div>
+                                
+                                {/* Campos de Retención */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-tiempo-gestion">Tiempo Archivo Gestión (años) *</Label>
+                                        <Input
+                                            id="edit-tiempo-gestion"
+                                            type="number"
+                                            min="0"
+                                            value={editForm.tiempo_archivo_gestion}
+                                            onChange={(e) => setEditForm({...editForm, tiempo_archivo_gestion: parseInt(e.target.value) || 0})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="edit-tiempo-central">Tiempo Archivo Central (años) *</Label>
+                                        <Input
+                                            id="edit-tiempo-central"
+                                            type="number"
+                                            min="0"
+                                            value={editForm.tiempo_archivo_central}
+                                            onChange={(e) => setEditForm({...editForm, tiempo_archivo_central: parseInt(e.target.value) || 0})}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-disposicion">Disposición Final *</Label>
+                                    <Select value={editForm.disposicion_final} onValueChange={(value) => setEditForm({...editForm, disposicion_final: value})}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar disposición final" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(disposicionesFinales).map(([key, label]) => (
+                                                <SelectItem key={key} value={key}>
+                                                    {label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-area-responsable">Área Responsable</Label>
+                                    <Input
+                                        id="edit-area-responsable"
+                                        type="text"
+                                        value={editForm.area_responsable}
+                                        onChange={(e) => setEditForm({...editForm, area_responsable: e.target.value})}
+                                    />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-observaciones">Observaciones</Label>
+                                    <Textarea
+                                        id="edit-observaciones"
+                                        value={editForm.observaciones}
+                                        onChange={(e) => setEditForm({...editForm, observaciones: e.target.value})}
+                                        rows={3}
+                                    />
+                                </div>
+                                
                                 <DialogFooter>
                                     <Button type="button" variant="outline" onClick={() => setShowEditModal(null)}>
                                         Cancelar
