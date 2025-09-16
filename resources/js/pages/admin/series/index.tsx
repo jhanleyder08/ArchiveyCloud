@@ -24,7 +24,7 @@ interface SerieDocumental {
     codigo: string;
     nombre: string;
     descripcion: string;
-    tabla_retencion_id: number;
+    trd_id: number;
     trd?: TRD;
     tiempo_archivo_gestion: number;
     tiempo_archivo_central: number;
@@ -88,7 +88,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
         codigo: '',
         nombre: '',
         descripcion: '',
-        tabla_retencion_id: '',
+        trd_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
         disposicion_final: 'conservacion_permanente',
@@ -101,7 +101,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
         codigo: '',
         nombre: '',
         descripcion: '',
-        tabla_retencion_id: '',
+        trd_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
         disposicion_final: 'conservacion_permanente',
@@ -117,7 +117,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                 codigo: showEditModal.codigo || '',
                 nombre: showEditModal.nombre || '',
                 descripcion: showEditModal.descripcion || '',
-                tabla_retencion_id: showEditModal.tabla_retencion_id?.toString() || '',
+                trd_id: showEditModal.trd_id?.toString() || '',
                 tiempo_archivo_gestion: showEditModal.tiempo_archivo_gestion || 0,
                 tiempo_archivo_central: showEditModal.tiempo_archivo_central || 0,
                 disposicion_final: showEditModal.disposicion_final || 'conservacion_permanente',
@@ -261,7 +261,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                 e.preventDefault();
                                 
                                 // Validación del lado del cliente
-                                if (!createForm.tabla_retencion_id) {
+                                if (!createForm.trd_id) {
                                     toast.error('Debe seleccionar una TRD asociada');
                                     return;
                                 }
@@ -281,7 +281,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                             codigo: '',
                                             nombre: '',
                                             descripcion: '',
-                                            tabla_retencion_id: '',
+                                            trd_id: '',
                                             tiempo_archivo_gestion: 0,
                                             tiempo_archivo_central: 0,
                                             disposicion_final: 'conservacion_permanente',
@@ -312,7 +312,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="create-trd">TRD Asociada *</Label>
-                                        <Select value={createForm.tabla_retencion_id} onValueChange={(value) => setCreateForm({...createForm, tabla_retencion_id: value})}>
+                                        <Select value={createForm.trd_id} onValueChange={(value) => setCreateForm({...createForm, trd_id: value})}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar TRD" />
                                             </SelectTrigger>
@@ -820,7 +820,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="edit-trd">TRD Asociada *</Label>
-                                        <Select value={editForm.tabla_retencion_id} onValueChange={(value) => setEditForm({...editForm, tabla_retencion_id: value})}>
+                                        <Select value={editForm.trd_id} onValueChange={(value) => setEditForm({...editForm, trd_id: value})}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar TRD" />
                                             </SelectTrigger>

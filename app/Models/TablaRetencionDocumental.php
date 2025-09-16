@@ -97,7 +97,7 @@ class TablaRetencionDocumental extends Model
      */
     public function series()
     {
-        return $this->hasMany(SerieDocumental::class, 'tabla_retencion_id');
+        return $this->hasMany(SerieDocumental::class, 'trd_id');
     }
 
     /**
@@ -113,7 +113,7 @@ class TablaRetencionDocumental extends Model
      */
     public function expedientes()
     {
-        return $this->hasManyThrough(Expediente::class, SerieDocumental::class, 'tabla_retencion_id', 'serie_documental_id');
+        return $this->hasManyThrough(Expediente::class, SerieDocumental::class, 'trd_id', 'serie_documental_id');
     }
 
     /**

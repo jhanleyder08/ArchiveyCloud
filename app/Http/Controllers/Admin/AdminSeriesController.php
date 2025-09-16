@@ -9,6 +9,7 @@ use App\Models\CuadroClasificacionDocumental;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AdminSeriesController extends Controller
@@ -85,6 +86,8 @@ class AdminSeriesController extends Controller
      */
     public function store(Request $request)
     {
+        \Log::info('STORE SERIE - Datos recibidos:', $request->all());
+        
         $validated = $request->validate([
             'codigo' => 'nullable|string|max:50|unique:series_documentales,codigo',
             'nombre' => 'required|string|max:255',
@@ -107,7 +110,11 @@ class AdminSeriesController extends Controller
         $validated['updated_by'] = Auth::id();
 
         try {
+            \Log::info('STORE SERIE - Datos validados:', $validated);
+            
             $serie = SerieDocumental::create($validated);
+            
+            \Log::info('STORE SERIE - Serie creada:', $serie->toArray());
 
             return redirect()->route('admin.series.index')
                            ->with('success', "Serie documental '{$serie->nombre}' creada exitosamente.");
@@ -147,10 +154,15 @@ class AdminSeriesController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, SerieDocumental $serie)
+    public function update(Request $request, SerieDocumental $series)
     {
+        \Log::info('UPDATE SERIE - ID: ' . ($series->id ?? 'NULL'));
+        \Log::info('UPDATE SERIE - Datos recibidos:', $request->all());
+        \Log::info('UPDATE SERIE - Codigo actual: ' . ($series->codigo ?? 'NULL'));
+        \Log::info('UPDATE SERIE - Serie completa:', $series->toArray());
+        
         $validated = $request->validate([
-            'codigo' => "nullable|string|max:50|unique:series_documentales,codigo,{$serie->id}",
+            'codigo' => ['nullable', 'string', 'max:50', Rule::unique('series_documentales', 'codigo')->ignore($series->id)],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
             'trd_id' => 'required|exists:tablas_retencion_documental,id',
@@ -167,10 +179,14 @@ class AdminSeriesController extends Controller
         ]);
 
         try {
-            $serie->update($validated);
+            \Log::info('UPDATE SERIE - Datos validados:', $validated);
+            
+            $result = $series->update($validated);
+            
+            \Log::info('UPDATE SERIE - Resultado update: ' . ($result ? 'true' : 'false'));
 
             return redirect()->route('admin.series.index')
-                           ->with('success', "Serie documental '{$serie->nombre}' actualizada exitosamente.");
+                           ->with('success', "Serie documental '{$series->nombre}' actualizada exitosamente.");
 
         } catch (\Exception $e) {
             return redirect()->back()

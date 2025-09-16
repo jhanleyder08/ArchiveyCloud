@@ -65,7 +65,7 @@ class SerieDocumental extends Model
             }
             
             // REQ-CL-017: Heredar tiempos de conservación de TRD
-            if ($serie->tabla_retencion_id && !$serie->tiempo_archivo_gestion) {
+            if ($serie->trd_id && !$serie->tiempo_archivo_gestion) {
                 $serie->heredarTiemposTRD();
             }
         });
@@ -91,7 +91,7 @@ class SerieDocumental extends Model
      */
     public function trd()
     {
-        return $this->belongsTo(TablaRetencionDocumental::class, 'tabla_retencion_id');
+        return $this->belongsTo(TablaRetencionDocumental::class, 'trd_id');
     }
 
     /**
@@ -99,7 +99,7 @@ class SerieDocumental extends Model
      */
     public function ccd()
     {
-        return $this->belongsTo(CuadroClasificacionDocumental::class, 'cuadro_clasificacion_id');
+        return $this->belongsTo(CuadroClasificacionDocumental::class, 'ccd_id');
     }
 
     /**
