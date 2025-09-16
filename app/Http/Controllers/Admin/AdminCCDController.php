@@ -92,29 +92,39 @@ class AdminCCDController extends Controller
             ],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
+            'entidad' => 'required|string|max:255',  // Campo requerido agregado
+            'dependencia' => 'nullable|string|max:255',
             'nivel' => 'required|integer|min:1|max:5',
             'padre_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
-            'orden' => 'nullable|integer|min:0',
+            'orden_jerarquico' => 'nullable|integer|min:0',  // Nombre corregido
             'estado' => 'required|in:borrador,activo,inactivo,historico',
             'activo' => 'boolean',
-            'observaciones' => 'nullable|string',
-            'vocabulario_controlado' => 'nullable|array',
-            'metadatos' => 'nullable|array',
+            'vocabularios_controlados' => 'nullable|array',  // Nombre corregido
+            'notas' => 'nullable|string',
+            'alcance' => 'nullable|string',
+            'razon_reubicacion' => 'nullable|string',
+            'fecha_reubicacion' => 'nullable|date',
+            'reubicado_por' => 'nullable|string|max:255',
         ]);
 
         $ccd = CuadroClasificacionDocumental::create([
             'codigo' => $request->codigo,
             'nombre' => $request->nombre,
             'descripcion' => $request->descripcion,
+            'entidad' => $request->entidad,  // Campo agregado
+            'dependencia' => $request->dependencia,  // Campo agregado
             'nivel' => $request->nivel,
             'padre_id' => $request->padre_id,
-            'orden' => $request->orden ?? 0,
+            'orden_jerarquico' => $request->orden_jerarquico ?? 0,  // Nombre corregido
             'estado' => $request->estado,
             'activo' => $request->boolean('activo', true),
-            'observaciones' => $request->observaciones,
-            'vocabulario_controlado' => $request->vocabulario_controlado,
-            'metadatos' => $request->metadatos,
-            'usuario_creador_id' => auth()->id(),
+            'vocabularios_controlados' => $request->vocabularios_controlados,  // Nombre corregido
+            'notas' => $request->notas,  // Campo agregado
+            'alcance' => $request->alcance,  // Campo agregado
+            'razon_reubicacion' => $request->razon_reubicacion,  // Campo agregado
+            'fecha_reubicacion' => $request->fecha_reubicacion,  // Campo agregado
+            'reubicado_por' => $request->reubicado_por,  // Campo agregado
+            'created_by' => auth()->id(),  // Nombre corregido
         ]);
 
         return redirect()->back()->with('success', 'Cuadro de Clasificación Documental creado exitosamente.');
