@@ -24,7 +24,7 @@ interface SerieDocumental {
     codigo: string;
     nombre: string;
     descripcion: string;
-    trd_id: number;
+    tabla_retencion_id: number;
     trd?: TRD;
     tiempo_archivo_gestion: number;
     tiempo_archivo_central: number;
@@ -88,7 +88,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
         codigo: '',
         nombre: '',
         descripcion: '',
-        trd_id: '',
+        tabla_retencion_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
         disposicion_final: 'conservacion_permanente',
@@ -101,10 +101,10 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
         codigo: '',
         nombre: '',
         descripcion: '',
-        trd_id: '',
+        tabla_retencion_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
+        disposicion_final: 'conservacion_permanente',
         area_responsable: '',
         observaciones: '',
         activa: true
@@ -117,10 +117,10 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                 codigo: showEditModal.codigo || '',
                 nombre: showEditModal.nombre || '',
                 descripcion: showEditModal.descripcion || '',
-                trd_id: showEditModal.trd_id?.toString() || '',
+                tabla_retencion_id: showEditModal.tabla_retencion_id?.toString() || '',
                 tiempo_archivo_gestion: showEditModal.tiempo_archivo_gestion || 0,
                 tiempo_archivo_central: showEditModal.tiempo_archivo_central || 0,
-                disposicion_final: showEditModal.disposicion_final || 'conservacion_total',
+                disposicion_final: showEditModal.disposicion_final || 'conservacion_permanente',
                 area_responsable: showEditModal.area_responsable || '',
                 observaciones: showEditModal.observaciones || '',
                 activa: showEditModal.activa ?? true
@@ -217,11 +217,10 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
 
     const getDisposicionBadge = (disposicion: string) => {
         const colors = {
-            'conservacion_total': 'bg-blue-500',
+            'conservacion_permanente': 'bg-blue-500',
             'eliminacion': 'bg-red-500',
             'seleccion': 'bg-yellow-500',
-            'transferencia': 'bg-purple-500',
-            'migracion': 'bg-indigo-500'
+            'microfilmacion': 'bg-purple-500'
         };
         
         return (
@@ -262,7 +261,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                 e.preventDefault();
                                 
                                 // Validación del lado del cliente
-                                if (!createForm.trd_id) {
+                                if (!createForm.tabla_retencion_id) {
                                     toast.error('Debe seleccionar una TRD asociada');
                                     return;
                                 }
@@ -282,10 +281,10 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                             codigo: '',
                                             nombre: '',
                                             descripcion: '',
-                                            trd_id: '',
+                                            tabla_retencion_id: '',
                                             tiempo_archivo_gestion: 0,
                                             tiempo_archivo_central: 0,
-                                            disposicion_final: 'conservacion_total',
+                                            disposicion_final: 'conservacion_permanente',
                                             area_responsable: '',
                                             observaciones: '',
                                             activa: true
@@ -313,7 +312,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="create-trd">TRD Asociada *</Label>
-                                        <Select value={createForm.trd_id} onValueChange={(value) => setCreateForm({...createForm, trd_id: value})}>
+                                        <Select value={createForm.tabla_retencion_id} onValueChange={(value) => setCreateForm({...createForm, tabla_retencion_id: value})}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar TRD" />
                                             </SelectTrigger>
@@ -821,7 +820,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="edit-trd">TRD Asociada *</Label>
-                                        <Select value={editForm.trd_id} onValueChange={(value) => setEditForm({...editForm, trd_id: value})}>
+                                        <Select value={editForm.tabla_retencion_id} onValueChange={(value) => setEditForm({...editForm, tabla_retencion_id: value})}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar TRD" />
                                             </SelectTrigger>

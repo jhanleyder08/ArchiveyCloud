@@ -157,7 +157,7 @@ class AdminSeriesController extends Controller
             'ccd_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
             'tiempo_archivo_gestion' => 'required|integer|min:0',
             'tiempo_archivo_central' => 'required|integer|min:0',
-            'disposicion_final' => 'required|in:conservacion_total,eliminacion,seleccion,transferencia,migracion',
+            'disposicion_final' => 'required|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
             'procedimiento' => 'nullable|string',
             'area_responsable' => 'nullable|string|max:255',
             'usuario_responsable_id' => 'nullable|exists:users,id',
@@ -273,7 +273,7 @@ class AdminSeriesController extends Controller
         }
 
         if ($request->filled('trd')) {
-            $query->where('trd_id', $request->get('trd'));
+            $query->where('tabla_retencion_id', $request->get('trd'));
         }
 
         if ($request->filled('estado')) {

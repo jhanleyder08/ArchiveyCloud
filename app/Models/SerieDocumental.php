@@ -49,11 +49,10 @@ class SerieDocumental extends Model
     ];
 
     // Tipos de disposición final
-    const DISPOSICION_CONSERVACION_TOTAL = 'conservacion_total';
+    const DISPOSICION_CONSERVACION_PERMANENTE = 'conservacion_permanente';
     const DISPOSICION_ELIMINACION = 'eliminacion';
     const DISPOSICION_SELECCION = 'seleccion';
-    const DISPOSICION_TRANSFERENCIA = 'transferencia';
-    const DISPOSICION_MIGRACION = 'migracion';
+    const DISPOSICION_MICROFILMACION = 'microfilmacion';
 
     protected static function boot()
     {
