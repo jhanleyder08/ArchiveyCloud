@@ -114,6 +114,8 @@ class AdminSubseriesController extends Controller
      */
     public function store(Request $request)
     {
+        \Log::info('STORE SUBSERIE - Datos recibidos:', $request->all());
+        
         $validator = Validator::make($request->all(), [
             'codigo' => 'nullable|string|max:50|unique:subseries_documentales,codigo,NULL,id,deleted_at,NULL',
             'nombre' => 'required|string|max:255',
@@ -139,6 +141,7 @@ class AdminSubseriesController extends Controller
             DB::beginTransaction();
 
             $validated = $validator->validated();
+            \Log::info('STORE SUBSERIE - Datos validados:', $validated);
 
             // Mapear campos del frontend a los de la base de datos
             $data = [
@@ -190,7 +193,25 @@ class AdminSubseriesController extends Controller
             $data['created_by'] = Auth::id();
             $data['updated_by'] = Auth::id();
 
-            $subserie = SubserieDocumental::create($data);
+            \Log::info('STORE SUBSERIE - Datos finales para crear:', $data);
+        
+            try {
+                $subserie = SubserieDocumental::create($data);
+                \Log::info('STORE SUBSERIE - Subserie creada exitosamente:', $subserie->toArray());
+            } catch (\Illuminate\Database\QueryException $e) {
+                \Log::error('STORE SUBSERIE - Error de base de datos:', [
+                    'error' => $e->getMessage(),
+                    'sql' => $e->getSql(),
+                    'bindings' => $e->getBindings()
+                ]);
+                throw $e;
+            } catch (\Exception $e) {
+                \Log::error('STORE SUBSERIE - Error general:', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                throw $e;
+            }
 
             DB::commit();
 

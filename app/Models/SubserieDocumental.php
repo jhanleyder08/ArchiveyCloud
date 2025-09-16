@@ -67,7 +67,8 @@ class SubserieDocumental extends Model
             }
         });
         
-        // Registrar en auditoría
+        // Registrar en auditoría - COMENTADO TEMPORALMENTE PARA EVITAR ERRORES
+        /*
         static::created(function ($subserie) {
             PistaAuditoria::registrar($subserie, PistaAuditoria::ACCION_CREAR, [
                 'descripcion' => 'Subserie documental creada: ' . $subserie->nombre,
@@ -82,6 +83,7 @@ class SubserieDocumental extends Model
                 'valores_nuevos' => $subserie->getAttributes()
             ]);
         });
+        */
     }
 
     /**
@@ -186,18 +188,18 @@ class SubserieDocumental extends Model
             return;
         }
         
-        // Heredar metadatos de la serie
-        $metadatosHeredados = $this->serie->getMetadatosHeredables();
-        $this->metadatos_heredables = array_merge($this->metadatos_heredables ?? [], $metadatosHeredados);
+        // COMENTADO: Heredar metadatos de la serie - campos no existen en BD
+        // $metadatosHeredados = $this->serie->getMetadatosHeredables();
+        // $this->metadatos_heredables = array_merge($this->metadatos_heredables ?? [], $metadatosHeredados);
         
         // Heredar tiempos de retención si no están definidos
         $this->tiempo_archivo_gestion = $this->tiempo_archivo_gestion ?? $this->serie->tiempo_archivo_gestion;
         $this->tiempo_archivo_central = $this->tiempo_archivo_central ?? $this->serie->tiempo_archivo_central;
         $this->disposicion_final = $this->disposicion_final ?? $this->serie->disposicion_final;
         
-        // Heredar palabras clave de la serie
-        $palabrasClaveHeredadas = $this->serie->palabras_clave ?? [];
-        $this->palabras_clave = array_unique(array_merge($this->palabras_clave ?? [], $palabrasClaveHeredadas));
+        // COMENTADO: Heredar palabras clave - campo no existe en BD
+        // $palabrasClaveHeredadas = $this->serie->palabras_clave ?? [];
+        // $this->palabras_clave = array_unique(array_merge($this->palabras_clave ?? [], $palabrasClaveHeredadas));
     }
 
     /**
