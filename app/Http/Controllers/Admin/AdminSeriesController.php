@@ -63,7 +63,7 @@ class AdminSeriesController extends Controller
         ];
 
         // Datos adicionales para filtros
-        $trds = TablaRetencionDocumental::where('vigente', true)
+        $trds = TablaRetencionDocumental::whereIn('estado', ['aprobada', 'vigente'])
                                        ->orderBy('nombre')
                                        ->get(['id', 'nombre', 'codigo']);
 

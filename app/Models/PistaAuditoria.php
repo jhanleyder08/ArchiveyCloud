@@ -207,7 +207,9 @@ class PistaAuditoria extends Model
             'timestamp' => now()->toISOString()
         ];
 
-        $this->hash_integridad = hash('sha256', json_encode($datos, \JSON_SORT_KEYS));
+        // Ordenar claves manualmente para consistencia
+        ksort($datos);
+        $this->hash_integridad = hash('sha256', json_encode($datos, JSON_UNESCAPED_UNICODE));
     }
 
     /**
@@ -226,7 +228,9 @@ class PistaAuditoria extends Model
             'timestamp' => $this->created_at->toISOString()
         ];
 
-        $hashCalculado = hash('sha256', json_encode($datos, \JSON_SORT_KEYS));
+        // Ordenar claves manualmente para consistencia
+        ksort($datos);
+        $hashCalculado = hash('sha256', json_encode($datos, JSON_UNESCAPED_UNICODE));
         return $hashCalculado === $this->hash_integridad;
     }
 

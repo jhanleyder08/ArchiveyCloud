@@ -88,8 +88,10 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
         serie_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
-        area_responsable: '',
+        disposicion_final: 'conservacion_permanente',
+        procedimiento: '',
+        metadatos_especificos: null,
+        tipologias_documentales: null,
         observaciones: '',
         activa: true
     });
@@ -101,8 +103,10 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
         serie_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
-        area_responsable: '',
+        disposicion_final: 'conservacion_permanente',
+        procedimiento: '',
+        metadatos_especificos: null,
+        tipologias_documentales: null,
         observaciones: '',
         activa: true
     });
@@ -196,16 +200,14 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
 
     const getDisposicionBadge = (disposicion: string) => {
         const colors = {
-            'conservacion_total': 'bg-blue-500',
-            'eliminacion': 'bg-red-500',
-            'seleccion': 'bg-yellow-500',
-            'transferencia': 'bg-purple-500',
-            'migracion': 'bg-indigo-500'
+            'conservacion_permanente': 'bg-green-100 text-green-800',
+            'eliminacion': 'bg-red-100 text-red-800',
+            'seleccion': 'bg-yellow-100 text-yellow-800',
+            'microfilmacion': 'bg-blue-100 text-blue-800'
         };
-        
         return (
-            <Badge variant="default" className={colors[disposicion as keyof typeof colors] || 'bg-gray-500'}>
-                {disposicionesFinales[disposicion as keyof typeof disposicionesFinales] || disposicion}
+            <Badge className={colors[disposicion] || 'bg-gray-100 text-gray-800'}>
+                {disposicion.replace('_', ' ').toUpperCase()}
             </Badge>
         );
     };

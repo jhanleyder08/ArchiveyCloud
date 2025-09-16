@@ -29,6 +29,7 @@ class TablaRetencionDocumental extends Model
         'fecha_vigencia_inicio',
         'fecha_vigencia_fin',
         'estado',
+        'vigente',
         'observaciones_generales',
         'metadatos_adicionales',
         'created_by',
@@ -40,6 +41,7 @@ class TablaRetencionDocumental extends Model
         'fecha_aprobacion' => 'date',
         'fecha_vigencia_inicio' => 'date',
         'fecha_vigencia_fin' => 'date',
+        'vigente' => 'boolean',
         'metadatos_adicionales' => 'array',
         'version' => 'integer',
         'created_at' => 'datetime',
@@ -95,7 +97,7 @@ class TablaRetencionDocumental extends Model
      */
     public function series()
     {
-        return $this->hasMany(SerieDocumental::class, 'tabla_retencion_id');
+        return $this->hasMany(SerieDocumental::class, 'trd_id');
     }
 
     /**
@@ -111,7 +113,7 @@ class TablaRetencionDocumental extends Model
      */
     public function expedientes()
     {
-        return $this->hasManyThrough(Expediente::class, SerieDocumental::class, 'tabla_retencion_id', 'serie_documental_id');
+        return $this->hasManyThrough(Expediente::class, SerieDocumental::class, 'trd_id', 'serie_documental_id');
     }
 
     /**
