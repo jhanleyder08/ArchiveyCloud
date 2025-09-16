@@ -21,25 +21,36 @@ class PistaAuditoria extends Model
 
     // REQ-CS-006: Pistas inalterables - sin soft deletes, sin updates
     protected $fillable = [
-        'entidad_type',
-        'entidad_id',
+        // Campos de migración original
+        'fecha_hora',
         'usuario_id',
-        'accion',
-        'descripcion',
+        'evento',
+        'tabla_afectada',
+        'registro_id',
+        'operacion',
         'valores_anteriores',
         'valores_nuevos',
+        'ip_address',
+        'user_agent',
+        'sesion_id',
+        'modulo',
+        'accion_detalle',
+        'resultado',
+        'observaciones',
+        'hash_integridad',
+        // Campos de migraciones adicionales
+        'entidad_type',
+        'entidad_id',
+        'accion',
+        'descripcion',
         'metadatos_cambios',
         'permisos_anteriores',
         'permisos_nuevos',
-        'ip_address',
-        'user_agent',
+        'contexto_adicional',
         'pais',
         'navegador',
         'dispositivo',
-        'sistema_operativo',
-        'sesion_id',
-        'hash_integridad',
-        'contexto_adicional'
+        'sistema_operativo'
     ];
 
     protected $casts = [
@@ -239,19 +250,82 @@ class PistaAuditoria extends Model
      */
     public static function registrar($entidad, $accion, $detalles = [])
     {
+        $request = request();
+        $userAgent = $request->userAgent() ?? '';
+        
+        // Detectar navegador, sistema operativo y dispositivo
+        $navegador = 'Desconocido';
+        $sistemaOperativo = 'Desconocido';
+        $dispositivo = 'Escritorio';
+        
+        if (str_contains($userAgent, 'Chrome')) $navegador = 'Chrome';
+        elseif (str_contains($userAgent, 'Firefox')) $navegador = 'Firefox';
+        elseif (str_contains($userAgent, 'Safari')) $navegador = 'Safari';
+        elseif (str_contains($userAgent, 'Edge')) $navegador = 'Edge';
+        
+        if (str_contains($userAgent, 'Windows')) $sistemaOperativo = 'Windows';
+        elseif (str_contains($userAgent, 'Mac')) $sistemaOperativo = 'macOS';
+        elseif (str_contains($userAgent, 'Linux')) $sistemaOperativo = 'Linux';
+        elseif (str_contains($userAgent, 'Android')) $sistemaOperativo = 'Android';
+        elseif (str_contains($userAgent, 'iOS')) $sistemaOperativo = 'iOS';
+        
+        if (str_contains($userAgent, 'Mobile') || str_contains($userAgent, 'Android') || str_contains($userAgent, 'iPhone')) {
+            $dispositivo = 'Móvil';
+        } elseif (str_contains($userAgent, 'Tablet') || str_contains($userAgent, 'iPad')) {
+            $dispositivo = 'Tablet';
+        }
+        
         return static::create([
-            'entidad_type' => is_object($entidad) ? get_class($entidad) : $entidad,
-            'entidad_id' => is_object($entidad) ? $entidad->id : null,
+            // Campos de migración original
+            'fecha_hora' => now(),
             'usuario_id' => auth()->id(),
-            'accion' => $accion,
-            'descripcion' => $detalles['descripcion'] ?? null,
+            'evento' => $detalles['evento'] ?? $accion,
+            'tabla_afectada' => is_object($entidad) ? $entidad->getTable() : 'desconocida',
+            'registro_id' => is_object($entidad) ? $entidad->id : null,
+            'operacion' => static::mapAccionToOperacion($accion),
             'valores_anteriores' => $detalles['valores_anteriores'] ?? null,
             'valores_nuevos' => $detalles['valores_nuevos'] ?? null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $userAgent,
+            'sesion_id' => session()->getId(),
+            'modulo' => $detalles['modulo'] ?? 'SGDEA',
+            'accion_detalle' => $detalles['descripcion'] ?? null,
+            'resultado' => $detalles['resultado'] ?? 'exitoso',
+            'observaciones' => $detalles['observaciones'] ?? null,
+            // Campos de migraciones adicionales
+            'entidad_type' => is_object($entidad) ? get_class($entidad) : $entidad,
+            'entidad_id' => is_object($entidad) ? $entidad->id : null,
+            'accion' => $accion,
+            'descripcion' => $detalles['descripcion'] ?? null,
             'metadatos_cambios' => $detalles['metadatos_cambios'] ?? null,
             'permisos_anteriores' => $detalles['permisos_anteriores'] ?? null,
             'permisos_nuevos' => $detalles['permisos_nuevos'] ?? null,
-            'contexto_adicional' => $detalles['contexto_adicional'] ?? null
+            'contexto_adicional' => $detalles['contexto_adicional'] ?? null,
+            'navegador' => $navegador,
+            'sistema_operativo' => $sistemaOperativo,
+            'dispositivo' => $dispositivo,
+            'pais' => 'Local' // Se puede mejorar con geolocalización
         ]);
+    }
+
+    /**
+     * Mapear acción a operación de la migración original
+     */
+    private static function mapAccionToOperacion($accion)
+    {
+        $mapeo = [
+            'crear' => 'create',
+            'actualizar' => 'update',
+            'eliminar' => 'delete',
+            'leer' => 'read',
+            'exportar' => 'export',
+            'importar' => 'import',
+            'login' => 'login',
+            'logout' => 'logout',
+            'failed_login' => 'failed_login'
+        ];
+        
+        return $mapeo[$accion] ?? 'create';
     }
 
     /**
