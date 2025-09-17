@@ -88,7 +88,7 @@ class CuadroClasificacionDocumental extends Model
      */
     public function hijos()
     {
-        return $this->hasMany(self::class, 'padre_id')->orderBy('orden');
+        return $this->hasMany(self::class, 'padre_id')->orderBy('orden_jerarquico');
     }
 
     /**
@@ -104,7 +104,7 @@ class CuadroClasificacionDocumental extends Model
      */
     public function creador()
     {
-        return $this->belongsTo(User::class, 'usuario_creador_id');
+        return $this->belongsTo(User::class, 'created_by');  // Corregido: usar nombre real de la columna
     }
 
     /**
@@ -112,7 +112,7 @@ class CuadroClasificacionDocumental extends Model
      */
     public function modificador()
     {
-        return $this->belongsTo(User::class, 'usuario_modificador_id');
+        return $this->belongsTo(User::class, 'updated_by');  // Corregido: usar nombre real de la columna
     }
 
     /**
@@ -211,10 +211,10 @@ class CuadroClasificacionDocumental extends Model
         // Generar número secuencial
         $ultimoHermano = static::where('padre_id', $this->padre_id)
                                 ->where('nivel', $this->nivel)
-                                ->orderBy('orden', 'desc')
+                                ->orderBy('orden_jerarquico', 'desc')
                                 ->first();
         
-        $secuencial = $ultimoHermano ? ($ultimoHermano->orden + 1) : 1;
+        $secuencial = $ultimoHermano ? ($ultimoHermano->orden_jerarquico + 1) : 1;
         
         return $codigoPadre . $prefijo . str_pad($secuencial, 3, '0', STR_PAD_LEFT);
     }
@@ -365,7 +365,7 @@ class CuadroClasificacionDocumental extends Model
         $nodo->addChild('nombre', htmlspecialchars($this->nombre));
         $nodo->addChild('descripcion', htmlspecialchars($this->descripcion));
         $nodo->addChild('nivel', $this->nivel);
-        $nodo->addChild('orden', $this->orden);
+        $nodo->addChild('orden_jerarquico', $this->orden_jerarquico);
         
         if ($incluirDescendientes && $this->hijos->count() > 0) {
             $hijosXml = $nodo->addChild('hijos');

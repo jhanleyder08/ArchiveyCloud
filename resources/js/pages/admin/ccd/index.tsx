@@ -26,6 +26,7 @@ import {
     PowerOff,
     FolderTree
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 
 interface CCD {
@@ -33,21 +34,27 @@ interface CCD {
     codigo: string;
     nombre: string;
     descripcion?: string;
+    entidad: string;  // Campo requerido agregado
+    dependencia?: string;  // Campo agregado
     nivel: number;
     padre_id?: number;
-    orden: number;
+    orden_jerarquico: number;  // Nombre corregido
     estado: 'borrador' | 'activo' | 'inactivo' | 'historico';
     activo: boolean;
-    observaciones?: string;
-    vocabulario_controlado?: any;
-    metadatos?: any;
-    usuario_creador_id?: number;
-    usuario_modificador_id?: number;
+    vocabularios_controlados?: any;  // Nombre corregido
+    notas?: string;  // Campo agregado
+    alcance?: string;  // Campo agregado
+    razon_reubicacion?: string;  // Campo agregado
+    fecha_reubicacion?: string;  // Campo agregado
+    reubicado_por?: string;  // Campo agregado
+    created_by?: number;  // Nombre corregido
+    updated_by?: number;  // Nombre corregido
     created_at: string;
     updated_at: string;
+    deleted_at?: string;  // Campo agregado
     padre?: CCD;
     hijos?: CCD[];
-    usuario_creador?: {
+    creador?: {  // Corregido: usar nombre real de la relación del backend
         id: number;
         name: string;
     };
@@ -83,7 +90,7 @@ interface CCDIndexProps {
 export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDIndexProps) {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [showViewModal, setShowViewModal] = useState(false);
+    const [showViewModal, setShowViewModal] = useState<CCD | null>(null);
     const [selectedCCD, setSelectedCCD] = useState<CCD | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -101,28 +108,38 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
         codigo: '',
         nombre: '',
         descripcion: '',
+        entidad: '',  // Campo requerido agregado
+        dependencia: '',  // Campo agregado
         nivel: 1,
         padre_id: '',
-        orden: 0,
+        orden_jerarquico: 0,  // Nombre corregido
         estado: 'borrador',
         activo: true,
-        observaciones: '',
-        vocabulario_controlado: {},
-        metadatos: {}
+        vocabularios_controlados: [],  // Nombre corregido
+        notas: '',  // Campo agregado
+        alcance: '',  // Campo agregado
+        razon_reubicacion: '',  // Campo agregado
+        fecha_reubicacion: '',  // Campo agregado
+        reubicado_por: ''  // Campo agregado
     });
 
     const [editForm, setEditForm] = useState({
         codigo: '',
         nombre: '',
         descripcion: '',
+        entidad: '',  // Campo requerido agregado
+        dependencia: '',  // Campo agregado
         nivel: 1,
         padre_id: '',
-        orden: 0,
+        orden_jerarquico: 0,  // Nombre corregido
         estado: 'borrador',
         activo: true,
-        observaciones: '',
-        vocabulario_controlado: {},
-        metadatos: {}
+        vocabularios_controlados: [],  // Nombre corregido
+        notas: '',  // Campo agregado
+        alcance: '',  // Campo agregado
+        razon_reubicacion: '',  // Campo agregado
+        fecha_reubicacion: '',  // Campo agregado
+        reubicado_por: ''  // Campo agregado
     });
 
     const handleSearch = () => {
@@ -154,14 +171,19 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     codigo: '',
                     nombre: '',
                     descripcion: '',
+                    entidad: '',  // Campo requerido agregado
+                    dependencia: '',  // Campo agregado
                     nivel: 1,
                     padre_id: '',
-                    orden: 0,
+                    orden_jerarquico: 0,  // Nombre corregido
                     estado: 'borrador',
                     activo: true,
-                    observaciones: '',
-                    vocabulario_controlado: {},
-                    metadatos: {}
+                    vocabularios_controlados: [],  // Nombre corregido
+                    notas: '',  // Campo agregado
+                    alcance: '',  // Campo agregado
+                    razon_reubicacion: '',  // Campo agregado
+                    fecha_reubicacion: '',  // Campo agregado
+                    reubicado_por: ''  // Campo agregado
                 });
                 toast.success('CCD creado exitosamente');
             },
@@ -193,8 +215,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
     };
 
     const handleView = (ccd: CCD) => {
-        setSelectedCCD(ccd);
-        setShowViewModal(true);
+        setShowViewModal(ccd);
     };
 
     const handleEdit = (ccd: CCD) => {
@@ -203,14 +224,19 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
             codigo: ccd.codigo,
             nombre: ccd.nombre,
             descripcion: ccd.descripcion || '',
+            entidad: ccd.entidad || '',  // Campo agregado
+            dependencia: ccd.dependencia || '',  // Campo agregado
             nivel: ccd.nivel,
             padre_id: ccd.padre_id?.toString() || '',
-            orden: ccd.orden,
+            orden_jerarquico: ccd.orden_jerarquico || 0,  // Nombre corregido
             estado: ccd.estado,
             activo: ccd.activo,
-            observaciones: ccd.observaciones || '',
-            vocabulario_controlado: ccd.vocabulario_controlado || {},
-            metadatos: ccd.metadatos || {}
+            vocabularios_controlados: ccd.vocabularios_controlados || [],  // Nombre corregido
+            notas: ccd.notas || '',  // Campo agregado
+            alcance: ccd.alcance || '',  // Campo agregado
+            razon_reubicacion: ccd.razon_reubicacion || '',  // Campo agregado
+            fecha_reubicacion: ccd.fecha_reubicacion || '',  // Campo agregado
+            reubicado_por: ccd.reubicado_por || ''  // Campo agregado
         });
         setShowEditModal(true);
     };
@@ -366,6 +392,28 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
+                                        <Label htmlFor="entidad">Entidad *</Label>
+                                        <Input
+                                            id="entidad"
+                                            value={createForm.entidad}
+                                            onChange={(e) => setCreateForm({...createForm, entidad: e.target.value})}
+                                            placeholder="Nombre de la entidad"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="dependencia">Dependencia</Label>
+                                        <Input
+                                            id="dependencia"
+                                            value={createForm.dependencia}
+                                            onChange={(e) => setCreateForm({...createForm, dependencia: e.target.value})}
+                                            placeholder="Dependencia responsable"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
                                         <Label htmlFor="estado">Estado *</Label>
                                         <Select 
                                             value={createForm.estado} 
@@ -384,24 +432,24 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                         </Select>
                                     </div>
                                     <div>
-                                        <Label htmlFor="orden">Orden</Label>
+                                        <Label htmlFor="orden_jerarquico">Orden Jerárquico</Label>
                                         <Input
-                                            id="orden"
+                                            id="orden_jerarquico"
                                             type="number"
-                                            value={createForm.orden}
-                                            onChange={(e) => setCreateForm({...createForm, orden: parseInt(e.target.value) || 0})}
+                                            value={createForm.orden_jerarquico}
+                                            onChange={(e) => setCreateForm({...createForm, orden_jerarquico: parseInt(e.target.value) || 0})}
                                             min="0"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="observaciones">Observaciones</Label>
+                                    <Label htmlFor="notas">Notas</Label>
                                     <Textarea
-                                        id="observaciones"
-                                        value={createForm.observaciones}
-                                        onChange={(e) => setCreateForm({...createForm, observaciones: e.target.value})}
-                                        placeholder="Observaciones adicionales"
+                                        id="notas"
+                                        value={createForm.notas}
+                                        onChange={(e) => setCreateForm({...createForm, notas: e.target.value})}
+                                        placeholder="Notas adicionales"
                                         rows={3}
                                     />
                                 </div>
@@ -427,33 +475,31 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     </Dialog>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-gray-600">Total CCDs</p>
-                                <p className="text-2xl font-semibold text-gray-900">{estadisticas.total}</p>
+                                <p className="text-sm font-medium text-gray-600">Total CCDs</p>
+                                <p className="text-2xl font-bold text-gray-900">{estadisticas.total}</p>
                             </div>
                             <FolderTree className="h-8 w-8 text-[#2a3d83]" />
                         </div>
                     </div>
-                    
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-gray-600">CCDs Activos</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.activos}</p>
+                                <p className="text-sm font-medium text-gray-600">Activos</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{estadisticas.activos}</p>
                             </div>
                             <CheckCircle className="h-8 w-8 text-[#2a3d83]" />
                         </div>
                     </div>
-                    
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-gray-600">Borradores</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.borradores}</p>
+                                <p className="text-sm font-medium text-gray-600">Borradores</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{estadisticas.borradores}</p>
                             </div>
                             <FileText className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -493,114 +539,173 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                     </div>
                 </div>
 
-                {/* CCDs Table */}
+                {/* Main Table */}
                 <div className="bg-white rounded-lg border overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50 border-b">
+                            <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Código</th>
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Nombre</th>
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Nivel</th>
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Estado</th>
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Activo</th>
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Creado</th>
-                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Acciones</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        CCD
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Entidad
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Nivel
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Estado
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Activo
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Fecha Creación
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Acciones
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                    {data.data.length > 0 ? (
-                                        data.data.map((ccd) => (
-                                            <tr key={ccd.id} className="border-b hover:bg-gray-50">
-                                                <td className="p-4">
-                                                    <div className="font-mono text-sm">{ccd.codigo}</div>
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="font-medium">{ccd.nombre}</div>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {data.data.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <FolderTree className="h-8 w-8 text-gray-300" />
+                                                <p>No se encontraron cuadros de clasificación documental</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    data.data.map((ccd) => (
+                                        <tr key={ccd.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {ccd.codigo}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600 line-clamp-2">
+                                                        {ccd.nombre}
+                                                    </div>
                                                     {ccd.descripcion && (
-                                                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                                                        <div className="text-xs text-gray-500 mt-1 line-clamp-1">
                                                             {ccd.descripcion}
                                                         </div>
                                                     )}
-                                                </td>
-                                                <td className="p-4">
-                                                    {getNivelBadge(ccd.nivel)}
-                                                </td>
-                                                <td className="p-4">
-                                                    {getEstadoBadge(ccd.estado)}
-                                                </td>
-                                                <td className="p-4">
-                                                    <Badge variant={ccd.activo ? "default" : "secondary"} className={ccd.activo ? "bg-green-500" : ""}>
-                                                        {ccd.activo ? 'Sí' : 'No'}
-                                                    </Badge>
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="text-sm">
-                                                        {new Date(ccd.created_at).toLocaleDateString('es-ES')}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-gray-900">
+                                                    {ccd.entidad}
+                                                </div>
+                                                {ccd.dependencia && (
+                                                    <div className="text-xs text-gray-500 line-clamp-1">
+                                                        {ccd.dependencia}
                                                     </div>
-                                                    {ccd.usuario_creador && (
-                                                        <div className="text-xs text-gray-500">
-                                                            por {ccd.usuario_creador.name}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-1 justify-end">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleView(ccd)}
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleEdit(ccd)}
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleDuplicate(ccd)}
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Copy className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleToggleActive(ccd)}
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            {ccd.activo ? (
-                                                                <PowerOff className="h-4 w-4 text-red-500" />
-                                                            ) : (
-                                                                <Power className="h-4 w-4 text-green-500" />
-                                                            )}
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleDelete(ccd)}
-                                                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={7} className="p-8 text-center text-gray-500">
-                                                No se encontraron cuadros de clasificación documental.
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {getNivelBadge(ccd.nivel)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {getEstadoBadge(ccd.estado)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <Badge variant={ccd.activo ? "default" : "secondary"} className={ccd.activo ? "bg-green-500" : ""}>
+                                                    {ccd.activo ? 'Sí' : 'No'}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-gray-900">
+                                                    {new Date(ccd.created_at).toLocaleDateString('es-ES')}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleView(ccd)}
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Ver detalles</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleEdit(ccd)}
+                                                                >
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Editar</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDuplicate(ccd)}
+                                                                >
+                                                                    <Copy className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Duplicar</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleToggleActive(ccd)}
+                                                                >
+                                                                    {ccd.activo ? (
+                                                                        <PowerOff className="h-4 w-4 text-red-500" />
+                                                                    ) : (
+                                                                        <Power className="h-4 w-4 text-green-500" />
+                                                                    )}
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                {ccd.activo ? 'Desactivar' : 'Activar'}
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDelete(ccd)}
+                                                                    className="text-red-600 hover:text-red-700"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>Eliminar</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                </div>
                                             </td>
                                         </tr>
-                                    )}
+                                    ))
+                                )}
                                 </tbody>
                             </table>
                         </div>
@@ -618,7 +723,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                 </div>
 
                 {/* Modal de Edición */}
-            <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+            <Dialog open={showEditModal} onOpenChange={(open) => { if (!open) { setShowEditModal(false); setSelectedCCD(null); } }}>
                 <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-semibold text-gray-900">Editar CCD</DialogTitle>
@@ -701,24 +806,24 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                     </Select>
                                 </div>
                                 <div>
-                                    <Label htmlFor="edit-orden">Orden</Label>
+                                    <Label htmlFor="edit-orden_jerarquico">Orden Jerárquico</Label>
                                     <Input
-                                        id="edit-orden"
+                                        id="edit-orden_jerarquico"
                                         type="number"
-                                        value={editForm.orden}
-                                        onChange={(e) => setEditForm({...editForm, orden: parseInt(e.target.value) || 0})}
+                                        value={editForm.orden_jerarquico}
+                                        onChange={(e) => setEditForm({...editForm, orden_jerarquico: parseInt(e.target.value) || 0})}
                                         min="0"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <Label htmlFor="edit-observaciones">Observaciones</Label>
+                                <Label htmlFor="edit-notas">Notas</Label>
                                 <Textarea
-                                    id="edit-observaciones"
-                                    value={editForm.observaciones}
-                                    onChange={(e) => setEditForm({...editForm, observaciones: e.target.value})}
-                                    placeholder="Observaciones adicionales"
+                                    id="edit-notas"
+                                    value={editForm.notas}
+                                    onChange={(e) => setEditForm({...editForm, notas: e.target.value})}
+                                    placeholder="Notas adicionales"
                                     rows={3}
                                 />
                             </div>
@@ -744,119 +849,77 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                 </DialogContent>
             </Dialog>
 
-            {/* Modal de Ver Detalles */}
-            <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
-                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold text-gray-900">Detalles del CCD</DialogTitle>
-                        <DialogDescription className="text-sm text-gray-600">
-                            Información completa del Cuadro de Clasificación Documental.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {selectedCCD && (
-                        <div className="space-y-6">
+            {/* View Modal */}
+            {showViewModal && (
+                <Dialog open={!!showViewModal} onOpenChange={() => setShowViewModal(null)}>
+                    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        <DialogHeader>
+                            <DialogTitle>Detalles del CCD</DialogTitle>
+                            <DialogDescription>
+                                Información completa del Cuadro de Clasificación Documental.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label className="text-sm font-medium text-gray-700">Código</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md font-mono text-sm">
-                                        {selectedCCD?.codigo}
-                                    </div>
+                                    <Label className="text-sm font-medium text-gray-500">Código</Label>
+                                    <p className="text-sm text-gray-900">{showViewModal.codigo}</p>
                                 </div>
                                 <div>
-                                    <Label className="text-sm font-medium text-gray-700">Nivel</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md">
-                                         {getNivelBadge(selectedCCD?.nivel || 1)}
-                                    </div>
+                                    <Label className="text-sm font-medium text-gray-500">Estado</Label>
+                                    <div className="mt-1">{getEstadoBadge(showViewModal.estado)}</div>
                                 </div>
                             </div>
-
                             <div>
-                                <Label className="text-sm font-medium text-gray-700">Nombre</Label>
-                                <div className="mt-1 p-2 bg-gray-50 rounded-md">
-                                     {selectedCCD?.nombre}
-                                </div>
+                                <Label className="text-sm font-medium text-gray-500">Nombre</Label>
+                                <p className="text-sm text-gray-900">{showViewModal.nombre}</p>
                             </div>
-
-                            {selectedCCD?.descripcion && (
-                                <div>
-                                    <Label className="text-sm font-medium text-gray-700">Descripción</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                                         {selectedCCD?.descripcion}
-                                    </div>
-                                </div>
-                            )}
-
+                            <div>
+                                <Label className="text-sm font-medium text-gray-500">Descripción</Label>
+                                <p className="text-sm text-gray-900">{showViewModal.descripcion}</p>
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label className="text-sm font-medium text-gray-700">Estado</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md">
-                                         {getEstadoBadge(selectedCCD?.estado || 'borrador')}
-                                    </div>
+                                    <Label className="text-sm font-medium text-gray-500">Entidad</Label>
+                                    <p className="text-sm text-gray-900">{showViewModal.entidad}</p>
                                 </div>
                                 <div>
-                                    <Label className="text-sm font-medium text-gray-700">Activo</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md">
-                                         <Badge variant={selectedCCD?.activo ? "default" : "secondary"} className={selectedCCD?.activo ? "bg-green-500" : ""}>
-                                            {selectedCCD?.activo ? 'Sí' : 'No'}
+                                    <Label className="text-sm font-medium text-gray-500">Dependencia</Label>
+                                    <p className="text-sm text-gray-900">{showViewModal.dependencia || 'No especificada'}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-sm font-medium text-gray-500">Nivel</Label>
+                                    <div className="mt-1">{getNivelBadge(showViewModal.nivel)}</div>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium text-gray-500">Activo</Label>
+                                    <div className="mt-1">
+                                        <Badge variant={showViewModal.activo ? "default" : "secondary"} className={showViewModal.activo ? "bg-green-500" : ""}>
+                                            {showViewModal.activo ? 'Sí' : 'No'}
                                         </Badge>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
+                            {showViewModal.notas && (
                                 <div>
-                                    <Label className="text-sm font-medium text-gray-700">Orden</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                                         {selectedCCD?.orden}
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label className="text-sm font-medium text-gray-700">Fecha de Creación</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                                         {selectedCCD?.created_at ? new Date(selectedCCD.created_at).toLocaleDateString('es-ES') : 'N/A'}
-                                    </div>
-                                </div>
-                            </div>
-
-                             {selectedCCD?.observaciones && (
-                                <div>
-                                    <Label className="text-sm font-medium text-gray-700">Observaciones</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                                         {selectedCCD?.observaciones}
-                                    </div>
+                                    <Label className="text-sm font-medium text-gray-500">Notas</Label>
+                                    <p className="text-sm text-gray-900">{showViewModal.notas}</p>
                                 </div>
                             )}
-
-                             {selectedCCD?.padre && (
-                                <div>
-                                    <Label className="text-sm font-medium text-gray-700">Elemento Padre</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                                         <span className="font-mono">{selectedCCD?.padre?.codigo}</span> - {selectedCCD?.padre?.nombre}
-                                    </div>
-                                </div>
-                            )}
-
-                             {selectedCCD?.usuario_creador && (
-                                <div>
-                                    <Label className="text-sm font-medium text-gray-700">Creado por</Label>
-                                    <div className="mt-1 p-2 bg-gray-50 rounded-md text-sm">
-                                         {selectedCCD?.usuario_creador?.name}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end pt-4">
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => setShowViewModal(false)}
-                                >
-                                    Cerrar
-                                </Button>
+                            <div>
+                                <Label className="text-sm font-medium text-gray-500">Fecha de Creación</Label>
+                                <p className="text-sm text-gray-900">{new Date(showViewModal.created_at).toLocaleDateString('es-ES', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}</p>
                             </div>
                         </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+                    </DialogContent>
+                </Dialog>
+            )}
         </AppLayout>
     );
 }

@@ -16,9 +16,9 @@ class AdminCCDController extends Controller
      */
     public function index(Request $request)
     {
-        $query = CuadroClasificacionDocumental::with(['padre', 'hijos', 'usuarioCreador'])
+        $query = CuadroClasificacionDocumental::with(['padre', 'hijos', 'creador'])  // Corregido: usar nombre real de la relación
             ->orderBy('nivel')
-            ->orderBy('orden')
+            ->orderBy('orden_jerarquico')  // Corregido: usar nombre real de la columna
             ->orderBy('codigo');
 
         // Filtros
@@ -202,6 +202,8 @@ class AdminCCDController extends Controller
      */
     public function duplicate(CuadroClasificacionDocumental $ccd)
     {
+        \Log::info('DUPLICATE: Iniciando duplicación del CCD', ['ccd_id' => $ccd->id, 'codigo' => $ccd->codigo]);
+        
         DB::beginTransaction();
         
         try {
@@ -214,21 +216,41 @@ class AdminCCDController extends Controller
                 $nuevoCodigo = $baseCodigo . '_' . $contador;
                 $contador++;
             }
+            
+            \Log::info('DUPLICATE: Código generado', ['nuevo_codigo' => $nuevoCodigo]);
 
             $nuevoCcd = $ccd->replicate();
             $nuevoCcd->codigo = $nuevoCodigo;
             $nuevoCcd->nombre = $ccd->nombre . ' (Copia)';
-            $nuevoCcd->estado = 'borrador';
+            $nuevoCcd->estado = $ccd->estado;  // Corregido: usar el mismo estado del CCD original
             $nuevoCcd->activo = true;
-            $nuevoCcd->usuario_creador_id = auth()->id();
-            $nuevoCcd->usuario_modificador_id = null;
-            $nuevoCcd->save();
+            $nuevoCcd->created_by = auth()->id();
+            $nuevoCcd->updated_by = null;
+            
+            \Log::info('DUPLICATE: Datos del nuevo CCD preparados', [
+                'codigo' => $nuevoCcd->codigo,
+                'nombre' => $nuevoCcd->nombre,
+                'created_by' => $nuevoCcd->created_by,
+                'estado' => $nuevoCcd->estado
+            ]);
+            
+            $resultado = $nuevoCcd->save();
+            
+            \Log::info('DUPLICATE: Resultado del save()', ['resultado' => $resultado, 'nuevo_id' => $nuevoCcd->id]);
 
             DB::commit();
+            
+            \Log::info('DUPLICATE: Transacción committeada exitosamente');
             
             return redirect()->back()->with('success', 'Cuadro de Clasificación Documental duplicado exitosamente.');
         } catch (\Exception $e) {
             DB::rollback();
+            \Log::error('DUPLICATE: Error en duplicación', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()->back()->with('error', 'Error al duplicar el CCD: ' . $e->getMessage());
         }
     }
