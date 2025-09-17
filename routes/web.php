@@ -42,6 +42,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('ccd', App\Http\Controllers\Admin\AdminCCDController::class);
         Route::post('ccd/{ccd}/duplicate', [App\Http\Controllers\Admin\AdminCCDController::class, 'duplicate'])->name('ccd.duplicate');
         Route::patch('ccd/{ccd}/toggle-active', [App\Http\Controllers\Admin\AdminCCDController::class, 'toggleActive'])->name('ccd.toggle-active');
+        
+        // Documentos routes
+        Route::resource('documentos', App\Http\Controllers\AdminDocumentController::class);
+        Route::post('documentos/{documento}/version', [App\Http\Controllers\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
+        Route::post('documentos/{documento}/firmar', [App\Http\Controllers\AdminDocumentController::class, 'firmarDigitalmente'])->name('documentos.firmar');
+        Route::post('documentos/{documento}/convertir', [App\Http\Controllers\AdminDocumentController::class, 'convertirFormato'])->name('documentos.convertir');
+        Route::get('documentos/{documento}/descargar', [App\Http\Controllers\AdminDocumentController::class, 'descargar'])->name('documentos.descargar');
+        Route::get('documentos/{documento}/preview', [App\Http\Controllers\AdminDocumentController::class, 'preview'])->name('documentos.preview');
+        Route::get('documentos/{documento}/exportar', [App\Http\Controllers\AdminDocumentController::class, 'exportar'])->name('documentos.exportar');
+        Route::get('documentos-estadisticas', [App\Http\Controllers\AdminDocumentController::class, 'estadisticas'])->name('documentos.estadisticas');
+        
+        // Módulo de Retención y Disposición
+        Route::prefix('retencion-disposicion')->name('retencion.')->group(function () {
+            Route::get('/', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'index'])->name('index');
+            Route::get('/{proceso}', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'show'])->name('show');
+            Route::post('/crear', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'crearProceso'])->name('crear');
+            
+            // Acciones de disposición
+            Route::post('/{proceso}/ejecutar-disposicion', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'ejecutarDisposicion'])->name('ejecutar-disposicion');
+            Route::post('/{proceso}/aplazar', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'aplazarDisposicion'])->name('aplazar');
+            Route::post('/{proceso}/reactivar', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'reactivarProceso'])->name('reactivar');
+            Route::post('/{proceso}/bloquear-eliminacion', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'bloquearEliminacion'])->name('bloquear-eliminacion');
+            Route::post('/{proceso}/desbloquear-eliminacion', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'desbloquearEliminacion'])->name('desbloquear-eliminacion');
+            
+            // Gestión de alertas
+            Route::get('/alertas', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'gestionarAlertas'])->name('alertas');
+            Route::post('/alertas/{alerta}/leer', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'marcarAlertaLeida'])->name('alerta.leer');
+            Route::post('/alertas/{alerta}/atender', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'marcarAlertaAtendida'])->name('alerta.atender');
+            
+            // Reportes y procesos masivos
+            Route::get('/reportes', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'reportes'])->name('reportes');
+            Route::post('/procesar-masivo', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'procesarActualizacionesMasivas'])->name('procesar-masivo');
+        });
     });
 });
 

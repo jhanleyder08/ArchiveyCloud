@@ -11,32 +11,97 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Enfoque simplificado: solo agregar lo que realmente falta
         Schema::table('cuadros_clasificacion_documental', function (Blueprint $table) {
-            // Agregar todas las columnas faltantes
-            $table->string('codigo', 50)->nullable()->after('id');
-            $table->string('nombre', 255)->after('codigo');
-            $table->text('descripcion')->after('nombre');
-            $table->integer('nivel')->default(1)->after('descripcion');
-            $table->unsignedBigInteger('padre_id')->nullable()->after('nivel');
-            $table->integer('orden_jerarquico')->default(0)->after('padre_id');
-            $table->enum('estado', ['borrador', 'activo', 'inactivo'])->default('borrador')->after('orden_jerarquico');
-            $table->json('metadatos')->nullable()->after('estado');
-            $table->unsignedBigInteger('usuario_creador_id')->nullable()->after('metadatos');
-            $table->unsignedBigInteger('usuario_modificador_id')->nullable()->after('usuario_creador_id');
-            $table->boolean('activo')->default(true)->after('usuario_modificador_id');
-            $table->softDeletes()->after('updated_at');
+            // Como ya sabemos que 'codigo' existe, solo agregamos las columnas que faltan
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'nombre')) {
+                $table->string('nombre', 255)->nullable()->after('entidad');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'descripcion')) {
+                $table->text('descripcion')->nullable()->after('nombre');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'nivel')) {
+                $table->integer('nivel')->default(1)->after('descripcion');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'padre_id')) {
+                $table->unsignedBigInteger('padre_id')->nullable()->after('nivel');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'estado')) {
+                $table->enum('estado', ['borrador', 'activo', 'inactivo'])->default('borrador')->after('orden_jerarquico');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'metadatos')) {
+                $table->json('metadatos')->nullable()->after('estado');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'usuario_creador_id')) {
+                $table->unsignedBigInteger('usuario_creador_id')->nullable()->after('metadatos');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'usuario_modificador_id')) {
+                $table->unsignedBigInteger('usuario_modificador_id')->nullable()->after('usuario_creador_id');
+            }
+            if (!Schema::hasColumn('cuadros_clasificacion_documental', 'deleted_at')) {
+                $table->softDeletes()->after('updated_at');
+            }
+        });
+        
+        // Agregar relaciones e índices con manejo de errores
+        Schema::table('cuadros_clasificacion_documental', function (Blueprint $table) {
+            try {
+                // Intentar agregar foreign keys (si ya existen, se ignorará el error)
+                if (Schema::hasColumn('cuadros_clasificacion_documental', 'padre_id')) {
+                    $table->foreign('padre_id')->references('id')->on('cuadros_clasificacion_documental')->onDelete('cascade');
+                }
+            } catch (\Exception $e) {
+                // Ignorar si ya existe
+            }
             
-            // Agregar índices y relaciones
-            $table->foreign('padre_id')->references('id')->on('cuadros_clasificacion_documental')->onDelete('cascade');
-            $table->foreign('usuario_creador_id')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('usuario_modificador_id')->references('id')->on('users')->onDelete('set null');
+            try {
+                if (Schema::hasColumn('cuadros_clasificacion_documental', 'usuario_creador_id')) {
+                    $table->foreign('usuario_creador_id')->references('id')->on('users')->onDelete('set null');
+                }
+            } catch (\Exception $e) {
+                // Ignorar si ya existe
+            }
             
-            // Índices para búsquedas
-            $table->index('codigo');
-            $table->index('nivel');
-            $table->index('padre_id');
-            $table->index('estado');
-            $table->unique(['codigo'], 'unique_codigo_ccd');
+            try {
+                if (Schema::hasColumn('cuadros_clasificacion_documental', 'usuario_modificador_id')) {
+                    $table->foreign('usuario_modificador_id')->references('id')->on('users')->onDelete('set null');
+                }
+            } catch (\Exception $e) {
+                // Ignorar si ya existe
+            }
+            
+            // Agregar índices con manejo de errores
+            try {
+                if (Schema::hasColumn('cuadros_clasificacion_documental', 'codigo')) {
+                    $table->index('codigo');
+                }
+            } catch (\Exception $e) {
+                // Ignorar si ya existe
+            }
+            
+            try {
+                if (Schema::hasColumn('cuadros_clasificacion_documental', 'nivel')) {
+                    $table->index('nivel');
+                }
+            } catch (\Exception $e) {
+                // Ignorar si ya existe
+            }
+            
+            try {
+                if (Schema::hasColumn('cuadros_clasificacion_documental', 'padre_id')) {
+                    $table->index('padre_id');
+                }
+            } catch (\Exception $e) {
+                // Ignorar si ya existe
+            }
+            
+            try {
+                if (Schema::hasColumn('cuadros_clasificacion_documental', 'estado')) {
+                    $table->index('estado');
+                }
+            } catch (\Exception $e) {
+                // Ignorar si ya existe
+            }
         });
     }
 

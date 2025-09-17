@@ -2,10 +2,10 @@ import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/index';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell } from 'lucide-react';
 import AppLogo from './app-logo';
 import SupportModal from './support-modal';
 import { useState } from 'react';
@@ -45,6 +45,16 @@ const mainNavItems: NavItem[] = [
                 title: 'Cuadros de Clasificación Documental',
                 href: '/admin/ccd',
                 icon: FolderTree,
+            },
+            {
+                title: 'Documentos',
+                href: '/admin/documentos',
+                icon: File,
+            },
+            {
+                title: 'Retención y Disposición',
+                href: '/admin/retencion-disposicion',
+                icon: Clock,
             },
         ],
     },
