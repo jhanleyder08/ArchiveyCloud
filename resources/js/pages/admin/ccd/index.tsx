@@ -22,8 +22,8 @@ import {
     Users,
     CheckCircle,
     AlertCircle,
-    Power,
-    PowerOff,
+    ToggleLeft,
+    ToggleRight,
     FolderTree
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -91,6 +91,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showViewModal, setShowViewModal] = useState<CCD | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState<CCD | null>(null);
     const [selectedCCD, setSelectedCCD] = useState<CCD | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -241,13 +242,14 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
         setShowEditModal(true);
     };
 
-    const handleDelete = (ccd: CCD) => {
-        if (!confirm('¿Está seguro de eliminar este CCD? Esta acción no se puede deshacer.')) {
-            return;
-        }
+    const handleDelete = () => {
+        if (!showDeleteModal) return;
 
-        router.delete(`/admin/ccd/${ccd.id}`, {
-            onSuccess: () => toast.success('CCD eliminado exitosamente'),
+        router.delete(`/admin/ccd/${showDeleteModal.id}`, {
+            onSuccess: () => {
+                toast.success('CCD eliminado exitosamente');
+                setShowDeleteModal(null);
+            },
             onError: () => toast.error('Error al eliminar el CCD')
         });
     };
@@ -271,10 +273,10 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
 
     const getEstadoBadge = (estado: string) => {
         const colors = {
-            'borrador': 'bg-gray-500',
-            'activo': 'bg-green-500',
-            'inactivo': 'bg-red-500',
-            'historico': 'bg-yellow-500'
+            'borrador': 'bg-gray-100 text-gray-800',
+            'activo': 'bg-green-100 text-green-800',
+            'inactivo': 'bg-red-100 text-red-800',
+            'historico': 'bg-yellow-100 text-yellow-800'
         };
         
         const labels = {
@@ -285,27 +287,27 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
         };
         
         return (
-            <Badge variant="default" className={colors[estado as keyof typeof colors] || 'bg-gray-500'}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[estado as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
                 {labels[estado as keyof typeof labels] || estado}
-            </Badge>
+            </span>
         );
     };
 
     const getNivelBadge = (nivel: number) => {
         const niveles = {
-            1: { label: 'Fondo', color: 'bg-blue-500' },
-            2: { label: 'Sección', color: 'bg-purple-500' },
-            3: { label: 'Subsección', color: 'bg-indigo-500' },
-            4: { label: 'Serie', color: 'bg-teal-500' },
-            5: { label: 'Subserie', color: 'bg-cyan-500' }
+            1: { label: 'Fondo', color: 'bg-blue-100 text-[#2a3d83]' },
+            2: { label: 'Sección', color: 'bg-purple-100 text-purple-800' },
+            3: { label: 'Subsección', color: 'bg-indigo-100 text-indigo-800' },
+            4: { label: 'Serie', color: 'bg-teal-100 text-teal-800' },
+            5: { label: 'Subserie', color: 'bg-cyan-100 text-cyan-800' }
         };
         
-        const nivelData = niveles[nivel as keyof typeof niveles] || { label: `Nivel ${nivel}`, color: 'bg-gray-500' };
+        const nivelData = niveles[nivel as keyof typeof niveles] || { label: `Nivel ${nivel}`, color: 'bg-gray-100 text-gray-800' };
         
         return (
-            <Badge variant="default" className={nivelData.color}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${nivelData.color}`}>
                 {nivelData.label}
-            </Badge>
+            </span>
         );
     };
 
@@ -613,9 +615,11 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                                 {getEstadoBadge(ccd.estado)}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <Badge variant={ccd.activo ? "default" : "secondary"} className={ccd.activo ? "bg-green-500" : ""}>
-                                                    {ccd.activo ? 'Sí' : 'No'}
-                                                </Badge>
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    ccd.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                    {ccd.activo ? 'Sí' : 'No'}
+                                </span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-sm text-gray-900">
@@ -631,6 +635,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleView(ccd)}
+                                                                    className="text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50"
                                                                 >
                                                                     <Eye className="h-4 w-4" />
                                                                 </Button>
@@ -645,6 +650,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleEdit(ccd)}
+                                                                    className="text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50"
                                                                 >
                                                                     <Edit className="h-4 w-4" />
                                                                 </Button>
@@ -659,6 +665,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleDuplicate(ccd)}
+                                                                    className="text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50"
                                                                 >
                                                                     <Copy className="h-4 w-4" />
                                                                 </Button>
@@ -673,11 +680,16 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleToggleActive(ccd)}
+                                                                    className={`${
+                                                                        ccd.activo 
+                                                                            ? 'text-orange-600 hover:text-orange-800 hover:bg-orange-50' 
+                                                                            : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                                                                    }`}
                                                                 >
                                                                     {ccd.activo ? (
-                                                                        <PowerOff className="h-4 w-4 text-red-500" />
+                                                                        <ToggleLeft className="h-4 w-4" />
                                                                     ) : (
-                                                                        <Power className="h-4 w-4 text-green-500" />
+                                                                        <ToggleRight className="h-4 w-4" />
                                                                     )}
                                                                 </Button>
                                                             </TooltipTrigger>
@@ -692,7 +704,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    onClick={() => handleDelete(ccd)}
+                                                                    onClick={() => setShowDeleteModal(ccd)}
                                                                     className="text-red-600 hover:text-red-700"
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
@@ -916,6 +928,42 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                     day: 'numeric'
                                 })}</p>
                             </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {/* Delete Modal */}
+            {showDeleteModal && (
+                <Dialog open={!!showDeleteModal} onOpenChange={() => setShowDeleteModal(null)}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Confirmar Eliminación</DialogTitle>
+                            <DialogDescription>
+                                ¿Está seguro de que desea eliminar el CCD "{showDeleteModal.nombre}"? Esta acción no se puede deshacer.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex items-center space-x-2">
+                            <div className="grid flex-1 gap-2">
+                                <p className="text-sm text-gray-600">
+                                    <strong>Código:</strong> {showDeleteModal.codigo}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowDeleteModal(null)}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDelete}
+                                disabled={loading}
+                            >
+                                Eliminar
+                            </Button>
                         </div>
                     </DialogContent>
                 </Dialog>

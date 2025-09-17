@@ -209,24 +209,24 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
 
     const getEstadoBadge = (activa: boolean) => {
         if (activa) {
-            return <Badge variant="default" className="bg-green-500">Activa</Badge>;
+            return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activa</span>;
         } else {
-            return <Badge variant="secondary">Inactiva</Badge>;
+            return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactiva</span>;
         }
     };
 
     const getDisposicionBadge = (disposicion: string) => {
         const colors = {
-            'conservacion_permanente': 'bg-blue-500',
-            'eliminacion': 'bg-red-500',
-            'seleccion': 'bg-yellow-500',
-            'microfilmacion': 'bg-purple-500'
+            'conservacion_permanente': 'bg-blue-100 text-[#2a3d83]',
+            'eliminacion': 'bg-red-100 text-red-800',
+            'seleccion': 'bg-yellow-100 text-yellow-800',
+            'microfilmacion': 'bg-purple-100 text-purple-800'
         };
         
         return (
-            <Badge variant="default" className={colors[disposicion as keyof typeof colors] || 'bg-gray-500'}>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[disposicion as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
                 {disposicionesFinales[disposicion as keyof typeof disposicionesFinales] || disposicion}
-            </Badge>
+            </span>
         );
     };
 
@@ -634,6 +634,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => setShowViewModal(serie)}
+                                                                    className="text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50"
                                                                 >
                                                                     <Eye className="h-4 w-4" />
                                                                 </Button>
@@ -648,6 +649,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => setShowEditModal(serie)}
+                                                                    className="text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50"
                                                                 >
                                                                     <Edit className="h-4 w-4" />
                                                                 </Button>
@@ -662,6 +664,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleDuplicate(serie)}
+                                                                    className="text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50"
                                                                 >
                                                                     <Copy className="h-4 w-4" />
                                                                 </Button>
@@ -676,11 +679,16 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleToggleActive(serie)}
+                                                                    className={`${
+                                                                        serie.activa 
+                                                                            ? 'text-orange-600 hover:text-orange-800 hover:bg-orange-50' 
+                                                                            : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                                                                    }`}
                                                                 >
                                                                     {serie.activa ? (
-                                                                        <ToggleLeft className="h-4 w-4 text-gray-500" />
+                                                                        <ToggleLeft className="h-4 w-4" />
                                                                     ) : (
-                                                                        <ToggleRight className="h-4 w-4 text-green-500" />
+                                                                        <ToggleRight className="h-4 w-4" />
                                                                     )}
                                                                 </Button>
                                                             </TooltipTrigger>
