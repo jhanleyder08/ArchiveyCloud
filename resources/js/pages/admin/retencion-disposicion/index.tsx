@@ -10,8 +10,14 @@ import { toast } from 'sonner';
 import { 
     Search, Eye, Clock, AlertTriangle, Archive, Send, Trash2, 
     PauseCircle, PlayCircle, Lock, Unlock, AlertCircle, CheckCircle,
-    FileText, Calendar, Bell, TrendingUp, Filter, RefreshCw
+    FileText, Calendar, Bell, TrendingUp, Filter, RefreshCw, Plus
 } from 'lucide-react';
+
+const breadcrumbItems = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Administración', href: '#' },
+    { title: 'Retención y Disposición', href: '/admin/retencion-disposicion' },
+];
 
 interface ProcesoRetencion {
     id: number;
@@ -105,11 +111,12 @@ interface Props {
 
 export default function AdminRetencionDisposicionIndex({ procesos, stats, filtros, trdOptions, flash }: Props) {
     const [searchQuery, setSearchQuery] = useState(filtros.search || '');
-    const [estadoFilter, setEstadoFilter] = useState(filtros.estado || '');
-    const [tipoEntidadFilter, setTipoEntidadFilter] = useState(filtros.tipo_entidad || '');
-    const [prioridadFilter, setPrioridadFilter] = useState(filtros.prioridad || '');
-    const [trdFilter, setTrdFilter] = useState(filtros.trd_id || '');
+    const [estadoFilter, setEstadoFilter] = useState(filtros.estado || 'all');
+    const [tipoEntidadFilter, setTipoEntidadFilter] = useState(filtros.tipo_entidad || 'all');
+    const [prioridadFilter, setPrioridadFilter] = useState(filtros.prioridad || 'all');
+    const [trdFilter, setTrdFilter] = useState(filtros.trd_id || 'all');
     const [procesando, setProcesando] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
 
     // Manejar filtros
     const handleFilterChange = (key: string, value: string) => {
@@ -192,178 +199,175 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Retención y Disposición" />
 
-            <div className="p-6">
+            <div className="p-6 space-y-6">
                 {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">Gestión de Retención y Disposición</h1>
-                    <p className="mt-1 text-sm text-gray-600">
-                        Control automatizado de períodos de retención y disposición documental
-                    </p>
+                <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-6 w-6 text-[#2a3d83]" />
+                        <h1 className="text-2xl font-semibold text-gray-900">
+                            Retención y Disposición
+                        </h1>
+                    </div>
+                    <Button 
+                        onClick={procesarActualizacionesMasivas}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors"
+                        disabled={procesando}
+                    >
+                        <RefreshCw className={`h-4 w-4 ${procesando ? 'animate-spin' : ''}`} />
+                        {procesando ? 'Procesando...' : 'Actualizar Procesos'}
+                    </Button>
                 </div>
 
-                {/* Estadísticas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-white rounded-lg border p-6">
-                        <div className="flex items-center">
-                            <div className="p-3 bg-blue-100 rounded-full">
-                                <FileText className="h-6 w-6 text-blue-600" />
-                            </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">Total Procesos</p>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Procesos</p>
                                 <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-lg border p-6">
-                        <div className="flex items-center">
-                            <div className="p-3 bg-red-100 rounded-full">
-                                <AlertTriangle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">Críticos</p>
-                                <p className="text-2xl font-semibold text-gray-900">{stats.criticos}</p>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <FileText className="h-6 w-6 text-[#2a3d83]" />
                             </div>
                         </div>
                     </div>
-
+                    
                     <div className="bg-white rounded-lg border p-6">
-                        <div className="flex items-center">
-                            <div className="p-3 bg-yellow-100 rounded-full">
-                                <Bell className="h-6 w-6 text-yellow-600" />
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Procesos Activos</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.activos}</p>
                             </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">En Alerta</p>
-                                <p className="text-2xl font-semibold text-gray-900">{stats.en_alerta}</p>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-white rounded-full"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
+                    
                     <div className="bg-white rounded-lg border p-6">
-                        <div className="flex items-center">
-                            <div className="p-3 bg-green-100 rounded-full">
-                                <Archive className="h-6 w-6 text-green-600" />
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Vencidos</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.vencidos}</p>
                             </div>
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">Conservados</p>
-                                <p className="text-2xl font-semibold text-gray-900">{stats.conservados}</p>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-white rounded-full"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Filtros y acciones */}
-                <div className="bg-white rounded-lg border p-4 mb-6">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="flex-1">
-                            <Input
-                                placeholder="Buscar por código, documento, expediente..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleFilterChange('search', searchQuery)}
-                                className="w-full"
-                                icon={<Search className="h-4 w-4 text-gray-400" />}
-                            />
+                {/* Search and Filters */}
+                <div className="bg-white rounded-lg border p-6">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-80">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleFilterChange('search', searchQuery)}
+                                    placeholder="Buscar procesos..."
+                                    className="pl-10"
+                                />
+                            </div>
                         </div>
-                        
-                        <Select value={estadoFilter} onValueChange={(value) => handleFilterChange('estado', value)}>
-                            <SelectTrigger className="w-full lg:w-[180px]">
-                                <SelectValue placeholder="Estado" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="activo">Activo</SelectItem>
-                                <SelectItem value="alerta_previa">Alerta Previa</SelectItem>
-                                <SelectItem value="vencido">Vencido</SelectItem>
-                                <SelectItem value="en_disposicion">En Disposición</SelectItem>
-                                <SelectItem value="transferido">Transferido</SelectItem>
-                                <SelectItem value="eliminado">Eliminado</SelectItem>
-                                <SelectItem value="conservado">Conservado</SelectItem>
-                                <SelectItem value="aplazado">Aplazado</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <Select value={tipoEntidadFilter} onValueChange={(value) => handleFilterChange('tipo_entidad', value)}>
-                            <SelectTrigger className="w-full lg:w-[180px]">
-                                <SelectValue placeholder="Tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="documento">Documentos</SelectItem>
-                                <SelectItem value="expediente">Expedientes</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <Select value={prioridadFilter} onValueChange={(value) => handleFilterChange('prioridad', value)}>
-                            <SelectTrigger className="w-full lg:w-[180px]">
-                                <SelectValue placeholder="Prioridad" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas</SelectItem>
-                                <SelectItem value="criticos">Críticos</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <div className="flex gap-2">
-                            <Link href="/admin/retencion-disposicion/alertas">
-                                <Button variant="outline">
-                                    <Bell className="h-4 w-4 mr-2" />
-                                    Alertas
-                                </Button>
-                            </Link>
-                            
-                            <Link href="/admin/retencion-disposicion/reportes">
-                                <Button variant="outline">
-                                    <TrendingUp className="h-4 w-4 mr-2" />
-                                    Reportes
-                                </Button>
-                            </Link>
-                            
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button 
-                                            variant="outline"
-                                            onClick={procesarActualizacionesMasivas}
-                                            disabled={procesando}
-                                        >
-                                            <RefreshCw className={`h-4 w-4 ${procesando ? 'animate-spin' : ''}`} />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Procesar actualizaciones masivas</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+                        <div className="flex items-center gap-2">
+                            <Select value={estadoFilter} onValueChange={(value) => handleFilterChange('estado', value)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Filtro por estado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los estados</SelectItem>
+                                    <SelectItem value="activo">Activo</SelectItem>
+                                    <SelectItem value="alerta_previa">Alerta Previa</SelectItem>
+                                    <SelectItem value="vencido">Vencido</SelectItem>
+                                    <SelectItem value="en_disposicion">En Disposición</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setShowFilters(!showFilters)}
+                            >
+                                <Filter className="h-4 w-4" />
+                            </Button>
                         </div>
                     </div>
+
+                    {showFilters && (
+                        <div className="mt-4 pt-4 border-t">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Select value={tipoEntidadFilter} onValueChange={(value) => handleFilterChange('tipo_entidad', value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Tipo de Entidad" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos los tipos</SelectItem>
+                                        <SelectItem value="documento">Documento</SelectItem>
+                                        <SelectItem value="expediente">Expediente</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={prioridadFilter} onValueChange={(value) => handleFilterChange('prioridad', value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Prioridad" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas las prioridades</SelectItem>
+                                        <SelectItem value="critico">Crítico</SelectItem>
+                                        <SelectItem value="alto">Alto</SelectItem>
+                                        <SelectItem value="medio">Medio</SelectItem>
+                                        <SelectItem value="bajo">Bajo</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={trdFilter} onValueChange={(value) => handleFilterChange('trd_id', value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="TRD" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas las TRD</SelectItem>
+                                        {trdOptions.map(trd => (
+                                            <SelectItem key={trd.id} value={trd.id.toString()}>
+                                                {trd.codigo} - {trd.nombre}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Tabla de procesos */}
+                {/* Table */}
                 <div className="bg-white rounded-lg border overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
+                        <table className="w-full">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
                                         Código / Entidad
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
                                         TRD / Serie
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
                                         Estado
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
                                         Vencimiento
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
                                         Días Restantes
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
                                         Indicadores
                                     </th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -371,10 +375,10 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {procesos.data.map((proceso) => (
-                                    <tr key={proceso.id} className={proceso.es_critico ? 'bg-red-50' : ''}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                            <tbody>
+                                {procesos.data.map(proceso => (
+                                    <tr key={proceso.id} className="border-b hover:bg-gray-50/50">
+                                        <td className="p-4">
                                             <div>
                                                 <div className="text-sm font-medium text-gray-900">
                                                     {proceso.codigo_proceso}
@@ -394,7 +398,7 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="p-4">
                                             <div>
                                                 <div className="text-sm font-medium text-gray-900">
                                                     {proceso.trd.nombre}
@@ -406,7 +410,7 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="p-4">
                                             <Badge className={getEstadoBadgeColor(proceso.estado)}>
                                                 <span className="flex items-center gap-1">
                                                     {getEstadoIcon(proceso.estado)}
@@ -414,7 +418,7 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
                                                 </span>
                                             </Badge>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="p-4">
                                             <div>
                                                 <div className="text-sm text-gray-900">
                                                     {new Date(proceso.fecha_vencimiento_gestion).toLocaleDateString('es-ES')}
@@ -424,7 +428,7 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="p-4">
                                             <span className={getDiasVencimientoColor(proceso.dias_hasta_vencimiento)}>
                                                 {proceso.dias_hasta_vencimiento > 0 
                                                     ? `${proceso.dias_hasta_vencimiento} días`
@@ -434,7 +438,7 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
                                                 }
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="p-4">
                                             <div className="flex gap-1">
                                                 {proceso.aplazado && (
                                                     <TooltipProvider>
@@ -488,34 +492,26 @@ export default function AdminRetencionDisposicionIndex({ procesos, stats, filtro
                         </table>
                     </div>
 
-                    {/* Paginación */}
+                    {/* Pagination */}
                     {procesos.last_page > 1 && (
-                        <div className="px-6 py-4 border-t border-gray-200">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-700">
-                                    Mostrando {procesos.from} a {procesos.to} de {procesos.total} resultados
-                                </div>
-                                <div className="flex gap-2">
-                                    {procesos.links.map((link, index) => (
-                                        link.url ? (
-                                            <Button
-                                                key={index}
-                                                variant={link.active ? "default" : "outline"}
-                                                size="sm"
-                                                onClick={() => router.get(link.url!)}
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        ) : (
-                                            <Button
-                                                key={index}
-                                                variant="outline"
-                                                size="sm"
-                                                disabled
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        )
-                                    ))}
-                                </div>
+                        <div className="mt-6 flex items-center justify-between px-6 pb-6">
+                            <p className="text-sm text-gray-600">
+                                Mostrando <span className="font-medium">{procesos.from || 0}</span> a{' '}
+                                <span className="font-medium">{procesos.to || 0}</span> de{' '}
+                                <span className="font-medium">{procesos.total}</span> procesos
+                            </p>
+                            <div className="flex gap-2">
+                                {procesos.links.map((link) => (
+                                    <Button
+                                        key={link.label}
+                                        variant={link.active ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => link.url && router.get(link.url)}
+                                        disabled={!link.url}
+                                        className={link.active ? "bg-[#2a3d83] hover:bg-[#1e2b5f]" : ""}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                ))}
                             </div>
                         </div>
                     )}
