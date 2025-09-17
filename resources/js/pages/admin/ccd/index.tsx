@@ -908,9 +908,15 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                 <div>
                                     <Label className="text-sm font-medium text-gray-500">Activo</Label>
                                     <div className="mt-1">
-                                        <Badge variant={showViewModal.activo ? "default" : "secondary"} className={showViewModal.activo ? "bg-green-500" : ""}>
-                                            {showViewModal.activo ? 'Sí' : 'No'}
-                                        </Badge>
+                                        {showViewModal.activo ? (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Sí
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                No
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

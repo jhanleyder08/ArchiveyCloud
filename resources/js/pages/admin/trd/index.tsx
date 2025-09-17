@@ -212,9 +212,23 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
     const getEstadoBadge = (estado: string) => {
         // Solo mostrar estados del proceso, no "vigente"
         const estadoProceso = estado === 'vigente' ? 'aprobada' : estado;
-        const variant = estadoProceso === 'aprobada' ? 'default' : 'secondary';
+        
+        const colors = {
+            'borrador': 'bg-gray-100 text-gray-800',
+            'revision': 'bg-yellow-100 text-yellow-800',
+            'aprobada': 'bg-green-100 text-green-800',
+            'rechazada': 'bg-red-100 text-red-800',
+            'obsoleta': 'bg-red-100 text-red-800'
+        };
+        
         const text = estados[estadoProceso as keyof typeof estados] || estadoProceso;
-        return <Badge variant={variant}>{text}</Badge>;
+        const colorClass = colors[estadoProceso as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+        
+        return (
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                {text}
+            </span>
+        );
     };
 
     return (
@@ -576,16 +590,15 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                                 {getEstadoBadge(trd.estado)}
                                             </td>
                                             <td className="py-4 px-6">
-                                                <div className="flex items-center gap-2">
-                                                    {trd.vigente ? (
-                                                        <ToggleRight className="h-5 w-5 text-green-600" />
-                                                    ) : (
-                                                        <ToggleLeft className="h-5 w-5 text-gray-400" />
-                                                    )}
-                                                    <span className={`text-sm font-medium ${trd.vigente ? 'text-green-600' : 'text-gray-500'}`}>
-                                                        {trd.vigente ? 'Vigente' : 'Inactiva'}
+                                                {trd.vigente ? (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        Vigente
                                                     </span>
-                                                </div>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                        Inactiva
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="py-4 px-6 text-gray-600">
                                                 {trd.series_count || 0}
@@ -975,9 +988,15 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                         <div>
                                             <Label className="font-medium text-gray-700">Estado Vigencia</Label>
                                             <div className="mt-1">
-                                                <Badge variant={showViewModal.vigente ? "default" : "secondary"}>
-                                                    {showViewModal.vigente ? "Vigente" : "No Vigente"}
-                                                </Badge>
+                                                {showViewModal.vigente ? (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        Vigente
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                        No Vigente
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div>
