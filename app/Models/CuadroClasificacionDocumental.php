@@ -28,7 +28,7 @@ class CuadroClasificacionDocumental extends Model
         'nivel',
         'padre_id',
         'orden_jerarquico',
-        'estado',
+        // 'estado', // Temporalmente comentado hasta agregar la columna a la BD
         'vocabularios_controlados',
         'notas',
         'alcance',
