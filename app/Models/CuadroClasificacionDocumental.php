@@ -28,7 +28,7 @@ class CuadroClasificacionDocumental extends Model
         'nivel',
         'padre_id',
         'orden_jerarquico',
-        // 'estado', // Temporalmente comentado hasta agregar la columna a la BD
+        'estado',
         'vocabularios_controlados',
         'notas',
         'alcance',
@@ -44,6 +44,7 @@ class CuadroClasificacionDocumental extends Model
         'vocabularios_controlados' => 'array',
         'activo' => 'boolean',
         'fecha_reubicacion' => 'datetime',
+        'estado' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime'

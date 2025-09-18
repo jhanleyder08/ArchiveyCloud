@@ -90,7 +90,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState<User | null>(null);
     const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'user', password: '', password_confirmation: '' });
-    const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user' });
+    const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user', active: true });
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
 
@@ -399,7 +399,8 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                                             setEditForm({ 
                                                                                 name: user.name, 
                                                                                 email: user.email, 
-                                                                                role: user.role?.id?.toString() || user.role_id?.toString() || '5'
+                                                                                role: user.role?.id?.toString() || user.role_id?.toString() || '5',
+                                                                                active: user.active !== undefined ? user.active : true
                                                                             });
                                                                             setShowEditModal(user);
                                                                         }}
@@ -534,7 +535,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                 <Dialog open={!!showEditModal} onOpenChange={(open) => {
                     if (!open) {
                         setShowEditModal(null);
-                        setEditForm({ name: '', email: '', role: 'user' });
+                        setEditForm({ name: '', email: '', role: 'user', active: true });
                     }
                 }}>
                     <DialogContent className="sm:max-w-[425px]">
@@ -549,9 +550,22 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                         <form onSubmit={(e) => {
                             e.preventDefault();
                             if (showEditModal) {
-                                router.put(`/admin/users/${showEditModal.id}`, editForm, {
+                                const formData = {
+                                    ...editForm,
+                                    role_id: editForm.role  // Cambiar 'role' a 'role_id' para el backend
+                                };
+                                
+                                console.log('Enviando datos:', formData);
+                                console.log('Usuario a editar:', showEditModal.id);
+                                
+                                router.put(`/admin/users/${showEditModal.id}`, formData, {
                                     onSuccess: () => {
+                                        console.log('Usuario actualizado exitosamente');
                                         setShowEditModal(null);
+                                        setEditForm({ name: '', email: '', role: 'user', active: true });
+                                    },
+                                    onError: (errors) => {
+                                        console.error('Errores de validación:', errors);
                                     }
                                 });
                             }
@@ -592,6 +606,18 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <input 
+                                        type="checkbox" 
+                                        id="edit-active"
+                                        checked={editForm.active}
+                                        onChange={(e) => setEditForm({...editForm, active: e.target.checked})}
+                                        className="h-4 w-4 rounded border-gray-300 text-[#2a3d83] focus:ring-[#2a3d83]"
+                                    />
+                                    <label htmlFor="edit-active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        Usuario Activo
+                                    </label>
                                 </div>
                                 <DialogFooter>
                                     <Button

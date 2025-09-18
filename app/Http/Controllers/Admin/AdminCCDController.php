@@ -31,10 +31,9 @@ class AdminCCDController extends Controller
             });
         }
 
-        // Temporalmente comentado hasta que se agregue la columna estado
-        // if ($request->filled('estado') && $request->estado !== 'all') {
-        //     $query->where('estado', $request->estado);
-        // }
+        if ($request->filled('estado') && $request->estado !== 'all') {
+            $query->where('estado', $request->estado);
+        }
 
         if ($request->filled('nivel') && $request->nivel !== 'all') {
             $query->where('nivel', $request->nivel);
@@ -46,12 +45,12 @@ class AdminCCDController extends Controller
 
         $ccd = $query->paginate(10)->withQueryString();
 
-        // Estadísticas (temporalmente sin usar columna estado)
+        // Estadísticas
         $estadisticas = [
             'total' => CuadroClasificacionDocumental::count(),
             'activos' => CuadroClasificacionDocumental::where('activo', true)->count(),
-            'borradores' => 0, // CuadroClasificacionDocumental::where('estado', 'borrador')->count(),
-            'vigentes' => 0, // CuadroClasificacionDocumental::where('estado', 'activo')->count(),
+            'borradores' => CuadroClasificacionDocumental::where('estado', 'borrador')->count(),
+            'vigentes' => CuadroClasificacionDocumental::where('estado', 'activo')->count(),
         ];
 
         // Opciones para filtros
@@ -98,7 +97,7 @@ class AdminCCDController extends Controller
             'nivel' => 'required|integer|min:1|max:5',
             'padre_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
             'orden_jerarquico' => 'nullable|integer|min:0',  // Nombre corregido
-            // 'estado' => 'required|in:borrador,activo,inactivo,historico', // Temporalmente comentado
+            'estado' => 'required|in:borrador,activo,inactivo,historico',
             'activo' => 'boolean',
             'vocabularios_controlados' => 'nullable|array',  // Nombre corregido
             'notas' => 'nullable|string',
@@ -117,7 +116,7 @@ class AdminCCDController extends Controller
             'nivel' => $request->nivel,
             'padre_id' => $request->padre_id,
             'orden_jerarquico' => $request->orden_jerarquico ?? 0,  // Nombre corregido
-            // 'estado' => $request->estado, // Temporalmente comentado
+            'estado' => $request->estado,
             'activo' => $request->boolean('activo', true),
             'vocabularios_controlados' => $request->vocabularios_controlados,  // Nombre corregido
             'notas' => $request->notas,  // Campo agregado
@@ -158,7 +157,7 @@ class AdminCCDController extends Controller
             'nivel' => 'required|integer|min:1|max:5',
             'padre_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
             'orden' => 'nullable|integer|min:0',
-            // 'estado' => 'required|in:borrador,activo,inactivo,historico', // Temporalmente comentado
+            'estado' => 'required|in:borrador,activo,inactivo,historico',
             'activo' => 'boolean',
             'observaciones' => 'nullable|string',
             'vocabulario_controlado' => 'nullable|array',
@@ -172,7 +171,7 @@ class AdminCCDController extends Controller
             'nivel' => $request->nivel,
             'padre_id' => $request->padre_id,
             'orden' => $request->orden ?? $ccd->orden,
-            // 'estado' => $request->estado, // Temporalmente comentado
+            'estado' => $request->estado,
             'activo' => $request->boolean('activo'),
             'observaciones' => $request->observaciones,
             'vocabulario_controlado' => $request->vocabulario_controlado,
@@ -223,7 +222,7 @@ class AdminCCDController extends Controller
             $nuevoCcd = $ccd->replicate();
             $nuevoCcd->codigo = $nuevoCodigo;
             $nuevoCcd->nombre = $ccd->nombre . ' (Copia)';
-            $nuevoCcd->estado = $ccd->estado;  // Corregido: usar el mismo estado del CCD original
+            $nuevoCcd->estado = 'borrador';  // Los duplicados siempre inician como borrador
             $nuevoCcd->activo = true;
             $nuevoCcd->created_by = auth()->id();
             $nuevoCcd->updated_by = null;
@@ -261,10 +260,10 @@ class AdminCCDController extends Controller
      */
     public function toggleActive(CuadroClasificacionDocumental $ccd)
     {
-        // Validar estado antes de activar/desactivar (temporalmente comentado)
-        // if (!$ccd->activo && $ccd->estado === 'borrador') {
-        //     return redirect()->back()->with('error', 'No se puede activar un CCD en estado Borrador.');
-        // }
+        // Validar estado antes de activar/desactivar
+        if (!$ccd->activo && $ccd->estado === 'borrador') {
+            return redirect()->back()->with('error', 'No se puede activar un CCD en estado Borrador.');
+        }
 
         $ccd->update([
             'activo' => !$ccd->activo,
