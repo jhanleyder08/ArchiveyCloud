@@ -356,7 +356,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                             value={createForm.nivel.toString()} 
                                             onValueChange={(value) => setCreateForm({...createForm, nivel: parseInt(value)})}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger id="nivel">
                                                 <SelectValue placeholder="Seleccionar nivel" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -421,7 +421,7 @@ export default function CCDIndex({ data, estadisticas, opciones, filtros }: CCDI
                                             value={createForm.estado} 
                                             onValueChange={(value) => setCreateForm({...createForm, estado: value as any})}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger id="estado">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>

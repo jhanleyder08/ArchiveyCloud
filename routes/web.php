@@ -12,6 +12,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 
+    // Ruta para extender sesión (actividad)
+    Route::post('extend-session', function () {
+        return response()->json(['status' => 'extended', 'time' => now()]);
+    })->name('session.extend');
+
     // Soporte Técnico (Modal)
     Route::post('support', [App\Http\Controllers\SupportController::class, 'store'])->name('support.store');
 
@@ -43,15 +48,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('ccd/{ccd}/duplicate', [App\Http\Controllers\Admin\AdminCCDController::class, 'duplicate'])->name('ccd.duplicate');
         Route::patch('ccd/{ccd}/toggle-active', [App\Http\Controllers\Admin\AdminCCDController::class, 'toggleActive'])->name('ccd.toggle-active');
         
-        // Documentos routes
-        Route::resource('documentos', App\Http\Controllers\AdminDocumentController::class);
-        Route::post('documentos/{documento}/version', [App\Http\Controllers\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
-        Route::post('documentos/{documento}/firmar', [App\Http\Controllers\AdminDocumentController::class, 'firmarDigitalmente'])->name('documentos.firmar');
-        Route::post('documentos/{documento}/convertir', [App\Http\Controllers\AdminDocumentController::class, 'convertirFormato'])->name('documentos.convertir');
-        Route::get('documentos/{documento}/descargar', [App\Http\Controllers\AdminDocumentController::class, 'descargar'])->name('documentos.descargar');
-        Route::get('documentos/{documento}/preview', [App\Http\Controllers\AdminDocumentController::class, 'preview'])->name('documentos.preview');
-        Route::get('documentos/{documento}/exportar', [App\Http\Controllers\AdminDocumentController::class, 'exportar'])->name('documentos.exportar');
-        Route::get('documentos-estadisticas', [App\Http\Controllers\AdminDocumentController::class, 'estadisticas'])->name('documentos.estadisticas');
+        // Gestión de Documentos routes
+        Route::resource('documentos', App\Http\Controllers\Admin\AdminDocumentController::class);
+        Route::get('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'uploadMasivo'])->name('documentos.upload-masivo');
+        Route::post('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'procesarSubidaMasiva'])->name('documentos.procesar-masivo');
+        Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
         
         // Módulo de Retención y Disposición
         Route::prefix('retencion-disposicion')->name('retencion.')->group(function () {

@@ -79,6 +79,42 @@ class AdminCCDController extends Controller
     }
 
     /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        // Obtener elementos disponibles como padres (todos los niveles menos el 5)
+        $padresDisponibles = CuadroClasificacionDocumental::where('activo', true)
+            ->where('nivel', '<', 5)
+            ->orderBy('nivel')
+            ->orderBy('orden_jerarquico')
+            ->select('id', 'codigo', 'nombre', 'nivel')
+            ->get();
+
+        // Opciones para filtros y formularios
+        $opciones = [
+            'estados' => [
+                ['value' => 'borrador', 'label' => 'Borrador'],
+                ['value' => 'activo', 'label' => 'Activo'],
+                ['value' => 'inactivo', 'label' => 'Inactivo'],
+                ['value' => 'historico', 'label' => 'Histórico'],
+            ],
+            'niveles' => [
+                ['value' => '1', 'label' => 'Nivel 1 - Fondo'],
+                ['value' => '2', 'label' => 'Nivel 2 - Sección'],
+                ['value' => '3', 'label' => 'Nivel 3 - Subsección'],
+                ['value' => '4', 'label' => 'Nivel 4 - Serie'],
+                ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
+            ],
+            'padres_disponibles' => $padresDisponibles
+        ];
+
+        return Inertia::render('admin/ccd/create', [
+            'opciones' => $opciones
+        ]);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
@@ -135,10 +171,75 @@ class AdminCCDController extends Controller
      */
     public function show(CuadroClasificacionDocumental $ccd)
     {
-        $ccd->load(['padre', 'hijos', 'usuarioCreador', 'usuarioModificador']);
+        $ccd->load(['padre', 'hijos', 'creador', 'modificador']);
         
         return response()->json($ccd);
     }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(CuadroClasificacionDocumental $ccd)
+    {
+        // Cargar relaciones necesarias
+        $ccd->load(['padre', 'hijos']);
+
+        // Obtener elementos disponibles como padres (excluyendo el elemento actual y sus descendientes)
+        $padresDisponibles = CuadroClasificacionDocumental::where('activo', true)
+            ->where('nivel', '<', 5)
+            ->where('id', '!=', $ccd->id)
+            ->orderBy('nivel')
+            ->orderBy('orden_jerarquico')
+            ->select('id', 'codigo', 'nombre', 'nivel')
+            ->get()
+            ->filter(function ($elemento) use ($ccd) {
+                // Excluir descendientes para evitar ciclos
+                return !$this->esDescendiente($elemento, $ccd);
+            });
+
+        // Opciones para filtros y formularios
+        $opciones = [
+            'estados' => [
+                ['value' => 'borrador', 'label' => 'Borrador'],
+                ['value' => 'activo', 'label' => 'Activo'],
+                ['value' => 'inactivo', 'label' => 'Inactivo'],
+                ['value' => 'historico', 'label' => 'Histórico'],
+            ],
+            'niveles' => [
+                ['value' => '1', 'label' => 'Nivel 1 - Fondo'],
+                ['value' => '2', 'label' => 'Nivel 2 - Sección'],
+                ['value' => '3', 'label' => 'Nivel 3 - Subsección'],
+                ['value' => '4', 'label' => 'Nivel 4 - Serie'],
+                ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
+            ],
+            'padres_disponibles' => $padresDisponibles->values()
+        ];
+
+        return Inertia::render('admin/ccd/edit', [
+            'ccd' => $ccd,
+            'opciones' => $opciones
+        ]);
+    }
+
+    /**
+     * Verificar si un elemento es descendiente de otro (para evitar ciclos)
+     */
+    private function esDescendiente($elemento, $ccdPadre)
+    {
+        $hijos = CuadroClasificacionDocumental::where('padre_id', $ccdPadre->id)->get();
+        
+        foreach ($hijos as $hijo) {
+            if ($hijo->id === $elemento->id) {
+                return true;
+            }
+            if ($this->esDescendiente($elemento, $hijo)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
 
     /**
      * Update the specified resource in storage.
@@ -154,29 +255,31 @@ class AdminCCDController extends Controller
             ],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
+            'entidad' => 'required|string|max:255',
+            'dependencia' => 'nullable|string|max:255',
             'nivel' => 'required|integer|min:1|max:5',
             'padre_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
-            'orden' => 'nullable|integer|min:0',
+            'orden_jerarquico' => 'nullable|integer|min:0',
             'estado' => 'required|in:borrador,activo,inactivo,historico',
             'activo' => 'boolean',
-            'observaciones' => 'nullable|string',
-            'vocabulario_controlado' => 'nullable|array',
-            'metadatos' => 'nullable|array',
+            'notas' => 'nullable|string',
+            'alcance' => 'nullable|string',
         ]);
 
         $ccd->update([
             'codigo' => $request->codigo,
             'nombre' => $request->nombre,
             'descripcion' => $request->descripcion,
+            'entidad' => $request->entidad,
+            'dependencia' => $request->dependencia,
             'nivel' => $request->nivel,
             'padre_id' => $request->padre_id,
-            'orden' => $request->orden ?? $ccd->orden,
+            'orden_jerarquico' => $request->orden_jerarquico ?? $ccd->orden_jerarquico,
             'estado' => $request->estado,
             'activo' => $request->boolean('activo'),
-            'observaciones' => $request->observaciones,
-            'vocabulario_controlado' => $request->vocabulario_controlado,
-            'metadatos' => $request->metadatos,
-            'usuario_modificador_id' => auth()->id(),
+            'notas' => $request->notas,
+            'alcance' => $request->alcance,
+            'updated_by' => auth()->id(),
         ]);
 
         return redirect()->back()->with('success', 'Cuadro de Clasificación Documental actualizado exitosamente.');

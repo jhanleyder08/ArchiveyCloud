@@ -48,14 +48,50 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        // Verificar si el email está verificado
+        // Verificar estado del usuario y permisos de acceso
         $user = Auth::user();
-        if ($user && is_null($user->email_verified_at)) {
-            Auth::logout();
+        if ($user) {
+            // Verificar si el email está verificado
+            if (is_null($user->email_verified_at)) {
+                Auth::logout();
+                
+                throw ValidationException::withMessages([
+                    'email' => 'Tu cuenta aún no ha sido verificada. Por favor, revisa tu correo electrónico y haz clic en el enlace de verificación que te hemos enviado.',
+                ]);
+            }
             
-            throw ValidationException::withMessages([
-                'email' => 'Tu cuenta aún no ha sido verificada. Por favor, revisa tu correo electrónico y haz clic en el enlace de verificación que te hemos enviado.',
-            ]);
+            // Verificar si el usuario puede acceder al sistema
+            if (!$user->puedeAcceder()) {
+                Auth::logout();
+                
+                // Registrar intento de acceso de usuario desactivado
+                $user->registrarIntentoFallido();
+                
+                $mensaje = 'Tu cuenta no está disponible para acceder al sistema.';
+                
+                // Personalizar mensaje según el estado
+                switch ($user->estado_cuenta) {
+                    case $user::ESTADO_INACTIVO:
+                        $mensaje = 'Tu cuenta está desactivada. Contacta al administrador para más información.';
+                        break;
+                    case $user::ESTADO_BLOQUEADO:
+                        $mensaje = 'Tu cuenta está bloqueada temporalmente. Intenta más tarde o contacta al administrador.';
+                        break;
+                    case $user::ESTADO_SUSPENDIDO:
+                        $mensaje = 'Tu cuenta ha sido suspendida. Contacta al administrador para más información.';
+                        break;
+                    case $user::ESTADO_VENCIDO:
+                        $mensaje = 'Tu cuenta ha vencido. Contacta al administrador para renovarla.';
+                        break;
+                }
+                
+                throw ValidationException::withMessages([
+                    'email' => $mensaje,
+                ]);
+            }
+            
+            // Registrar acceso exitoso
+            $user->registrarAccesoExitoso();
         }
 
         RateLimiter::clear($this->throttleKey());

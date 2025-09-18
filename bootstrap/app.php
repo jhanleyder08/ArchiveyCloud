@@ -3,6 +3,8 @@
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RoleMiddleware;
+use App\Http\Middleware\TrackUserActivity;
+use App\Http\Middleware\VerifyUserActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,11 +23,15 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            TrackUserActivity::class, // Trackear actividad del usuario
+            VerifyUserActive::class, // Verificar usuarios activos en todas las rutas web
         ]);
 
         // Registrar middleware de roles
         $middleware->alias([
             'role' => RoleMiddleware::class,
+            'user.active' => VerifyUserActive::class,
+            'track.activity' => TrackUserActivity::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

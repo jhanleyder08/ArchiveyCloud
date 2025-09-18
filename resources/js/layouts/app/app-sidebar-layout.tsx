@@ -3,10 +3,15 @@ import { AppShell } from '@/components/app-shell';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppSidebarHeader } from '@/components/app-sidebar-header';
 import { Toaster } from '@/components/ui/toast';
+import SessionTimeout from '@/components/SessionTimeout';
 import { type BreadcrumbItem } from '@/types';
 import { type PropsWithChildren } from 'react';
+import { usePage } from '@inertiajs/react';
 
 export default function AppSidebarLayout({ children, breadcrumbs = [] }: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[] }>) {
+    const { props } = usePage();
+    const sessionData = (props as any).session;
+
     return (
         <AppShell variant="sidebar">
             <AppSidebar />
@@ -15,6 +20,12 @@ export default function AppSidebarLayout({ children, breadcrumbs = [] }: PropsWi
                 {children}
             </AppContent>
             <Toaster position="top-right" expand={false} richColors />
+            
+            {/* Componente de timeout de sesión */}
+            <SessionTimeout 
+                timeoutMinutes={sessionData?.timeout_minutes || 10}
+                warningMinutes={2}
+            />
         </AppShell>
     );
 }
