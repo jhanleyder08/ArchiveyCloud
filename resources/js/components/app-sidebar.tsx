@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes/index';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell, Archive, BarChart3, Briefcase, BellRing } from 'lucide-react';
 import AppLogo from './app-logo';
 import SupportModal from './support-modal';
 import { useState } from 'react';
@@ -47,14 +47,34 @@ const mainNavItems: NavItem[] = [
                 icon: FolderTree,
             },
             {
+                title: 'Expedientes Electrónicos',
+                href: '/admin/expedientes',
+                icon: Briefcase,
+            },
+            {
                 title: 'Documentos',
                 href: '/admin/documentos',
                 icon: File,
             },
             {
-                title: 'Retención y Disposición',
-                href: '/admin/retencion-disposicion',
-                icon: Clock,
+                title: 'Préstamos y Consultas',
+                href: '/admin/prestamos',
+                icon: Users,
+            },
+            {
+                title: 'Disposición Final',
+                href: '/admin/disposiciones',
+                icon: Archive,
+            },
+            {
+                title: 'Reportes y Estadísticas',
+                href: '/admin/reportes',
+                icon: BarChart3,
+            },
+            {
+                title: 'Centro de Notificaciones',
+                href: '/admin/notificaciones',
+                icon: BellRing,
             },
         ],
     },

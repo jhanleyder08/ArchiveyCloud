@@ -93,9 +93,7 @@ class AdminDocumentController extends Controller
             'total' => Documento::count(),
             'activos' => Documento::where('estado', Documento::ESTADO_ACTIVO)->count(),
             'borradores' => Documento::where('estado', Documento::ESTADO_BORRADOR)->count(),
-            'electronicos' => Documento::where('tipo_soporte', Documento::SOPORTE_ELECTRONICO)->count(),
-            'fisicos' => Documento::where('tipo_soporte', Documento::SOPORTE_FISICO)->count(),
-            'tamaño_total_mb' => Documento::sum('tamaño') / 1024 / 1024,
+            'archivados' => Documento::where('estado', Documento::ESTADO_ARCHIVADO)->count(),
         ];
 
         // Opciones para filtros
@@ -113,13 +111,14 @@ class AdminDocumentController extends Controller
                 ['value' => Documento::SOPORTE_HIBRIDO, 'label' => 'Híbrido'],
             ],
             'formatos_disponibles' => $this->getFormatosDisponibles(),
-            'expedientes_disponibles' => Expediente::select('id', 'codigo', 'nombre')->get(),
+            'expedientes_disponibles' => Expediente::select('id', 'numero_expediente', 'titulo')->get(),
         ];
 
         return Inertia::render('admin/documentos/index', [
-            'data' => $documentos,
-            'estadisticas' => $estadisticas,
-            'opciones' => $opciones,
+            'documentos' => $documentos,
+            'stats' => $estadisticas,
+            'expedientes' => $opciones['expedientes_disponibles'],
+            'tipologias' => [],
             'filtros' => $request->only(['search', 'expediente_id', 'estado', 'formato', 'tipo_soporte'])
         ]);
     }

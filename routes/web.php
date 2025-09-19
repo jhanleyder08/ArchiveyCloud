@@ -54,6 +54,68 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'procesarSubidaMasiva'])->name('documentos.procesar-masivo');
         Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
         
+        // Gestión de Expedientes routes
+        Route::resource('expedientes', App\Http\Controllers\Admin\AdminExpedienteController::class);
+        Route::get('expedientes/dashboard', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'dashboard'])->name('expedientes.dashboard');
+        Route::post('expedientes/{expediente}/cambiar-estado', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'cambiarEstado'])->name('expedientes.cambiar-estado');
+        Route::get('expedientes/{expediente}/exportar-directorio', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'exportarDirectorio'])->name('expedientes.exportar-directorio');
+        Route::get('expedientes/{expediente}/verificar-integridad', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'verificarIntegridad'])->name('expedientes.verificar-integridad');
+        
+        // Sistema de Reportes y Estadísticas routes
+        Route::prefix('reportes')->name('reportes.')->group(function () {
+            Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('dashboard');
+            Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('cumplimiento-normativo');
+            Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('productividad');
+            Route::get('/almacenamiento', [App\Http\Controllers\Admin\AdminReportController::class, 'almacenamiento'])->name('almacenamiento');
+            Route::post('/exportar', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('exportar');
+        });
+        
+        // Sistema de Préstamos y Consultas routes
+        Route::prefix('prestamos')->name('prestamos.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'store'])->name('store');
+            Route::get('/{prestamo}', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'show'])->name('show');
+            Route::put('/{prestamo}/devolver', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'devolver'])->name('devolver');
+            Route::put('/{prestamo}/renovar', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'renovar'])->name('renovar');
+            Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'reportes'])->name('reportes');
+            Route::get('/buscar/elementos', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'buscar'])->name('buscar');
+        });
+
+        // Sistema de Disposición Final routes
+        Route::prefix('disposiciones')->name('disposiciones.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'store'])->name('store');
+            Route::get('/{disposicion}', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'show'])->name('show');
+            
+            // Workflow de disposiciones
+            Route::put('/{disposicion}/enviar-revision', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'enviarRevision'])->name('enviar-revision');
+            Route::put('/{disposicion}/aprobar', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'aprobar'])->name('aprobar');
+            Route::put('/{disposicion}/rechazar', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'rechazar'])->name('rechazar');
+            Route::put('/{disposicion}/ejecutar', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'ejecutar'])->name('ejecutar');
+            
+            // Reportes
+            Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'reportes'])->name('reportes');
+        });
+        
+        // Sistema de Notificaciones
+        Route::prefix('notificaciones')->name('notificaciones.')->group(function () {
+            // Notificaciones del usuario
+            Route::get('/', [App\Http\Controllers\Admin\NotificacionController::class, 'index'])->name('index');
+            Route::get('/no-leidas', [App\Http\Controllers\Admin\NotificacionController::class, 'noLeidas'])->name('no-leidas');
+            Route::patch('/{notificacion}/marcar-leida', [App\Http\Controllers\Admin\NotificacionController::class, 'marcarLeida'])->name('marcar-leida');
+            Route::patch('/marcar-todas-leidas', [App\Http\Controllers\Admin\NotificacionController::class, 'marcarTodasLeidas'])->name('marcar-todas-leidas');
+            Route::patch('/{notificacion}/archivar', [App\Http\Controllers\Admin\NotificacionController::class, 'archivar'])->name('archivar');
+            Route::delete('/{notificacion}', [App\Http\Controllers\Admin\NotificacionController::class, 'destroy'])->name('destroy');
+            
+            // Panel administrativo (solo administradores)
+            Route::get('/admin', [App\Http\Controllers\Admin\NotificacionController::class, 'admin'])->name('admin');
+            Route::get('/crear', [App\Http\Controllers\Admin\NotificacionController::class, 'crear'])->name('crear');
+            Route::post('/', [App\Http\Controllers\Admin\NotificacionController::class, 'store'])->name('store');
+            Route::post('/limpiar-antiguas', [App\Http\Controllers\Admin\NotificacionController::class, 'limpiarAntiguas'])->name('limpiar-antiguas');
+        });
+        
         // Módulo de Retención y Disposición
         Route::prefix('retencion-disposicion')->name('retencion.')->group(function () {
             Route::get('/', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'index'])->name('index');

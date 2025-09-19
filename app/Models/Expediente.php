@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
@@ -182,9 +183,14 @@ class Expediente extends Model
     /**
      * Relación con documentos
      */
-    public function documentos(): HasMany
+    public function prestamos(): HasMany
     {
-        return $this->hasMany(Documento::class, 'expediente_id');
+        return $this->hasMany(Prestamo::class);
+    }
+
+    public function disposicionFinal(): HasOne
+    {
+        return $this->hasOne(DisposicionFinal::class);
     }
 
     /**

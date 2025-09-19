@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -6,12 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { Search, Eye, Edit, Trash2, Download, FileText, Filter, CloudUpload, Plus, Copy, ToggleLeft, ToggleRight, CheckCircle, Upload, FolderOpen, Archive, FileCheck } from 'lucide-react';
-import CreateDocumentModal from '@/components/admin/documentos/CreateDocumentModal';
+import { 
+    Search, 
+    Eye, 
+    Edit, 
+    Trash2, 
+    Download, 
+    FileText, 
+    Filter, 
+    Plus, 
+    FolderOpen, 
+    Archive 
+} from 'lucide-react';
 
 const breadcrumbItems = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -244,7 +252,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Total Documentos</p>
-                                <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats?.total || 0}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
                                 <FileText className="h-6 w-6 text-[#2a3d83]" />
@@ -256,7 +264,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Documentos Activos</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.activos}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats?.activos || 0}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
                                 <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
@@ -270,7 +278,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Borradores</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.borradores}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats?.borradores || 0}</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
                                 <div className="h-6 w-6 bg-[#2a3d83] rounded-full flex items-center justify-center">
@@ -390,14 +398,14 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                                 </tr>
                             </thead>
                             <tbody>
-                                {documentos.data.length === 0 ? (
+                                {!documentos?.data || documentos.data.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="p-8 text-center text-gray-500">
                                             No hay documentos disponibles
                                         </td>
                                     </tr>
                                 ) : (
-                                    documentos.data.map((documento) => (
+                                    documentos?.data?.map((documento) => (
                                         <tr key={documento.id} className="border-b hover:bg-gray-50/50">
                                             <td className="p-4">
                                                 <div className="flex items-center">
@@ -514,15 +522,15 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                     </div>
 
                     {/* Pagination */}
-                    {documentos.last_page > 1 && (
+                    {documentos?.last_page && documentos.last_page > 1 && (
                         <div className="mt-6 flex items-center justify-between px-6 pb-6">
                             <p className="text-sm text-gray-600">
-                                Mostrando <span className="font-medium">{documentos.from || 0}</span> a{' '}
-                                <span className="font-medium">{documentos.to || 0}</span> de{' '}
-                                <span className="font-medium">{documentos.total}</span> documentos
+                                Mostrando <span className="font-medium">{documentos?.from || 0}</span> a{' '}
+                                <span className="font-medium">{documentos?.to || 0}</span> de{' '}
+                                <span className="font-medium">{documentos?.total || 0}</span> documentos
                             </p>
                             <div className="flex gap-2">
-                                {documentos.links.map((link) => (
+                                {documentos?.links?.map((link) => (
                                     <Button
                                         key={link.label}
                                         variant={link.active ? "default" : "outline"}
@@ -539,16 +547,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                 </div>
             </div>
 
-            {/* Modal de creación de documentos */}
-            <CreateDocumentModal
-                open={showCreateModal}
-                onOpenChange={setShowCreateModal}
-                expedientes={expedientes}
-                tipologias={tipologias}
-                formatosDisponibles={Object.keys(formatosDisponibles)}
-                tiposSoporte={tiposSoporte}
-                nivelesConfidencialidad={nivelesConfidencialidad}
-            />
+            {/* TODO: Implementar modal de creación de documentos */}
         </AppLayout>
     );
 }

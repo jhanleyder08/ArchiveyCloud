@@ -6,6 +6,13 @@ import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 // Import wayfinder to ensure global functions are available
 import './wayfinder';
+// Import Ziggy to make route() function available globally
+import { Ziggy } from './ziggy';
+import { route } from 'ziggy-js';
+
+// Make route function available globally
+window.route = route;
+window.Ziggy = Ziggy;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

@@ -33,15 +33,29 @@ export default function SessionTimeout({
 
     // Manejar logout automático
     const handleAutoLogout = useCallback(() => {
+        // Prevenir múltiples ejecuciones
+        if (!isActive) return;
+        
+        setIsActive(false); // Desactivar inmediatamente para evitar bucles
+        
+        // Intentar logout normal primero, pero si falla (419), redirigir directamente
         router.post('/logout', {}, {
             onSuccess: () => {
                 window.location.href = '/login';
+            },
+            onError: (errors) => {
+                // Si hay error 419 (CSRF token expired) o cualquier otro error,
+                // redirigir directamente al login
+                console.warn('Logout failed, redirecting to login:', errors);
+                window.location.href = '/login';
             }
         });
-    }, []);
+    }, [isActive]);
 
     // Extender sesión
     const extendSession = useCallback(() => {
+        if (!isActive) return; // No hacer nada si ya se desactivó
+        
         // Hacer una petición para extender la sesión
         fetch('/extend-session', {
             method: 'POST',
@@ -53,14 +67,18 @@ export default function SessionTimeout({
         }).then(response => {
             if (response.ok) {
                 resetTimer();
+            } else if (response.status === 419 || response.status === 401) {
+                // Token CSRF expirado o sesión expirada
+                handleAutoLogout();
             } else {
                 throw new Error('Session extension failed');
             }
-        }).catch(() => {
+        }).catch((error) => {
+            console.warn('Session extension failed:', error);
             // Si falla, probablemente la sesión ya expiró
             handleAutoLogout();
         });
-    }, [resetTimer, handleAutoLogout]);
+    }, [resetTimer, handleAutoLogout, isActive]);
 
     // Detectar actividad del usuario
     useEffect(() => {
@@ -86,8 +104,12 @@ export default function SessionTimeout({
 
     // Timer countdown
     useEffect(() => {
+        if (!isActive) return; // No ejecutar timer si no está activo
+        
         const interval = setInterval(() => {
             setTimeRemaining(prev => {
+                if (!isActive) return prev; // Double check para evitar actualizaciones
+                
                 const newTime = prev - 1;
                 
                 // Mostrar advertencia cuando quedan 2 minutos
@@ -97,7 +119,6 @@ export default function SessionTimeout({
                 
                 // Auto logout cuando llega a 0
                 if (newTime <= 0) {
-                    setIsActive(false);
                     handleAutoLogout();
                     return 0;
                 }
@@ -107,7 +128,7 @@ export default function SessionTimeout({
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [warningMinutes, showWarning, handleAutoLogout]);
+    }, [warningMinutes, showWarning, handleAutoLogout, isActive]);
 
     // Interceptar respuestas 401 (sesión expirada)
     useEffect(() => {

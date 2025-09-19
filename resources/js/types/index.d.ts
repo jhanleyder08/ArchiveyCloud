@@ -36,8 +36,13 @@ export interface User {
     name: string;
     email: string;
     avatar?: string;
-    email_verified_at: string | null;
+    email_verified_at?: string;
     created_at: string;
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
+}
+
+// Global function declarations
+declare global {
+    function route(name?: string, params?: any): string;
 }
