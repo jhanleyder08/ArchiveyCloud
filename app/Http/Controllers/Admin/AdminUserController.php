@@ -59,7 +59,7 @@ class AdminUserController extends Controller
      */
     public function create()
     {
-        $roles = Role::all();
+        $roles = Role::where('activo', true)->orderBy('nivel_jerarquico')->get(['id', 'name', 'description']);
         
         return Inertia::render('admin/users/create', [
             'roles' => $roles,
@@ -108,7 +108,7 @@ class AdminUserController extends Controller
      */
     public function edit(User $user)
     {
-        $roles = Role::all();
+        $roles = Role::where('activo', true)->orderBy('nivel_jerarquico')->get(['id', 'name', 'description']);
         
         return Inertia::render('admin/users/edit', [
             'user' => $user->load('role'),
@@ -121,8 +121,6 @@ class AdminUserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        // Debug: Verificar qué datos están llegando
-        \Log::info('Datos recibidos en update:', $request->all());
         
         $request->validate([
             'name' => 'required|string|max:255',
@@ -139,10 +137,6 @@ class AdminUserController extends Controller
             'active' => $request->boolean('active', true),
         ];
 
-        // Debug: Verificar datos que se van a actualizar
-        \Log::info('Datos para actualizar:', $updateData);
-        \Log::info('Usuario antes:', ['id' => $user->id, 'role_id' => $user->role_id, 'active' => $user->active]);
-
         // Solo actualizar contraseña si se proporciona
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
@@ -150,12 +144,8 @@ class AdminUserController extends Controller
 
         $user->update($updateData);
 
-        // Debug: Verificar usuario después de actualizar
-        $user->refresh();
-        \Log::info('Usuario después:', ['id' => $user->id, 'role_id' => $user->role_id, 'active' => $user->active]);
-
         return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario actualizado exitosamente - Rol cambiado correctamente.');
+            ->with('success', 'Usuario actualizado exitosamente.');
     }
 
     /**

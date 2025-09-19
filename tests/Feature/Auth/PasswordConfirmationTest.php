@@ -3,7 +3,7 @@
 use App\Models\User;
 
 test('confirm password screen can be rendered', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email_verified_at' => now()]);
 
     $response = $this->actingAs($user)->get(route('password.confirm'));
 
@@ -11,7 +11,7 @@ test('confirm password screen can be rendered', function () {
 });
 
 test('password can be confirmed', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email_verified_at' => now()]);
 
     $response = $this->actingAs($user)->post(route('password.confirm.store'), [
         'password' => 'password',
@@ -22,7 +22,7 @@ test('password can be confirmed', function () {
 });
 
 test('password is not confirmed with invalid password', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['email_verified_at' => now()]);
 
     $response = $this->actingAs($user)->post(route('password.confirm.store'), [
         'password' => 'wrong-password',

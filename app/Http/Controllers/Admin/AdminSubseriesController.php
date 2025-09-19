@@ -28,7 +28,7 @@ class AdminSubseriesController extends Controller
             $area = $request->get('area');
 
             // Query base con relaciones
-            $query = SubserieDocumental::with(['serie.trd'])
+            $query = SubserieDocumental::with(['serie.tablaRetencion'])
                 ->select('subseries_documentales.*');
 
             // Aplicar filtros
@@ -71,7 +71,7 @@ class AdminSubseriesController extends Controller
             ];
 
             // Obtener series para el filtro (sin filtro activa por ahora)
-            $series = SerieDocumental::with('trd')
+            $series = SerieDocumental::with('tablaRetencion')
                 ->orderBy('codigo')
                 ->get();
 
@@ -100,7 +100,7 @@ class AdminSubseriesController extends Controller
      */
     public function create()
     {
-        $series = SerieDocumental::with('trd')
+        $series = SerieDocumental::with('tablaRetencion')
             ->where('activa', true)
             ->orderBy('codigo')
             ->get();
@@ -232,7 +232,7 @@ class AdminSubseriesController extends Controller
      */
     public function show(SubserieDocumental $subserie)
     {
-        $subserie->load(['serie.trd', 'expedientes']);
+        $subserie->load(['serie.tablaRetencion', 'expedientes']);
 
         return Inertia::render('admin/subseries/show', [
             'subserie' => $subserie,
@@ -244,9 +244,9 @@ class AdminSubseriesController extends Controller
      */
     public function edit(SubserieDocumental $subserie)
     {
-        $subserie->load(['serie.trd']);
+        $subserie->load(['serie.tablaRetencion']);
 
-        $series = SerieDocumental::with('trd')
+        $series = SerieDocumental::with('tablaRetencion')
             ->where('activa', true)
             ->orderBy('codigo')
             ->get();
@@ -442,7 +442,7 @@ class AdminSubseriesController extends Controller
         try {
             $format = $request->get('format', 'json');
             
-            $subseries = SubserieDocumental::with(['serie.trd'])
+            $subseries = SubserieDocumental::with(['serie.tablaRetencion'])
                 ->orderBy('codigo')
                 ->get();
 
@@ -469,7 +469,7 @@ class AdminSubseriesController extends Controller
                 'descripcion' => $subserie->descripcion,
                 'serie_codigo' => $subserie->serie->codigo,
                 'serie_nombre' => $subserie->serie->nombre,
-                'trd_codigo' => $subserie->serie->trd->codigo,
+                'trd_codigo' => $subserie->serie->tablaRetencion->codigo,
                 'tiempo_archivo_gestion' => $subserie->tiempo_archivo_gestion,
                 'tiempo_archivo_central' => $subserie->tiempo_archivo_central,
                 'disposicion_final' => $subserie->disposicion_final,
@@ -508,7 +508,7 @@ class AdminSubseriesController extends Controller
                     $subserie->descripcion,
                     $subserie->serie->codigo,
                     $subserie->serie->nombre,
-                    $subserie->serie->trd->codigo,
+                    $subserie->serie->tablaRetencion->codigo,
                     $subserie->tiempo_archivo_gestion,
                     $subserie->tiempo_archivo_central,
                     $subserie->disposicion_final,
@@ -534,7 +534,7 @@ class AdminSubseriesController extends Controller
             $subserieNode->addChild('descripcion', htmlspecialchars($subserie->descripcion));
             $subserieNode->addChild('serie_codigo', htmlspecialchars($subserie->serie->codigo));
             $subserieNode->addChild('serie_nombre', htmlspecialchars($subserie->serie->nombre));
-            $subserieNode->addChild('trd_codigo', htmlspecialchars($subserie->serie->trd->codigo));
+            $subserieNode->addChild('trd_codigo', htmlspecialchars($subserie->serie->tablaRetencion->codigo));
             $subserieNode->addChild('tiempo_archivo_gestion', $subserie->tiempo_archivo_gestion);
             $subserieNode->addChild('tiempo_archivo_central', $subserie->tiempo_archivo_central);
             $subserieNode->addChild('disposicion_final', htmlspecialchars($subserie->disposicion_final));

@@ -39,7 +39,7 @@ export default function EditUser({ user, roles }: Props) {
         email: user.email,
         password: '',
         password_confirmation: '',
-        role_id: user.role.id,
+        role_id: user.role?.id || '',
         active: user.active,
     });
 
@@ -244,6 +244,7 @@ export default function EditUser({ user, roles }: Props) {
                                         }`}
                                         required
                                     >
+                                        <option value="">Seleccionar rol...</option>
                                         {roles.map((role) => (
                                             <option key={role.id} value={role.id}>
                                                 {role.name}

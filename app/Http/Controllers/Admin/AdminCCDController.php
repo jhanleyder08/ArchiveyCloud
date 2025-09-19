@@ -16,10 +16,7 @@ class AdminCCDController extends Controller
      */
     public function index(Request $request)
     {
-        $query = CuadroClasificacionDocumental::with(['padre', 'hijos', 'creador'])  // Corregido: usar nombre real de la relación
-            ->orderBy('nivel')
-            ->orderBy('orden_jerarquico')  // Corregido: usar nombre real de la columna
-            ->orderBy('codigo');
+        $query = CuadroClasificacionDocumental::orderBy('codigo');
 
         // Filtros
         if ($request->filled('search')) {
@@ -29,14 +26,6 @@ class AdminCCDController extends Controller
                   ->orWhere('nombre', 'LIKE', "%{$search}%")
                   ->orWhere('descripcion', 'LIKE', "%{$search}%");
             });
-        }
-
-        if ($request->filled('estado') && $request->estado !== 'all') {
-            $query->where('estado', $request->estado);
-        }
-
-        if ($request->filled('nivel') && $request->nivel !== 'all') {
-            $query->where('nivel', $request->nivel);
         }
 
         if ($request->filled('activo') && $request->activo !== 'all') {
@@ -49,11 +38,10 @@ class AdminCCDController extends Controller
         $estadisticas = [
             'total' => CuadroClasificacionDocumental::count(),
             'activos' => CuadroClasificacionDocumental::where('activo', true)->count(),
-            'borradores' => CuadroClasificacionDocumental::where('estado', 'borrador')->count(),
-            'vigentes' => CuadroClasificacionDocumental::where('estado', 'activo')->count(),
+            'inactivos' => CuadroClasificacionDocumental::where('activo', false)->count(),
         ];
 
-        // Opciones para filtros
+        // Opciones para los filtros y formularios
         $opciones = [
             'estados' => [
                 ['value' => 'borrador', 'label' => 'Borrador'],
@@ -74,7 +62,7 @@ class AdminCCDController extends Controller
             'data' => $ccd,
             'estadisticas' => $estadisticas,
             'opciones' => $opciones,
-            'filtros' => $request->only(['search', 'estado', 'nivel', 'activo'])
+            'filtros' => $request->only(['search', 'activo'])
         ]);
     }
 
@@ -83,15 +71,6 @@ class AdminCCDController extends Controller
      */
     public function create()
     {
-        // Obtener elementos disponibles como padres (todos los niveles menos el 5)
-        $padresDisponibles = CuadroClasificacionDocumental::where('activo', true)
-            ->where('nivel', '<', 5)
-            ->orderBy('nivel')
-            ->orderBy('orden_jerarquico')
-            ->select('id', 'codigo', 'nombre', 'nivel')
-            ->get();
-
-        // Opciones para filtros y formularios
         $opciones = [
             'estados' => [
                 ['value' => 'borrador', 'label' => 'Borrador'],
@@ -106,7 +85,6 @@ class AdminCCDController extends Controller
                 ['value' => '4', 'label' => 'Nivel 4 - Serie'],
                 ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
             ],
-            'padres_disponibles' => $padresDisponibles
         ];
 
         return Inertia::render('admin/ccd/create', [
@@ -128,39 +106,21 @@ class AdminCCDController extends Controller
             ],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
-            'entidad' => 'required|string|max:255',  // Campo requerido agregado
-            'dependencia' => 'nullable|string|max:255',
-            'nivel' => 'required|integer|min:1|max:5',
-            'padre_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
-            'orden_jerarquico' => 'nullable|integer|min:0',  // Nombre corregido
-            'estado' => 'required|in:borrador,activo,inactivo,historico',
             'activo' => 'boolean',
-            'vocabularios_controlados' => 'nullable|array',  // Nombre corregido
-            'notas' => 'nullable|string',
-            'alcance' => 'nullable|string',
-            'razon_reubicacion' => 'nullable|string',
-            'fecha_reubicacion' => 'nullable|date',
-            'reubicado_por' => 'nullable|string|max:255',
+            'fecha_aprobacion' => 'nullable|date',
+            'version' => 'nullable|string|max:10',
+            'observaciones' => 'nullable|string',
         ]);
 
         $ccd = CuadroClasificacionDocumental::create([
             'codigo' => $request->codigo,
             'nombre' => $request->nombre,
             'descripcion' => $request->descripcion,
-            'entidad' => $request->entidad,  // Campo agregado
-            'dependencia' => $request->dependencia,  // Campo agregado
-            'nivel' => $request->nivel,
-            'padre_id' => $request->padre_id,
-            'orden_jerarquico' => $request->orden_jerarquico ?? 0,  // Nombre corregido
-            'estado' => $request->estado,
             'activo' => $request->boolean('activo', true),
-            'vocabularios_controlados' => $request->vocabularios_controlados,  // Nombre corregido
-            'notas' => $request->notas,  // Campo agregado
-            'alcance' => $request->alcance,  // Campo agregado
-            'razon_reubicacion' => $request->razon_reubicacion,  // Campo agregado
-            'fecha_reubicacion' => $request->fecha_reubicacion,  // Campo agregado
-            'reubicado_por' => $request->reubicado_por,  // Campo agregado
-            'created_by' => auth()->id(),  // Nombre corregido
+            'fecha_aprobacion' => $request->fecha_aprobacion,
+            'version' => $request->version ?? '1.0',
+            'observaciones' => $request->observaciones,
+            'created_by' => auth()->id(),
         ]);
 
         return redirect()->back()->with('success', 'Cuadro de Clasificación Documental creado exitosamente.');
@@ -171,8 +131,6 @@ class AdminCCDController extends Controller
      */
     public function show(CuadroClasificacionDocumental $ccd)
     {
-        $ccd->load(['padre', 'hijos', 'creador', 'modificador']);
-        
         return response()->json($ccd);
     }
 
@@ -181,23 +139,6 @@ class AdminCCDController extends Controller
      */
     public function edit(CuadroClasificacionDocumental $ccd)
     {
-        // Cargar relaciones necesarias
-        $ccd->load(['padre', 'hijos']);
-
-        // Obtener elementos disponibles como padres (excluyendo el elemento actual y sus descendientes)
-        $padresDisponibles = CuadroClasificacionDocumental::where('activo', true)
-            ->where('nivel', '<', 5)
-            ->where('id', '!=', $ccd->id)
-            ->orderBy('nivel')
-            ->orderBy('orden_jerarquico')
-            ->select('id', 'codigo', 'nombre', 'nivel')
-            ->get()
-            ->filter(function ($elemento) use ($ccd) {
-                // Excluir descendientes para evitar ciclos
-                return !$this->esDescendiente($elemento, $ccd);
-            });
-
-        // Opciones para filtros y formularios
         $opciones = [
             'estados' => [
                 ['value' => 'borrador', 'label' => 'Borrador'],
@@ -212,32 +153,12 @@ class AdminCCDController extends Controller
                 ['value' => '4', 'label' => 'Nivel 4 - Serie'],
                 ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
             ],
-            'padres_disponibles' => $padresDisponibles->values()
         ];
 
         return Inertia::render('admin/ccd/edit', [
             'ccd' => $ccd,
             'opciones' => $opciones
         ]);
-    }
-
-    /**
-     * Verificar si un elemento es descendiente de otro (para evitar ciclos)
-     */
-    private function esDescendiente($elemento, $ccdPadre)
-    {
-        $hijos = CuadroClasificacionDocumental::where('padre_id', $ccdPadre->id)->get();
-        
-        foreach ($hijos as $hijo) {
-            if ($hijo->id === $elemento->id) {
-                return true;
-            }
-            if ($this->esDescendiente($elemento, $hijo)) {
-                return true;
-            }
-        }
-        
-        return false;
     }
 
 
@@ -255,30 +176,20 @@ class AdminCCDController extends Controller
             ],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
-            'entidad' => 'required|string|max:255',
-            'dependencia' => 'nullable|string|max:255',
-            'nivel' => 'required|integer|min:1|max:5',
-            'padre_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
-            'orden_jerarquico' => 'nullable|integer|min:0',
-            'estado' => 'required|in:borrador,activo,inactivo,historico',
             'activo' => 'boolean',
-            'notas' => 'nullable|string',
-            'alcance' => 'nullable|string',
+            'fecha_aprobacion' => 'nullable|date',
+            'version' => 'nullable|string|max:10',
+            'observaciones' => 'nullable|string',
         ]);
 
         $ccd->update([
             'codigo' => $request->codigo,
             'nombre' => $request->nombre,
             'descripcion' => $request->descripcion,
-            'entidad' => $request->entidad,
-            'dependencia' => $request->dependencia,
-            'nivel' => $request->nivel,
-            'padre_id' => $request->padre_id,
-            'orden_jerarquico' => $request->orden_jerarquico ?? $ccd->orden_jerarquico,
-            'estado' => $request->estado,
             'activo' => $request->boolean('activo'),
-            'notas' => $request->notas,
-            'alcance' => $request->alcance,
+            'fecha_aprobacion' => $request->fecha_aprobacion,
+            'version' => $request->version,
+            'observaciones' => $request->observaciones,
             'updated_by' => auth()->id(),
         ]);
 
@@ -290,11 +201,6 @@ class AdminCCDController extends Controller
      */
     public function destroy(CuadroClasificacionDocumental $ccd)
     {
-        // Verificar si tiene hijos
-        if ($ccd->hijos()->count() > 0) {
-            return redirect()->back()->with('error', 'No se puede eliminar el CCD porque tiene elementos hijos.');
-        }
-
         $ccd->delete();
         
         return redirect()->back()->with('success', 'Cuadro de Clasificación Documental eliminado exitosamente.');
@@ -305,10 +211,6 @@ class AdminCCDController extends Controller
      */
     public function duplicate(CuadroClasificacionDocumental $ccd)
     {
-        \Log::info('DUPLICATE: Iniciando duplicación del CCD', ['ccd_id' => $ccd->id, 'codigo' => $ccd->codigo]);
-        
-        DB::beginTransaction();
-        
         try {
             // Generar código único
             $baseCodigo = $ccd->codigo . '_copia';
@@ -319,41 +221,17 @@ class AdminCCDController extends Controller
                 $nuevoCodigo = $baseCodigo . '_' . $contador;
                 $contador++;
             }
-            
-            \Log::info('DUPLICATE: Código generado', ['nuevo_codigo' => $nuevoCodigo]);
 
             $nuevoCcd = $ccd->replicate();
             $nuevoCcd->codigo = $nuevoCodigo;
             $nuevoCcd->nombre = $ccd->nombre . ' (Copia)';
-            $nuevoCcd->estado = 'borrador';  // Los duplicados siempre inician como borrador
             $nuevoCcd->activo = true;
             $nuevoCcd->created_by = auth()->id();
             $nuevoCcd->updated_by = null;
-            
-            \Log::info('DUPLICATE: Datos del nuevo CCD preparados', [
-                'codigo' => $nuevoCcd->codigo,
-                'nombre' => $nuevoCcd->nombre,
-                'created_by' => $nuevoCcd->created_by,
-                'estado' => $nuevoCcd->estado
-            ]);
-            
-            $resultado = $nuevoCcd->save();
-            
-            \Log::info('DUPLICATE: Resultado del save()', ['resultado' => $resultado, 'nuevo_id' => $nuevoCcd->id]);
+            $nuevoCcd->save();
 
-            DB::commit();
-            
-            \Log::info('DUPLICATE: Transacción committeada exitosamente');
-            
-            return redirect()->back()->with('success', 'Cuadro de Clasificación Documental duplicado exitosamente.');
+            return redirect()->back()->with('success', 'CCD duplicado exitosamente como: ' . $nuevoCodigo);
         } catch (\Exception $e) {
-            DB::rollback();
-            \Log::error('DUPLICATE: Error en duplicación', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
             return redirect()->back()->with('error', 'Error al duplicar el CCD: ' . $e->getMessage());
         }
     }
@@ -363,14 +241,9 @@ class AdminCCDController extends Controller
      */
     public function toggleActive(CuadroClasificacionDocumental $ccd)
     {
-        // Validar estado antes de activar/desactivar
-        if (!$ccd->activo && $ccd->estado === 'borrador') {
-            return redirect()->back()->with('error', 'No se puede activar un CCD en estado Borrador.');
-        }
-
         $ccd->update([
             'activo' => !$ccd->activo,
-            'usuario_modificador_id' => auth()->id(),
+            'updated_by' => auth()->id(),
         ]);
 
         $estado = $ccd->activo ? 'activado' : 'desactivado';

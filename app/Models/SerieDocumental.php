@@ -23,16 +23,13 @@ class SerieDocumental extends Model
         'codigo',
         'nombre',
         'descripcion',
-        'trd_id',
-        'ccd_id',
+        'tabla_retencion_id',
+        'cuadro_clasificacion_id',
         'tiempo_archivo_gestion',
         'tiempo_archivo_central',
         'disposicion_final',
         'procedimiento',
         'metadatos_heredables',
-        'palabras_clave',
-        'usuario_responsable_id',
-        'area_responsable',
         'activa',
         'observaciones',
         'created_by',
@@ -50,9 +47,12 @@ class SerieDocumental extends Model
 
     // Tipos de disposición final
     const DISPOSICION_CONSERVACION_PERMANENTE = 'conservacion_permanente';
+    const DISPOSICION_CONSERVACION_TOTAL = 'conservacion_total';
     const DISPOSICION_ELIMINACION = 'eliminacion';
     const DISPOSICION_SELECCION = 'seleccion';
+    const DISPOSICION_TRANSFERENCIA = 'transferencia';
     const DISPOSICION_MICROFILMACION = 'microfilmacion';
+    const DISPOSICION_MIGRACION = 'migracion';
 
     protected static function boot()
     {
@@ -65,7 +65,7 @@ class SerieDocumental extends Model
             }
             
             // REQ-CL-017: Heredar tiempos de conservación de TRD
-            if ($serie->trd_id && !$serie->tiempo_archivo_gestion) {
+            if ($serie->tabla_retencion_id && !$serie->tiempo_archivo_gestion) {
                 $serie->heredarTiemposTRD();
             }
         });
@@ -89,17 +89,17 @@ class SerieDocumental extends Model
     /**
      * REQ-CL-018: Relación obligatoria con TRD
      */
-    public function trd()
+    public function tablaRetencion()
     {
-        return $this->belongsTo(TablaRetencionDocumental::class, 'trd_id');
+        return $this->belongsTo(TablaRetencionDocumental::class, 'tabla_retencion_id');
     }
 
     /**
      * Relación con Cuadro de Clasificación Documental
      */
-    public function ccd()
+    public function cuadroClasificacion()
     {
-        return $this->belongsTo(CuadroClasificacionDocumental::class, 'ccd_id');
+        return $this->belongsTo(CuadroClasificacionDocumental::class, 'cuadro_clasificacion_id');
     }
 
     /**
@@ -194,7 +194,7 @@ class SerieDocumental extends Model
      */
     public function heredarTiemposTRD()
     {
-        if ($this->trd) {
+        if ($this->tablaRetencion) {
             // En una implementación real, la TRD tendría reglas específicas
             // Por ahora, establecemos valores por defecto
             $this->tiempo_archivo_gestion = $this->tiempo_archivo_gestion ?? 5; // años
@@ -209,8 +209,8 @@ class SerieDocumental extends Model
     public function asignarPalabrasClave($palabras, $vocabulario = null)
     {
         // Validar palabras contra vocabulario controlado si se proporciona
-        if ($vocabulario && $this->ccd && $this->ccd->vocabulario_controlado) {
-            $vocabularioValido = $this->ccd->vocabulario_controlado;
+        if ($vocabulario && $this->cuadroClasificacion && $this->cuadroClasificacion->vocabulario_controlado) {
+            $vocabularioValido = $this->cuadroClasificacion->vocabulario_controlado;
             $palabras = array_filter($palabras, function($palabra) use ($vocabularioValido) {
                 return in_array($palabra, $vocabularioValido);
             });
@@ -244,17 +244,17 @@ class SerieDocumental extends Model
         $metadatos['palabras_clave_serie'] = $this->palabras_clave;
         
         // Heredar metadatos del CCD si existe
-        if ($this->ccd) {
-            $metadatos['ccd_codigo'] = $this->ccd->codigo;
-            $metadatos['ccd_nombre'] = $this->ccd->nombre;
-            $metadatos['ccd_ruta'] = $this->ccd->getRutaCompleta();
+        if ($this->cuadroClasificacion) {
+            $metadatos['ccd_codigo'] = $this->cuadroClasificacion->codigo;
+            $metadatos['ccd_nombre'] = $this->cuadroClasificacion->nombre;
+            $metadatos['ccd_ruta'] = $this->cuadroClasificacion->getRutaCompleta() ?? '';
         }
         
         // Heredar metadatos de TRD si existe
-        if ($this->trd) {
-            $metadatos['trd_codigo'] = $this->trd->codigo;
-            $metadatos['trd_version'] = $this->trd->version;
-            $metadatos['trd_vigente'] = $this->trd->vigente;
+        if ($this->tablaRetencion) {
+            $metadatos['trd_codigo'] = $this->tablaRetencion->codigo;
+            $metadatos['trd_version'] = $this->tablaRetencion->version;
+            $metadatos['trd_vigente'] = $this->tablaRetencion->vigente;
         }
         
         return $metadatos;
@@ -341,7 +341,7 @@ class SerieDocumental extends Model
         $errores = [];
         
         // Validar asociación obligatoria con TRD
-        if (!$this->tabla_retencion_id || !$this->trd) {
+        if (!$this->tabla_retencion_id || !$this->tablaRetencion) {
             $errores[] = 'La serie debe estar asociada a una TRD válida';
         }
         

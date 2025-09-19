@@ -19,7 +19,7 @@ class AdminSeriesController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SerieDocumental::with(['trd', 'usuarioResponsable']);
+        $query = SerieDocumental::with(['tablaRetencion', 'usuarioResponsable']);
 
         // Filtros de búsqueda
         if ($request->filled('search')) {
@@ -32,8 +32,8 @@ class AdminSeriesController extends Controller
         }
 
         // Filtro por TRD - usando nombre de columna correcto y manejando "all"
-        if ($request->filled('trd') && $request->get('trd') !== 'all') {
-            $query->where('trd_id', $request->get('trd'));
+        if ($request->filled('tablaRetencion') && $request->get('tablaRetencion') !== 'all') {
+            $query->where('tabla_retencion_id', $request->get('tablaRetencion'));
         }
 
         // Filtro por estado - manejando "all"
@@ -76,7 +76,7 @@ class AdminSeriesController extends Controller
             'stats' => $stats,
             'trds' => $trds,
             'areas' => $areas,
-            'filters' => $request->only(['search', 'trd', 'estado', 'area']),
+            'filters' => $request->only(['search', 'tablaRetencion', 'estado', 'area']),
             'flash' => session()->only(['success', 'error'])
         ]);
     }
@@ -92,8 +92,8 @@ class AdminSeriesController extends Controller
             'codigo' => 'nullable|string|max:50|unique:series_documentales,codigo',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
-            'trd_id' => 'required|exists:tablas_retencion_documental,id',
-            'ccd_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
+            'tabla_retencion_id' => 'required|exists:tablas_retencion_documental,id',
+            'cuadro_clasificacion_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
             'tiempo_archivo_gestion' => 'required|integer|min:0',
             'tiempo_archivo_central' => 'required|integer|min:0',
             'disposicion_final' => 'required|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
@@ -132,8 +132,8 @@ class AdminSeriesController extends Controller
     public function show(SerieDocumental $serie)
     {
         $serie->load([
-            'trd',
-            'ccd',
+            'tablaRetencion',
+            'cuadroClasificacion',
             'usuarioResponsable',
             'subseries' => function ($query) {
                 $query->where('activa', true)->orderBy('codigo');
@@ -165,8 +165,8 @@ class AdminSeriesController extends Controller
             'codigo' => ['nullable', 'string', 'max:50', Rule::unique('series_documentales', 'codigo')->ignore($series->id)],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
-            'trd_id' => 'required|exists:tablas_retencion_documental,id',
-            'ccd_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
+            'tabla_retencion_id' => 'required|exists:tablas_retencion_documental,id',
+            'cuadro_clasificacion_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
             'tiempo_archivo_gestion' => 'required|integer|min:0',
             'tiempo_archivo_central' => 'required|integer|min:0',
             'disposicion_final' => 'required|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
@@ -276,7 +276,7 @@ class AdminSeriesController extends Controller
     {
         $formato = $request->get('formato', 'json');
         
-        $query = SerieDocumental::with(['trd', 'usuarioResponsable']);
+        $query = SerieDocumental::with(['tablaRetencion', 'usuarioResponsable']);
         
         // Aplicar mismo filtros que en index
         if ($request->filled('search')) {
@@ -288,8 +288,8 @@ class AdminSeriesController extends Controller
             });
         }
 
-        if ($request->filled('trd')) {
-            $query->where('tabla_retencion_id', $request->get('trd'));
+        if ($request->filled('tablaRetencion')) {
+            $query->where('tabla_retencion_id', $request->get('tablaRetencion'));
         }
 
         if ($request->filled('estado')) {
@@ -320,7 +320,7 @@ class AdminSeriesController extends Controller
                 'codigo' => $serie->codigo,
                 'nombre' => $serie->nombre,
                 'descripcion' => $serie->descripcion,
-                'trd' => $serie->trd->nombre ?? null,
+                'tablaRetencion' => $serie->tablaRetencion->nombre ?? null,
                 'tiempo_archivo_gestion' => $serie->tiempo_archivo_gestion,
                 'tiempo_archivo_central' => $serie->tiempo_archivo_central,
                 'disposicion_final' => $serie->disposicion_final,
@@ -360,7 +360,7 @@ class AdminSeriesController extends Controller
                     $serie->codigo,
                     $serie->nombre,
                     $serie->descripcion,
-                    $serie->trd->nombre ?? '',
+                    $serie->tablaRetencion->nombre ?? '',
                     $serie->tiempo_archivo_gestion,
                     $serie->tiempo_archivo_central,
                     $serie->disposicion_final,
@@ -385,7 +385,7 @@ class AdminSeriesController extends Controller
             $serieXml->addChild('codigo', htmlspecialchars($serie->codigo));
             $serieXml->addChild('nombre', htmlspecialchars($serie->nombre));
             $serieXml->addChild('descripcion', htmlspecialchars($serie->descripcion));
-            $serieXml->addChild('trd', htmlspecialchars($serie->trd->nombre ?? ''));
+            $serieXml->addChild('tablaRetencion', htmlspecialchars($serie->tablaRetencion->nombre ?? ''));
             $serieXml->addChild('tiempo_archivo_gestion', $serie->tiempo_archivo_gestion);
             $serieXml->addChild('tiempo_archivo_central', $serie->tiempo_archivo_central);
             $serieXml->addChild('disposicion_final', $serie->disposicion_final);

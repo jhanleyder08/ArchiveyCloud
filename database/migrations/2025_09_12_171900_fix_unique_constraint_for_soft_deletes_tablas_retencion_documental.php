@@ -13,60 +13,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Buscar todos los índices únicos en la columna codigo
-        $indexes = DB::select("
-            SELECT DISTINCT index_name 
-            FROM information_schema.statistics 
-            WHERE table_schema = DATABASE() 
-            AND table_name = 'tablas_retencion_documental' 
-            AND column_name = 'codigo' 
-            AND non_unique = 0
-        ");
-
-        // Eliminar todos los índices únicos encontrados en la columna codigo
-        foreach ($indexes as $index) {
-            try {
-                DB::statement("ALTER TABLE tablas_retencion_documental DROP INDEX `{$index->index_name}`");
-                echo "Índice eliminado: {$index->index_name}\n";
-            } catch (Exception $e) {
-                echo "No se pudo eliminar el índice {$index->index_name}: " . $e->getMessage() . "\n";
-            }
-        }
-
-        // Método alternativo usando Laravel Schema si no hay índices encontrados
-        if (empty($indexes)) {
-            try {
-                Schema::table('tablas_retencion_documental', function (Blueprint $table) {
-                    $table->dropUnique(['codigo']);
-                });
-                echo "Índice eliminado usando Laravel Schema\n";
-            } catch (Exception $e) {
-                echo "No se pudo eliminar usando Laravel Schema: " . $e->getMessage() . "\n";
-            }
-        }
-
-        // Crear nuevo índice único que considere solo registros no eliminados
-        // Para MySQL, usamos una aproximación que funciona con soft deletes
+        // Detectar el tipo de base de datos
+        $driver = DB::connection()->getDriverName();
+        
+        // Solo intentar eliminar el índice único en código
         try {
-            DB::statement("
-                ALTER TABLE tablas_retencion_documental 
-                ADD CONSTRAINT tablas_retencion_documental_codigo_unique_not_deleted 
-                UNIQUE (codigo, deleted_at)
-            ");
+            Schema::table('tablas_retencion_documental', function (Blueprint $table) {
+                $table->dropUnique(['codigo']);
+            });
+            echo "Índice eliminado: tablas_retencion_documental_codigo_unique\n";
+        } catch (Exception $e) {
+            // Si no existe, no pasa nada
+            echo "Índice único no encontrado o ya eliminado: " . $e->getMessage() . "\n";
+        }
+
+        // Crear nuevo índice único que funcione con soft deletes
+        try {
+            if ($driver === 'sqlite') {
+                // Para SQLite, crear un índice único parcial
+                DB::statement("
+                    CREATE UNIQUE INDEX tablas_retencion_documental_codigo_active_unique 
+                    ON tablas_retencion_documental (codigo) 
+                    WHERE deleted_at IS NULL
+                ");
+            } else {
+                // Para MySQL, crear índice único compuesto con deleted_at
+                DB::statement("
+                    CREATE UNIQUE INDEX tablas_retencion_documental_codigo_active_unique 
+                    ON tablas_retencion_documental (codigo, deleted_at)
+                ");
+            }
             echo "Nueva restricción única creada exitosamente\n";
         } catch (Exception $e) {
             echo "Error creando nueva restricción: " . $e->getMessage() . "\n";
-            
-            // Fallback: Crear índice único compuesto que permita duplicados cuando deleted_at no es null
-            try {
-                DB::statement("
-                    CREATE UNIQUE INDEX tablas_retencion_documental_codigo_active_unique 
-                    ON tablas_retencion_documental (codigo, IFNULL(deleted_at, ''))
-                ");
-                echo "Índice único compuesto creado como alternativa\n";
-            } catch (Exception $e2) {
-                echo "Error en fallback: " . $e2->getMessage() . "\n";
-            }
         }
     }
 
@@ -75,20 +54,20 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Eliminar la nueva restricción única
+        // Eliminar el índice único activo
         try {
-            DB::statement("ALTER TABLE tablas_retencion_documental DROP CONSTRAINT tablas_retencion_documental_codigo_unique_not_deleted");
+            DB::statement("DROP INDEX tablas_retencion_documental_codigo_active_unique");
         } catch (Exception $e) {
-            try {
-                DB::statement("DROP INDEX tablas_retencion_documental_codigo_active_unique ON tablas_retencion_documental");
-            } catch (Exception $e2) {
-                // Ignora errores si no existe
-            }
+            // Ignora errores si no existe
         }
         
         // Restaurar la restricción única original
-        Schema::table('tablas_retencion_documental', function (Blueprint $table) {
-            $table->unique('codigo');
-        });
+        try {
+            Schema::table('tablas_retencion_documental', function (Blueprint $table) {
+                $table->unique('codigo');
+            });
+        } catch (Exception $e) {
+            // Ignora si ya existe
+        }
     }
 };

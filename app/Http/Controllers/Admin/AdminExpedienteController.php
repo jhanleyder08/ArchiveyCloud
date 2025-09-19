@@ -6,597 +6,362 @@ use App\Http\Controllers\Controller;
 use App\Models\Expediente;
 use App\Models\SerieDocumental;
 use App\Models\SubserieDocumental;
-use App\Models\TablaRetencionDocumental;
-use App\Models\User;
+use App\Models\CuadroClasificacionDocumental;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Carbon\Carbon;
 
-/**
- * Controlador para Expedientes Electrónicos
- * 
- * Implementa requerimientos:
- * REQ-CL-019: Generación automática de expedientes electrónicos
- * REQ-CL-020: Gestión del ciclo de vida de expedientes
- * REQ-CL-021: Expedientes híbridos
- * REQ-CL-025: Control de volúmenes de expedientes
- * REQ-CL-037: Exportación de directorios
- */
 class AdminExpedienteController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
-        $query = Expediente::with(['serie', 'subserie', 'usuarioResponsable'])
-                          ->orderBy('created_at', 'desc');
-
-        // Filtros
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('codigo', 'LIKE', "%{$search}%")
-                  ->orWhere('nombre', 'LIKE', "%{$search}%")
-                  ->orWhere('descripcion', 'LIKE', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
-        if ($request->filled('tipo_expediente')) {
-            $query->where('tipo_expediente', $request->tipo_expediente);
-        }
-
-        if ($request->filled('serie_id')) {
-            $query->where('serie_id', $request->serie_id);
-        }
-
-        if ($request->filled('area_responsable')) {
-            $query->where('area_responsable', $request->area_responsable);
-        }
-
-        if ($request->filled('proximidad_vencimiento')) {
-            $dias = $request->proximidad_vencimiento;
-            if ($dias === 'vencidos') {
-                $query->vencidos();
-            } else {
-                $query->proximosVencer(intval($dias));
-            }
-        }
-
-        // Paginación
-        $expedientes = $query->paginate(20);
-
-        // Estadísticas
-        $estadisticas = [
-            'total' => Expediente::count(),
-            'abiertos' => Expediente::where('estado', Expediente::ESTADO_ABIERTO)->count(),
-            'cerrados' => Expediente::where('estado', Expediente::ESTADO_CERRADO)->count(),
-            'electronicos' => Expediente::where('tipo_expediente', Expediente::TIPO_ELECTRONICO)->count(),
-            'fisicos' => Expediente::where('tipo_expediente', Expediente::TIPO_FISICO)->count(),
-            'hibridos' => Expediente::where('tipo_expediente', Expediente::TIPO_HIBRIDO)->count(),
-            'proximos_vencer' => Expediente::proximosVencer(30)->count(),
-            'vencidos' => Expediente::vencidos()->count(),
-        ];
-
-        // Opciones para filtros
-        $opciones = [
-            'estados' => [
-                ['value' => Expediente::ESTADO_ABIERTO, 'label' => 'Abierto'],
-                ['value' => Expediente::ESTADO_CERRADO, 'label' => 'Cerrado'],
-                ['value' => Expediente::ESTADO_TRANSFERIDO, 'label' => 'Transferido'],
-                ['value' => Expediente::ESTADO_ARCHIVADO, 'label' => 'Archivado'],
-                ['value' => Expediente::ESTADO_EN_DISPOSICION, 'label' => 'En Disposición'],
-            ],
-            'tipos' => [
-                ['value' => Expediente::TIPO_ELECTRONICO, 'label' => 'Electrónico'],
-                ['value' => Expediente::TIPO_FISICO, 'label' => 'Físico'],
-                ['value' => Expediente::TIPO_HIBRIDO, 'label' => 'Híbrido'],
-            ],
-            'proximidad_vencimiento' => [
-                ['value' => '7', 'label' => 'Próximos 7 días'],
-                ['value' => '30', 'label' => 'Próximos 30 días'],
-                ['value' => '90', 'label' => 'Próximos 90 días'],
-                ['value' => 'vencidos', 'label' => 'Vencidos'],
-            ],
-            'series_disponibles' => SerieDocumental::select('id', 'codigo', 'nombre')->get(),
-            'areas_disponibles' => $this->getAreasDisponibles(),
-        ];
-
-        return Inertia::render('admin/expedientes/index', [
-            'data' => $expedientes,
-            'estadisticas' => $estadisticas,
-            'opciones' => $opciones,
-            'filtros' => $request->only(['search', 'estado', 'tipo_expediente', 'serie_id', 'area_responsable', 'proximidad_vencimiento'])
-        ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $opciones = [
-            'series' => SerieDocumental::with('subseries')
-                                      ->where('activo', true)
-                                      ->select('id', 'codigo', 'nombre')
-                                      ->get(),
-            'subseries' => SubserieDocumental::where('activo', true)
-                                             ->select('id', 'serie_id', 'codigo', 'nombre')
-                                             ->get(),
-            'trds' => TablaRetencionDocumental::where('activo', true)
-                                             ->select('id', 'codigo', 'version', 'nombre')
-                                             ->get(),
-            'usuarios' => User::where('activo', true)
-                             ->select('id', 'name', 'email')
-                             ->get(),
-            'tipos_expediente' => [
-                ['value' => Expediente::TIPO_ELECTRONICO, 'label' => 'Electrónico'],
-                ['value' => Expediente::TIPO_FISICO, 'label' => 'Físico'],
-                ['value' => Expediente::TIPO_HIBRIDO, 'label' => 'Híbrido'],
-            ],
-            'confidencialidad' => [
-                ['value' => Expediente::CONFIDENCIALIDAD_PUBLICA, 'label' => 'Pública'],
-                ['value' => Expediente::CONFIDENCIALIDAD_INTERNA, 'label' => 'Interna'],
-                ['value' => Expediente::CONFIDENCIALIDAD_CONFIDENCIAL, 'label' => 'Confidencial'],
-                ['value' => Expediente::CONFIDENCIALIDAD_RESERVADA, 'label' => 'Reservada'],
-                ['value' => Expediente::CONFIDENCIALIDAD_CLASIFICADA, 'label' => 'Clasificada'],
-            ],
-            'areas_disponibles' => $this->getAreasDisponibles(),
-        ];
-
-        return Inertia::render('admin/expedientes/create', [
-            'opciones' => $opciones
-        ]);
-    }
-
-    /**
-     * REQ-CL-019: Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'serie_id' => 'required|exists:series_documentales,id',
-            'subserie_id' => 'nullable|exists:subseries_documentales,id',
-            'trd_id' => 'nullable|exists:tablas_retencion_documental,id',
-            'tipo_expediente' => 'required|in:' . implode(',', [
-                Expediente::TIPO_ELECTRONICO,
-                Expediente::TIPO_FISICO,
-                Expediente::TIPO_HIBRIDO
-            ]),
-            'confidencialidad' => 'required|in:' . implode(',', [
-                Expediente::CONFIDENCIALIDAD_PUBLICA,
-                Expediente::CONFIDENCIALIDAD_INTERNA,
-                Expediente::CONFIDENCIALIDAD_CONFIDENCIAL,
-                Expediente::CONFIDENCIALIDAD_RESERVADA,
-                Expediente::CONFIDENCIALIDAD_CLASIFICADA
-            ]),
-            'usuario_responsable_id' => 'required|exists:users,id',
-            'area_responsable' => 'required|string|max:255',
-            'volumen_maximo' => 'nullable|integer|min:1',
-            'ubicacion_fisica' => 'nullable|string|max:255',
-            'ubicacion_digital' => 'nullable|string|max:255',
-            'palabras_clave' => 'nullable|array',
-            'palabras_clave.*' => 'string|max:50',
-            'acceso_publico' => 'boolean',
-            'observaciones' => 'nullable|string',
-        ]);
-
-        DB::beginTransaction();
-        
         try {
-            $expediente = new Expediente();
-            $expediente->fill($request->all());
-            $expediente->estado = Expediente::ESTADO_ABIERTO;
-            $expediente->fecha_apertura = now();
-            
-            // Validar relación serie-subserie
-            if ($request->subserie_id) {
-                $subserie = SubserieDocumental::find($request->subserie_id);
-                if ($subserie->serie_id !== $request->serie_id) {
-                    return redirect()->back()
-                                   ->withInput()
-                                   ->withErrors(['subserie_id' => 'La subserie seleccionada no pertenece a la serie indicada.']);
+            $query = Expediente::query();
+
+            // Aplicar filtros
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('numero_expediente', 'like', "%{$search}%")
+                      ->orWhere('titulo', 'like', "%{$search}%")
+                      ->orWhere('descripcion', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('estado')) {
+                $query->where('estado_ciclo_vida', $request->estado);
+            }
+
+            if ($request->filled('tipo_expediente')) {
+                $query->where('tipo_expediente', $request->tipo_expediente);
+            }
+
+            if ($request->filled('serie_id')) {
+                $query->where('serie_documental_id', $request->serie_id);
+            }
+
+            if ($request->filled('area_responsable')) {
+                $query->where('area_responsable', $request->area_responsable);
+            }
+
+            if ($request->filled('proximidad_vencimiento')) {
+                $dias = (int) $request->proximidad_vencimiento;
+                if ($dias > 0) {
+                    $fechaLimite = Carbon::now()->addDays($dias);
+                    $query->where('fecha_vencimiento_disposicion', '<=', $fechaLimite)
+                          ->where('fecha_vencimiento_disposicion', '>', Carbon::now());
                 }
             }
-            
-            $expediente->save();
-            
-            DB::commit();
-            
-            return redirect()->route('admin.expedientes.index')
-                           ->with('success', 'Expediente creado exitosamente.');
-                           
+
+            $expedientes = $query->orderBy('created_at', 'desc')->paginate(20);
+
+            // Estadísticas completas
+            $estadisticas = [
+                'total' => Expediente::count(),
+                'abiertos' => Expediente::where('estado_ciclo_vida', 'tramite')->count(),
+                'cerrados' => Expediente::where('estado_ciclo_vida', 'central')->count(),
+                'electronicos' => Expediente::where('tipo_expediente', 'electronico')->count(),
+                'fisicos' => Expediente::where('tipo_expediente', 'fisico')->count(),
+                'hibridos' => Expediente::where('tipo_expediente', 'hibrido')->count(),
+                'proximos_vencer' => 0, // Simplificado por ahora
+                'vencidos' => 0, // Simplificado por ahora
+            ];
+
+            // Opciones para filtros
+            $opciones = [
+                'estados' => [
+                    ['value' => 'tramite', 'label' => 'En Trámite'],
+                    ['value' => 'gestion', 'label' => 'Archivo de Gestión'],
+                    ['value' => 'central', 'label' => 'Archivo Central'],
+                    ['value' => 'historico', 'label' => 'Archivo Histórico'],
+                    ['value' => 'eliminado', 'label' => 'Eliminado'],
+                ],
+                'tipos' => [
+                    ['value' => 'electronico', 'label' => 'Electrónico'],
+                    ['value' => 'fisico', 'label' => 'Físico'],
+                    ['value' => 'hibrido', 'label' => 'Híbrido'],
+                ],
+                'proximidad_vencimiento' => [
+                    ['value' => '7', 'label' => 'Próximos 7 días'],
+                    ['value' => '15', 'label' => 'Próximos 15 días'],
+                    ['value' => '30', 'label' => 'Próximos 30 días'],
+                    ['value' => '90', 'label' => 'Próximos 90 días'],
+                ],
+                'series_disponibles' => SerieDocumental::activas()->get(['id', 'codigo', 'nombre']),
+                'areas_disponibles' => Expediente::select('area_responsable')
+                                                 ->distinct()
+                                                 ->whereNotNull('area_responsable')
+                                                 ->get()
+                                                 ->map(fn($item) => ['value' => $item->area_responsable, 'label' => $item->area_responsable]),
+            ];
+
+            return Inertia::render('admin/expedientes/index', [
+                'data' => $expedientes,
+                'estadisticas' => $estadisticas,
+                'opciones' => $opciones,
+                'filtros' => $request->only(['search', 'estado', 'tipo_expediente', 'serie_id', 'area_responsable', 'proximidad_vencimiento'])
+            ]);
+
         } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()
-                           ->withInput()
-                           ->withErrors(['error' => 'Error al crear expediente: ' . $e->getMessage()]);
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
+    public function create()
+    {
+        $series = SerieDocumental::activas()->get();
+        
+        $subseries = SubserieDocumental::activas()->get();
+            
+        $ccdOptions = CuadroClasificacionDocumental::where('activo', true)
+            ->get(['id', 'codigo', 'nombre']);
+
+        return Inertia::render('admin/expedientes/create', [
+            'series' => $series,
+            'subseries' => $subseries,
+            'ccdOptions' => $ccdOptions,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            $request->validate([
+                'codigo' => 'required|string|max:50|unique:expedientes,codigo',
+                'nombre' => 'required|string|max:255',
+                'descripcion' => 'nullable|string',
+                'serie_id' => 'required|exists:series_documentales,id',
+                'subserie_id' => 'nullable|exists:subseries_documentales,id',
+                'tipo_expediente' => 'required|in:electronico,fisico,hibrido',
+                'confidencialidad' => 'required|in:publico,restringido,confidencial,secreto',
+                'area_responsable' => 'required|string|max:255',
+                'ubicacion_fisica' => 'nullable|string|max:255',
+                'palabras_clave' => 'nullable|array',
+                'documentos_electronicos' => 'boolean',
+                'firma_digital' => 'boolean',
+                'control_versiones' => 'boolean',
+                'notificaciones' => 'boolean',
+            ]);
+
+            $expediente = Expediente::create([
+                'codigo' => $request->codigo,
+                'nombre' => $request->nombre,
+                'descripcion' => $request->descripcion,
+                'serie_id' => $request->serie_id,
+                'subserie_id' => $request->subserie_id,
+                'tipo_expediente' => $request->tipo_expediente,
+                'confidencialidad' => $request->confidencialidad,
+                'area_responsable' => $request->area_responsable,
+                'ubicacion_fisica' => $request->ubicacion_fisica,
+                'palabras_clave' => $request->palabras_clave,
+                'estado' => 'abierto',
+                'fecha_apertura' => now(),
+                'usuario_responsable_id' => auth()->id(),
+                'volumen_actual' => 1,
+                'volumen_maximo' => 1,
+                'numero_folios' => 0,
+                'documentos_electronicos' => $request->boolean('documentos_electronicos', false),
+                'firma_digital' => $request->boolean('firma_digital', false),
+                'control_versiones' => $request->boolean('control_versiones', false),
+                'notificaciones' => $request->boolean('notificaciones', true),
+            ]);
+
+            return redirect()->route('admin.expedientes.index')->with('success', 'Expediente creado exitosamente.');
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInput();
+        }
+    }
+
     public function show(Expediente $expediente)
     {
         $expediente->load([
             'serie',
             'subserie',
-            'trd',
-            'usuarioResponsable',
-            'documentos.tipologia',
-            'documentos.usuarioCreador'
+            'usuarioResponsable'
         ]);
 
-        // Obtener estadísticas del expediente
-        $estadisticas = $expediente->getEstadisticas();
-        
-        // Verificar integridad
-        $erroresIntegridad = $expediente->validarIntegridad();
-        
-        // Documentos recientes
-        $documentosRecientes = $expediente->documentos()
-                                        ->orderBy('created_at', 'desc')
-                                        ->limit(10)
-                                        ->get();
+        $estadisticas = [
+            'documentos_count' => 0,
+            'documentos_electronicos' => 0,
+            'documentos_fisicos' => 0,
+            'tamaño_total' => 0,
+            'ultimo_movimiento' => null,
+        ];
 
         return Inertia::render('admin/expedientes/show', [
-            'expediente' => [
-                ...$expediente->toArray(),
-                'estadisticas' => $estadisticas,
-                'errores_integridad' => $erroresIntegridad,
-                'puede_editar' => $this->puedeEditar($expediente),
-                'puede_cerrar' => $this->puedeCerrar($expediente),
-                'puede_cambiar_estado' => $this->puedeCambiarEstado($expediente),
-                'estados_disponibles' => $this->getEstadosDisponibles($expediente->estado),
-            ],
-            'documentos_recientes' => $documentosRecientes
+            'expediente' => $expediente,
+            'estadisticas' => $estadisticas,
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Expediente $expediente)
     {
-        $expediente->load(['serie', 'subserie', 'usuarioResponsable']);
+        $expediente->load(['serie', 'subserie']);
         
-        $opciones = [
-            'series' => SerieDocumental::with('subseries')
-                                      ->where('activo', true)
-                                      ->select('id', 'codigo', 'nombre')
-                                      ->get(),
-            'subseries' => SubserieDocumental::where('activo', true)
-                                             ->select('id', 'serie_id', 'codigo', 'nombre')
-                                             ->get(),
-            'trds' => TablaRetencionDocumental::where('activo', true)
-                                             ->select('id', 'codigo', 'version', 'nombre')
-                                             ->get(),
-            'usuarios' => User::where('activo', true)
-                             ->select('id', 'name', 'email')
-                             ->get(),
-            'tipos_expediente' => [
-                ['value' => Expediente::TIPO_ELECTRONICO, 'label' => 'Electrónico'],
-                ['value' => Expediente::TIPO_FISICO, 'label' => 'Físico'],
-                ['value' => Expediente::TIPO_HIBRIDO, 'label' => 'Híbrido'],
-            ],
-            'confidencialidad' => [
-                ['value' => Expediente::CONFIDENCIALIDAD_PUBLICA, 'label' => 'Pública'],
-                ['value' => Expediente::CONFIDENCIALIDAD_INTERNA, 'label' => 'Interna'],
-                ['value' => Expediente::CONFIDENCIALIDAD_CONFIDENCIAL, 'label' => 'Confidencial'],
-                ['value' => Expediente::CONFIDENCIALIDAD_RESERVADA, 'label' => 'Reservada'],
-                ['value' => Expediente::CONFIDENCIALIDAD_CLASIFICADA, 'label' => 'Clasificada'],
-            ],
-            'areas_disponibles' => $this->getAreasDisponibles(),
-        ];
+        $series = SerieDocumental::activas()->get();
+        
+        $subseries = SubserieDocumental::activas()->get();
 
         return Inertia::render('admin/expedientes/edit', [
             'expediente' => $expediente,
-            'opciones' => $opciones
+            'series' => $series,
+            'subseries' => $subseries,
         ]);
     }
 
-    /**
-     * REQ-CL-020: Update the specified resource in storage.
-     */
     public function update(Request $request, Expediente $expediente)
     {
-        if (!$this->puedeEditar($expediente)) {
-            return redirect()->back()
-                           ->withErrors(['error' => 'No tienes permisos para editar este expediente.']);
+        try {
+            $request->validate([
+                'nombre' => 'required|string|max:255',
+                'descripcion' => 'nullable|string',
+                'serie_documental_id' => 'required|exists:series_documentales,id',
+                'subserie_documental_id' => 'nullable|exists:subseries_documentales,id',
+                'tipo_expediente' => 'required|in:electronico,fisico,hibrido',
+                'confidencialidad' => 'required|in:publico,restringido,confidencial,secreto',
+                'area_responsable' => 'required|string|max:255',
+                'ubicacion_fisica' => 'nullable|string|max:255',
+                'palabras_clave' => 'nullable|array',
+                'documentos_electronicos' => 'boolean',
+                'firma_digital' => 'boolean',
+                'control_versiones' => 'boolean',
+                'notificaciones' => 'boolean',
+            ]);
+
+            $expediente->update($request->only([
+                'nombre', 'descripcion', 'serie_documental_id', 'subserie_documental_id',
+                'tipo_expediente', 'confidencialidad', 'area_responsable', 'ubicacion_fisica',
+                'palabras_clave', 'documentos_electronicos', 'firma_digital', 'control_versiones',
+                'notificaciones'
+            ]));
+
+            return redirect()->route('admin.expedientes.index')->with('success', 'Expediente actualizado exitosamente.');
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage())->withInput();
         }
-
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'serie_id' => 'required|exists:series_documentales,id',
-            'subserie_id' => 'nullable|exists:subseries_documentales,id',
-            'trd_id' => 'nullable|exists:tablas_retencion_documental,id',
-            'tipo_expediente' => 'required|in:' . implode(',', [
-                Expediente::TIPO_ELECTRONICO,
-                Expediente::TIPO_FISICO,
-                Expediente::TIPO_HIBRIDO
-            ]),
-            'confidencialidad' => 'required|in:' . implode(',', [
-                Expediente::CONFIDENCIALIDAD_PUBLICA,
-                Expediente::CONFIDENCIALIDAD_INTERNA,
-                Expediente::CONFIDENCIALIDAD_CONFIDENCIAL,
-                Expediente::CONFIDENCIALIDAD_RESERVADA,
-                Expediente::CONFIDENCIALIDAD_CLASIFICADA
-            ]),
-            'usuario_responsable_id' => 'required|exists:users,id',
-            'area_responsable' => 'required|string|max:255',
-            'volumen_maximo' => 'nullable|integer|min:1',
-            'ubicacion_fisica' => 'nullable|string|max:255',
-            'ubicacion_digital' => 'nullable|string|max:255',
-            'palabras_clave' => 'nullable|array',
-            'palabras_clave.*' => 'string|max:50',
-            'acceso_publico' => 'boolean',
-            'observaciones' => 'nullable|string',
-        ]);
-
-        // Validar relación serie-subserie
-        if ($request->subserie_id) {
-            $subserie = SubserieDocumental::find($request->subserie_id);
-            if ($subserie->serie_id !== $request->serie_id) {
-                return redirect()->back()
-                               ->withInput()
-                               ->withErrors(['subserie_id' => 'La subserie seleccionada no pertenece a la serie indicada.']);
-            }
-        }
-
-        $expediente->fill($request->all());
-        $expediente->save();
-
-        return redirect()->route('admin.expedientes.index')
-                       ->with('success', 'Expediente actualizado exitosamente.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Expediente $expediente)
     {
-        if (!$this->puedeEliminar($expediente)) {
-            return redirect()->back()
-                           ->withErrors(['error' => 'No tienes permisos para eliminar este expediente.']);
+        try {
+            // Verificar si tiene documentos asociados
+            if ($expediente->documentos()->exists()) {
+                return redirect()->back()->with('error', 'No se puede eliminar un expediente que tiene documentos asociados.');
+            }
+
+            $expediente->delete();
+            return redirect()->route('admin.expedientes.index')->with('success', 'Expediente eliminado exitosamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
-
-        $expediente->delete();
-
-        return redirect()->route('admin.expedientes.index')
-                       ->with('success', 'Expediente eliminado exitosamente.');
     }
 
-    /**
-     * REQ-CL-020: Cambiar estado del expediente
-     */
     public function cambiarEstado(Request $request, Expediente $expediente)
     {
-        $request->validate([
-            'estado' => 'required|in:' . implode(',', [
-                Expediente::ESTADO_ABIERTO,
-                Expediente::ESTADO_CERRADO,
-                Expediente::ESTADO_TRANSFERIDO,
-                Expediente::ESTADO_ARCHIVADO,
-                Expediente::ESTADO_EN_DISPOSICION
-            ]),
-            'observaciones' => 'nullable|string|max:500'
-        ]);
-
         try {
-            $expediente->cambiarEstado($request->estado, $request->observaciones);
-            
-            return response()->json([
-                'success' => true,
-                'mensaje' => 'Estado del expediente actualizado exitosamente.',
-                'nuevo_estado' => $request->estado
+            $request->validate([
+                'nuevo_estado' => 'required|in:abierto,tramite,revision,cerrado,archivado',
+                'observaciones' => 'nullable|string|max:500',
             ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'mensaje' => 'Error al cambiar estado: ' . $e->getMessage()
-            ], 400);
-        }
-    }
 
-    /**
-     * REQ-CL-037: Exportar directorio del expediente
-     */
-    public function exportarDirectorio(Request $request, Expediente $expediente)
-    {
-        $formato = $request->get('formato', 'json');
-        $incluirDocumentos = $request->boolean('incluir_documentos', true);
-        
-        try {
-            $directorio = $expediente->exportarDirectorio($formato, $incluirDocumentos);
-            
-            $nombreArchivo = "directorio_expediente_{$expediente->codigo}";
-            
-            switch ($formato) {
-                case 'xml':
-                    return response($directorio)
-                            ->header('Content-Type', 'application/xml')
-                            ->header('Content-Disposition', "attachment; filename=\"{$nombreArchivo}.xml\"");
-                            
-                case 'csv':
-                    return response($directorio)
-                            ->header('Content-Type', 'text/csv')
-                            ->header('Content-Disposition', "attachment; filename=\"{$nombreArchivo}.csv\"");
-                            
-                default:
-                    return response($directorio)
-                            ->header('Content-Type', 'application/json')
-                            ->header('Content-Disposition', "attachment; filename=\"{$nombreArchivo}.json\"");
+            $estadoAnterior = $expediente->estado;
+            $expediente->update([
+                'estado' => $request->nuevo_estado,
+                'fecha_cierre' => $request->nuevo_estado === 'cerrado' ? now() : null,
+            ]);
+
+            // Registrar en auditoría
+            if (class_exists('App\Models\PistaAuditoria')) {
+                \App\Models\PistaAuditoria::registrar($expediente, 'cambio_estado', [
+                    'descripcion' => "Estado cambiado de {$estadoAnterior} a {$request->nuevo_estado}",
+                    'observaciones' => $request->observaciones,
+                ]);
             }
-            
+
+            return redirect()->back()->with('success', 'Estado del expediente actualizado exitosamente.');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'mensaje' => 'Error al exportar directorio: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Verificar integridad del expediente
-     */
-    public function verificarIntegridad(Expediente $expediente)
-    {
-        $errores = $expediente->validarIntegridad();
-        
-        return response()->json([
-            'success' => count($errores) === 0,
-            'errores' => $errores,
-            'mensaje' => count($errores) === 0 ? 
-                        'Expediente íntegro' : 
-                        'Se encontraron ' . count($errores) . ' errores de integridad'
-        ]);
-    }
-
-    /**
-     * Dashboard de expedientes
-     */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $estadisticas = [
             'total_expedientes' => Expediente::count(),
-            'expedientes_abiertos' => Expediente::abiertos()->count(),
-            'expedientes_cerrados' => Expediente::cerrados()->count(),
-            'proximos_vencer_7d' => Expediente::proximosVencer(7)->count(),
-            'proximos_vencer_30d' => Expediente::proximosVencer(30)->count(),
-            'vencidos' => Expediente::vencidos()->count(),
-            'por_tipo' => [
-                'electronicos' => Expediente::porTipo(Expediente::TIPO_ELECTRONICO)->count(),
-                'fisicos' => Expediente::porTipo(Expediente::TIPO_FISICO)->count(),
-                'hibridos' => Expediente::porTipo(Expediente::TIPO_HIBRIDO)->count(),
-            ],
-            'volumen_total_mb' => round(Expediente::sum('volumen_actual') / 1024 / 1024, 2),
-            'promedio_documentos_por_expediente' => Expediente::withCount('documentos')
-                                                             ->get()
-                                                             ->avg('documentos_count'),
+            'expedientes_abiertos' => Expediente::where('estado', 'abierto')->count(),
+            'expedientes_cerrados' => Expediente::where('estado', 'cerrado')->count(),
+            'expedientes_por_mes' => Expediente::selectRaw('MONTH(fecha_apertura) as mes, COUNT(*) as total')
+                ->whereYear('fecha_apertura', now()->year)
+                ->groupBy('mes')
+                ->orderBy('mes')
+                ->get(),
         ];
-
-        // Expedientes recientes
-        $expedientesRecientes = Expediente::with(['serie', 'usuarioResponsable'])
-                                         ->orderBy('created_at', 'desc')
-                                         ->limit(10)
-                                         ->get();
-
-        // Expedientes próximos a vencer
-        $proximosVencer = Expediente::with(['serie', 'usuarioResponsable'])
-                                   ->proximosVencer(30)
-                                   ->orderBy('fecha_vencimiento_disposicion')
-                                   ->limit(10)
-                                   ->get();
 
         return Inertia::render('admin/expedientes/dashboard', [
             'estadisticas' => $estadisticas,
-            'expedientes_recientes' => $expedientesRecientes,
-            'proximos_vencer' => $proximosVencer
         ]);
     }
 
-    /**
-     * Métodos auxiliares
-     */
-    
-    /**
-     * Verificar permisos de edición
-     */
-    private function puedeEditar(Expediente $expediente)
+    public function exportarDirectorio(Expediente $expediente)
     {
-        $user = auth()->user();
-        return $user->isAdmin() || 
-               $expediente->usuario_responsable_id === $user->id ||
-               $user->hasPermission('expedientes.editar');
-    }
+        try {
+            $expediente->load(['documentos', 'serieDocumental', 'subserieDocumental']);
+            
+            $directorio = [
+                'expediente' => $expediente->only([
+                    'codigo', 'nombre', 'descripcion', 'estado', 'fecha_apertura', 'fecha_cierre'
+                ]),
+                'serie' => $expediente->serieDocumental?->only(['codigo', 'nombre']),
+                'subserie' => $expediente->subserieDocumental?->only(['codigo', 'nombre']),
+                'documentos' => $expediente->documentos->map(function($doc) {
+                    return $doc->only(['codigo', 'nombre', 'tipo_documento', 'fecha_creacion', 'tamaño']);
+                }),
+                'fecha_exportacion' => now()->toISOString(),
+            ];
 
-    /**
-     * Verificar si se puede cerrar el expediente
-     */
-    private function puedeCerrar(Expediente $expediente)
-    {
-        return $expediente->estado === Expediente::ESTADO_ABIERTO && 
-               $this->puedeEditar($expediente);
-    }
+            return response()->json($directorio)
+                ->header('Content-Disposition', 'attachment; filename="directorio_expediente_'.$expediente->codigo.'.json"');
 
-    /**
-     * Verificar si se puede cambiar el estado
-     */
-    private function puedeCambiarEstado(Expediente $expediente)
-    {
-        $user = auth()->user();
-        return $user->isAdmin() || 
-               $expediente->usuario_responsable_id === $user->id ||
-               $user->hasPermission('expedientes.cambiar_estado');
-    }
-
-    /**
-     * Verificar permisos de eliminación
-     */
-    private function puedeEliminar(Expediente $expediente)
-    {
-        $user = auth()->user();
-        
-        // No se puede eliminar si tiene documentos
-        if ($expediente->documentos()->count() > 0) {
-            return false;
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
-        
-        return $user->isAdmin() || 
-               ($expediente->usuario_responsable_id === $user->id && $expediente->estado === Expediente::ESTADO_ABIERTO) ||
-               $user->hasPermission('expedientes.eliminar');
     }
 
-    /**
-     * Obtener estados disponibles según el estado actual
-     */
-    private function getEstadosDisponibles($estadoActual)
+    public function verificarIntegridad(Expediente $expediente)
     {
-        $transicionesValidas = [
-            Expediente::ESTADO_ABIERTO => [
-                Expediente::ESTADO_CERRADO,
-                Expediente::ESTADO_ARCHIVADO
-            ],
-            Expediente::ESTADO_CERRADO => [
-                Expediente::ESTADO_TRANSFERIDO,
-                Expediente::ESTADO_ARCHIVADO,
-                Expediente::ESTADO_EN_DISPOSICION
-            ],
-            Expediente::ESTADO_TRANSFERIDO => [
-                Expediente::ESTADO_ARCHIVADO,
-                Expediente::ESTADO_EN_DISPOSICION
-            ],
-            Expediente::ESTADO_ARCHIVADO => [
-                Expediente::ESTADO_EN_DISPOSICION
-            ],
-            Expediente::ESTADO_EN_DISPOSICION => []
-        ];
+        try {
+            $errores = [];
+            $expediente->load(['documentos', 'serieDocumental']);
 
-        return $transicionesValidas[$estadoActual] ?? [];
-    }
+            // Verificar integridad básica
+            if (!$expediente->serieDocumental) {
+                $errores[] = 'El expediente no tiene serie documental asignada';
+            }
 
-    /**
-     * Obtener áreas disponibles
-     */
-    private function getAreasDisponibles()
-    {
-        return Expediente::select('area_responsable')
-                        ->distinct()
-                        ->whereNotNull('area_responsable')
-                        ->pluck('area_responsable')
-                        ->map(function($area) {
-                            return ['value' => $area, 'label' => $area];
-                        });
+            if ($expediente->documentos->isEmpty()) {
+                $errores[] = 'El expediente no tiene documentos asociados';
+            }
+
+            // Verificar documentos
+            foreach ($expediente->documentos as $documento) {
+                if (!file_exists(storage_path('app/public/' . $documento->ruta_archivo))) {
+                    $errores[] = "Archivo físico no encontrado: {$documento->nombre}";
+                }
+            }
+
+            $resultado = [
+                'integro' => empty($errores),
+                'errores' => $errores,
+                'verificado_en' => now()->toISOString(),
+                'total_documentos' => $expediente->documentos->count(),
+            ];
+
+            return response()->json($resultado);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }
