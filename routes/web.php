@@ -139,6 +139,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/limpiar-antiguas', [App\Http\Controllers\Admin\NotificacionController::class, 'limpiarAntiguas'])->name('limpiar-antiguas');
         });
         
+        // Sistema de Índices Electrónicos
+        Route::prefix('indices')->name('indices.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'index'])->name('index');
+            Route::get('/{indice}', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'show'])->name('show');
+            Route::delete('/{indice}', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'destroy'])->name('destroy');
+            
+            // Gestión de índices
+            Route::post('/regenerar', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'regenerar'])->name('regenerar');
+            Route::post('/indexar-entidad', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'indexarEntidad'])->name('indexar-entidad');
+            Route::patch('/{indice}/actualizar', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'actualizar'])->name('actualizar');
+            
+            // Exportación y estadísticas
+            Route::post('/exportar', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'exportar'])->name('exportar');
+            Route::get('/estadisticas/dashboard', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'estadisticas'])->name('estadisticas');
+        });
+
         // Módulo de Retención y Disposición
         Route::prefix('retencion-disposicion')->name('retencion.')->group(function () {
             Route::get('/', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'index'])->name('index');

@@ -183,6 +183,14 @@ class Expediente extends Model
     /**
      * Relación con documentos
      */
+    public function documentos(): HasMany
+    {
+        return $this->hasMany(Documento::class, 'expediente_id');
+    }
+
+    /**
+     * Relación con préstamos
+     */
     public function prestamos(): HasMany
     {
         return $this->hasMany(Prestamo::class);

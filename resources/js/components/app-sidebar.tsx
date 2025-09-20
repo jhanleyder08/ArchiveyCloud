@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes/index';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell, Archive, BarChart3, Briefcase, BellRing, Shield, GitBranch } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell, Archive, BarChart3, Briefcase, BellRing, Shield, GitBranch, Database } from 'lucide-react';
 import AppLogo from './app-logo';
 import SupportModal from './support-modal';
 import { useState } from 'react';
@@ -75,6 +75,11 @@ const mainNavItems: NavItem[] = [
                 title: 'Centro de Notificaciones',
                 href: '/admin/notificaciones',
                 icon: BellRing,
+            },
+            {
+                title: 'Índices Electrónicos',
+                href: '/admin/indices',
+                icon: Database,
             },
             {
                 title: 'Firmas Digitales',
