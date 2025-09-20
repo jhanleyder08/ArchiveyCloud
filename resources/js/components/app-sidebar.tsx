@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes/index';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell, Archive, BarChart3, Briefcase, BellRing, Shield } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell, Archive, BarChart3, Briefcase, BellRing, Shield, GitBranch } from 'lucide-react';
 import AppLogo from './app-logo';
 import SupportModal from './support-modal';
 import { useState } from 'react';
@@ -80,6 +80,11 @@ const mainNavItems: NavItem[] = [
                 title: 'Firmas Digitales',
                 href: '/admin/firmas/dashboard',
                 icon: Shield,
+            },
+            {
+                title: 'Workflow de Aprobaciones',
+                href: '/admin/workflow',
+                icon: GitBranch,
             },
         ],
     },

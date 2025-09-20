@@ -81,6 +81,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/firma/{firma}/verificar-especifica', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'verificarFirmaEspecifica'])->name('verificar-especifica');
         });
         
+        // Sistema de Workflow/Aprobaciones routes
+        Route::prefix('workflow')->name('workflow.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\WorkflowController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\Admin\WorkflowController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\WorkflowController::class, 'store'])->name('store');
+            Route::get('/{workflow}', [App\Http\Controllers\Admin\WorkflowController::class, 'show'])->name('show');
+            Route::get('/{workflow}/aprobar', [App\Http\Controllers\Admin\WorkflowController::class, 'aprobar'])->name('aprobar');
+            Route::post('/{workflow}/procesar', [App\Http\Controllers\Admin\WorkflowController::class, 'procesarAprobacion'])->name('procesar');
+            Route::post('/{workflow}/delegar', [App\Http\Controllers\Admin\WorkflowController::class, 'delegar'])->name('delegar');
+            Route::post('/{workflow}/cancelar', [App\Http\Controllers\Admin\WorkflowController::class, 'cancelar'])->name('cancelar');
+        });
+        
         // Sistema de Préstamos y Consultas routes
         Route::prefix('prestamos')->name('prestamos.')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'index'])->name('index');
