@@ -55,14 +55,20 @@ class Documento extends Model
         'ubicacion_fisica',
         'observaciones',
         'usuario_creador_id',
-        'usuario_modificador_id'
+        'usuario_modificador_id',
+        'firmado_digitalmente',
+        'fecha_ultima_firma',
+        'estado_firma',
+        'total_firmas'
     ];
 
     protected $casts = [
         'fecha_creacion' => 'datetime',
         'fecha_modificacion' => 'datetime',
         'fecha_digitalizacion' => 'datetime',
+        'fecha_ultima_firma' => 'datetime',
         'es_version_principal' => 'boolean',
+        'firmado_digitalmente' => 'boolean',
         'palabras_clave' => 'array',
         'metadatos_documento' => 'array',
         'created_at' => 'datetime',

@@ -71,6 +71,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/exportar', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('exportar');
         });
         
+        // Sistema de Firmas Digitales routes
+        Route::prefix('firmas')->name('firmas.')->group(function () {
+            Route::get('/dashboard', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'dashboard'])->name('dashboard');
+            Route::get('/documento/{documento}/firmar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'mostrarFormularioFirma'])->name('formulario');
+            Route::post('/documento/{documento}/firmar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'firmarDocumento'])->name('firmar');
+            Route::get('/documento/{documento}/verificar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'verificarFirmas'])->name('verificar');
+            Route::get('/documento/{documento}/certificado', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'generarCertificado'])->name('certificado');
+            Route::get('/firma/{firma}/verificar-especifica', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'verificarFirmaEspecifica'])->name('verificar-especifica');
+        });
+        
         // Sistema de Préstamos y Consultas routes
         Route::prefix('prestamos')->name('prestamos.')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'index'])->name('index');
