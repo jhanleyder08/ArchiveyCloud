@@ -99,7 +99,7 @@ interface Opciones {
 }
 
 interface Props {
-    data: PaginatedExpedientes;
+    expedientes: PaginatedExpedientes;
     estadisticas: Estadisticas;
     opciones: Opciones;
     filtros: {
@@ -116,13 +116,7 @@ interface Props {
     };
 }
 
-export default function AdminExpedientesIndex({ 
-    data: expedientes, 
-    estadisticas, 
-    opciones, 
-    filtros, 
-    flash 
-}: Props) {
+export default function Index({ expedientes, estadisticas, opciones, filtros }: Props) {
     const { flash: pageFlash } = usePage<{flash: {success?: string, error?: string}}>().props;
     const [searchQuery, setSearchQuery] = useState(filtros.search || '');
     const [showFilters, setShowFilters] = useState(false);

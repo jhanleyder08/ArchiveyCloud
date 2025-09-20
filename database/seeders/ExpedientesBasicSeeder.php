@@ -78,7 +78,10 @@ class ExpedientesBasicSeeder extends Seeder
             ]
         ];
         
-        DB::table('expedientes')->insert($expedientes);
+        // Insertar expedientes uno por uno para mejor control
+        foreach ($expedientes as $expediente) {
+            DB::table('expedientes')->insert($expediente);
+        }
         
         $this->command->info('✅ Expedientes de ejemplo creados exitosamente');
     }

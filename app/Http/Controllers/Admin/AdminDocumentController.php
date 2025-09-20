@@ -56,8 +56,7 @@ class AdminDocumentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Documento::with(['expediente', 'tipologia', 'usuarioCreador'])
-                          ->orderBy('created_at', 'desc');
+        $query = Documento::query()->orderBy('created_at', 'desc');
 
         // Filtros
         if ($request->filled('search')) {
@@ -90,28 +89,28 @@ class AdminDocumentController extends Controller
 
         // Estadísticas
         $estadisticas = [
-            'total' => Documento::count(),
-            'activos' => Documento::where('estado', Documento::ESTADO_ACTIVO)->count(),
-            'borradores' => Documento::where('estado', Documento::ESTADO_BORRADOR)->count(),
-            'archivados' => Documento::where('estado', Documento::ESTADO_ARCHIVADO)->count(),
+            'total' => 0, // Documento::count(),
+            'activos' => 0, // Simplificado por ahora
+            'borradores' => 0, // Simplificado por ahora
+            'archivados' => 0, // Simplificado por ahora
         ];
 
         // Opciones para filtros
         $opciones = [
             'estados' => [
-                ['value' => Documento::ESTADO_BORRADOR, 'label' => 'Borrador'],
-                ['value' => Documento::ESTADO_PENDIENTE, 'label' => 'Pendiente'],
-                ['value' => Documento::ESTADO_APROBADO, 'label' => 'Aprobado'],
-                ['value' => Documento::ESTADO_ACTIVO, 'label' => 'Activo'],
-                ['value' => Documento::ESTADO_ARCHIVADO, 'label' => 'Archivado'],
+                ['value' => 'borrador', 'label' => 'Borrador'],
+                ['value' => 'pendiente', 'label' => 'Pendiente'],
+                ['value' => 'aprobado', 'label' => 'Aprobado'],
+                ['value' => 'activo', 'label' => 'Activo'],
+                ['value' => 'archivado', 'label' => 'Archivado'],
             ],
             'soportes' => [
-                ['value' => Documento::SOPORTE_ELECTRONICO, 'label' => 'Electrónico'],
-                ['value' => Documento::SOPORTE_FISICO, 'label' => 'Físico'],
-                ['value' => Documento::SOPORTE_HIBRIDO, 'label' => 'Híbrido'],
+                ['value' => 'electronico', 'label' => 'Electrónico'],
+                ['value' => 'fisico', 'label' => 'Físico'],
+                ['value' => 'hibrido', 'label' => 'Híbrido'],
             ],
-            'formatos_disponibles' => $this->getFormatosDisponibles(),
-            'expedientes_disponibles' => Expediente::select('id', 'numero_expediente', 'titulo')->get(),
+            'formatos_disponibles' => ['pdf', 'doc', 'docx', 'jpg', 'png'],
+            'expedientes_disponibles' => [], // Expediente::select('id', 'numero_expediente', 'titulo')->get(),
         ];
 
         return Inertia::render('admin/documentos/index', [

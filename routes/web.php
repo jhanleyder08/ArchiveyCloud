@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         // Sistema de Reportes y Estadísticas routes
         Route::prefix('reportes')->name('reportes.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\AdminReportController::class, 'index'])->name('index');
             Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('dashboard');
             Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('cumplimiento-normativo');
             Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('productividad');

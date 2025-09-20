@@ -9,7 +9,7 @@ import {
     SidebarMenuSubItem
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
@@ -72,10 +72,10 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                                         asChild
                                                         isActive={isActive(subItem.href)}
                                                     >
-                                                        <Link href={subItem.href} prefetch>
+                                                        <div onClick={() => router.visit(subItem.href as string)}>
                                                             {subItem.icon && <subItem.icon />}
                                                             <span>{subItem.title}</span>
-                                                        </Link>
+                                                        </div>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
                                             ))}
@@ -89,14 +89,21 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         return (
                             <SidebarMenuItem key={item.title}>
                                 <SidebarMenuButton
-                                    asChild
                                     isActive={isActive(item.href)}
                                     tooltip={{ children: item.title }}
+                                    onMouseEnter={() => console.log('🖱️ Mouse encima de:', item.title)}
+                                    onMouseDown={() => console.log('🖱️ Mouse presionado en:', item.title)}
+                                    onClick={(e) => {
+                                        console.log('🎯 CLICK DETECTADO en:', item.title);
+                                        console.log('🎯 Event:', e);
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log('🚀 Navegando a:', item.href);
+                                        window.location.href = item.href as string;
+                                    }}
                                 >
-                                    <Link href={item.href} prefetch>
-                                        {item.icon && <item.icon />}
-                                        <span>{item.title}</span>
-                                    </Link>
+                                    {item.icon && <item.icon />}
+                                    <span>{item.title}</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         );

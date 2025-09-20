@@ -1,0 +1,1 @@
+import{r as a}from"./app-BLuzjK0-.js";import{c as e,d as o}from"./PieChart-4l_WbIGS.js";var i=["axis","item"],s=a.forwardRef((r,t)=>a.createElement(e,{chartName:"BarChart",defaultTooltipEventType:"axis",validateTooltipEventTypes:i,tooltipPayloadSearcher:o,categoricalChartProps:r,ref:t}));export{s as B};

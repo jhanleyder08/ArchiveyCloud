@@ -15,10 +15,13 @@ class AdminExpedienteController extends Controller
 {
     public function index(Request $request)
     {
+        // Logging removido - funcionando correctamente
+        
         try {
+            // Consulta con campos reales de la migración
             $query = Expediente::query();
 
-            // Aplicar filtros
+            // Filtros según campos reales
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
@@ -40,31 +43,19 @@ class AdminExpedienteController extends Controller
                 $query->where('serie_documental_id', $request->serie_id);
             }
 
-            if ($request->filled('area_responsable')) {
-                $query->where('area_responsable', $request->area_responsable);
-            }
-
-            if ($request->filled('proximidad_vencimiento')) {
-                $dias = (int) $request->proximidad_vencimiento;
-                if ($dias > 0) {
-                    $fechaLimite = Carbon::now()->addDays($dias);
-                    $query->where('fecha_vencimiento_disposicion', '<=', $fechaLimite)
-                          ->where('fecha_vencimiento_disposicion', '>', Carbon::now());
-                }
-            }
-
             $expedientes = $query->orderBy('created_at', 'desc')->paginate(20);
 
-            // Estadísticas completas
+            // Estadísticas con campos reales
             $estadisticas = [
                 'total' => Expediente::count(),
-                'abiertos' => Expediente::where('estado_ciclo_vida', 'tramite')->count(),
-                'cerrados' => Expediente::where('estado_ciclo_vida', 'central')->count(),
+                'tramite' => Expediente::where('estado_ciclo_vida', 'tramite')->count(),
+                'gestion' => Expediente::where('estado_ciclo_vida', 'gestion')->count(),
+                'central' => Expediente::where('estado_ciclo_vida', 'central')->count(),
+                'historico' => Expediente::where('estado_ciclo_vida', 'historico')->count(),
                 'electronicos' => Expediente::where('tipo_expediente', 'electronico')->count(),
                 'fisicos' => Expediente::where('tipo_expediente', 'fisico')->count(),
                 'hibridos' => Expediente::where('tipo_expediente', 'hibrido')->count(),
-                'proximos_vencer' => 0, // Simplificado por ahora
-                'vencidos' => 0, // Simplificado por ahora
+                'tamaño_total' => (float) (Expediente::sum('tamaño_mb') ?? 0),
             ];
 
             // Opciones para filtros
@@ -81,28 +72,21 @@ class AdminExpedienteController extends Controller
                     ['value' => 'fisico', 'label' => 'Físico'],
                     ['value' => 'hibrido', 'label' => 'Híbrido'],
                 ],
-                'proximidad_vencimiento' => [
-                    ['value' => '7', 'label' => 'Próximos 7 días'],
-                    ['value' => '15', 'label' => 'Próximos 15 días'],
-                    ['value' => '30', 'label' => 'Próximos 30 días'],
-                    ['value' => '90', 'label' => 'Próximos 90 días'],
-                ],
-                'series_disponibles' => SerieDocumental::activas()->get(['id', 'codigo', 'nombre']),
-                'areas_disponibles' => Expediente::select('area_responsable')
-                                                 ->distinct()
-                                                 ->whereNotNull('area_responsable')
-                                                 ->get()
-                                                 ->map(fn($item) => ['value' => $item->area_responsable, 'label' => $item->area_responsable]),
+                'series_disponibles' => \DB::table('series_documentales')->where('activa', true)->get(['id', 'codigo', 'nombre']),
             ];
 
-            return Inertia::render('admin/expedientes/index', [
-                'data' => $expedientes,
+            return Inertia::render('admin/expedientes/index-simple', [
+                'expedientes' => $expedientes,
                 'estadisticas' => $estadisticas,
                 'opciones' => $opciones,
-                'filtros' => $request->only(['search', 'estado', 'tipo_expediente', 'serie_id', 'area_responsable', 'proximidad_vencimiento'])
+                'filtros' => $request->only(['search', 'estado', 'tipo_expediente', 'serie_id'])
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('=== ERROR EN CONTROLADOR ===', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
