@@ -12,10 +12,7 @@ class SeriesDocumentalesSeeder extends Seeder
      */
     public function run(): void
     {
-        // Limpiar tabla antes de insertar
-        DB::table('series_documentales')->delete();
-        
-        // Insertar series documentales por defecto
+        // Insertar series documentales solo si no existen
         $series = [
             [
                 'id' => 1,
@@ -67,6 +64,11 @@ class SeriesDocumentalesSeeder extends Seeder
             ],
         ];
         
-        DB::table('series_documentales')->insert($series);
+        foreach ($series as $serie) {
+            $exists = DB::table('series_documentales')->where('id', $serie['id'])->exists();
+            if (!$exists) {
+                DB::table('series_documentales')->insert($serie);
+            }
+        }
     }
 }

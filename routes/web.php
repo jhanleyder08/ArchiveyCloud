@@ -122,6 +122,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'reportes'])->name('reportes');
         });
         
+        // Dashboard Ejecutivo Unificado
+        Route::prefix('dashboard-ejecutivo')->name('dashboard-ejecutivo.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'index'])->name('index');
+            Route::get('/datos-grafico', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'datosGrafico'])->name('datos-grafico');
+            Route::post('/exportar-pdf', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'exportarPDF'])->name('exportar-pdf');
+        });
+
         // Sistema de Notificaciones
         Route::prefix('notificaciones')->name('notificaciones.')->group(function () {
             // Notificaciones del usuario
@@ -177,6 +184,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/reportes', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'reportes'])->name('reportes');
             Route::post('/procesar-masivo', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'procesarActualizacionesMasivas'])->name('procesar-masivo');
         });
+        
+        // Ruta de prueba
+        Route::get('test-simple', function () {
+            return Inertia::render('test-simple');
+        })->name('test-simple');
     });
 });
 

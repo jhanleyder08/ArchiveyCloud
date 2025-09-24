@@ -29,7 +29,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
     };
 
     const isActive = (href: NonNullable<NavItem['href']>) => {
-        return page.url.startsWith(typeof href === 'string' ? href : href.url);
+        const hrefString = typeof href === 'string' ? href : (href as any)?.url || href;
+        return page.url.startsWith(hrefString);
     };
 
     const hasActiveSubItem = (item: NavItem) => {
@@ -72,10 +73,13 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                                         asChild
                                                         isActive={isActive(subItem.href)}
                                                     >
-                                                        <div onClick={() => router.visit(subItem.href as string)}>
-                                                            {subItem.icon && <subItem.icon />}
-                                                            <span>{subItem.title}</span>
-                                                        </div>
+                                                        <div onClick={() => {
+                                            const hrefString = typeof subItem.href === 'string' ? subItem.href : (subItem.href as any)?.url || subItem.href;
+                                            router.visit(hrefString);
+                                        }}>
+                                            {subItem.icon && <subItem.icon />}
+                                            <span>{subItem.title}</span>
+                                        </div>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
                                             ))}
@@ -86,24 +90,18 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         );
                     } else {
                         // Regular item
+                        const hrefString = typeof item.href === 'string' ? item.href : (item.href as any)?.url || item.href;
                         return (
                             <SidebarMenuItem key={item.title}>
                                 <SidebarMenuButton
                                     isActive={isActive(item.href)}
                                     tooltip={{ children: item.title }}
-                                    onMouseEnter={() => console.log('🖱️ Mouse encima de:', item.title)}
-                                    onMouseDown={() => console.log('🖱️ Mouse presionado en:', item.title)}
-                                    onClick={(e) => {
-                                        console.log('🎯 CLICK DETECTADO en:', item.title);
-                                        console.log('🎯 Event:', e);
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        console.log('🚀 Navegando a:', item.href);
-                                        window.location.href = item.href as string;
-                                    }}
+                                    asChild
                                 >
-                                    {item.icon && <item.icon />}
-                                    <span>{item.title}</span>
+                                    <Link href={hrefString}>
+                                        {item.icon && <item.icon />}
+                                        <span>{item.title}</span>
+                                    </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         );

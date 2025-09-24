@@ -12,10 +12,7 @@ class CuadrosClasificacionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Limpiar tabla antes de insertar
-        DB::table('cuadros_clasificacion_documental')->delete();
-        
-        // Insertar cuadros de clasificación por defecto
+        // Insertar cuadros de clasificación solo si no existen
         $cuadros = [
             [
                 'id' => 1,
@@ -43,6 +40,11 @@ class CuadrosClasificacionSeeder extends Seeder
             ]
         ];
         
-        DB::table('cuadros_clasificacion_documental')->insert($cuadros);
+        foreach ($cuadros as $cuadro) {
+            $exists = DB::table('cuadros_clasificacion_documental')->where('id', $cuadro['id'])->exists();
+            if (!$exists) {
+                DB::table('cuadros_clasificacion_documental')->insert($cuadro);
+            }
+        }
     }
 }
