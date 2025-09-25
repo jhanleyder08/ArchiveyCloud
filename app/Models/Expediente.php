@@ -722,4 +722,12 @@ class Expediente extends Model
         
         return $csv;
     }
+
+    /**
+     * Relación con notificaciones (polimórfica)
+     */
+    public function notificaciones(): MorphMany
+    {
+        return $this->morphMany(Notificacion::class, 'relacionado', 'relacionado_tipo', 'relacionado_id');
+    }
 }

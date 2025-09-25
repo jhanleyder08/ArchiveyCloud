@@ -12,6 +12,8 @@ class Notificacion extends Model
 {
     use HasFactory;
 
+    protected $table = 'notificacions';
+
     protected $fillable = [
         'user_id',
         'tipo',
@@ -27,6 +29,10 @@ class Notificacion extends Model
         'relacionado_tipo',
         'es_automatica',
         'creado_por',
+        'expediente_id', // Para compatibilidad con el comando
+        'documento_id',  // Para compatibilidad con el comando
+        'leida',         // Para compatibilidad con el comando
+        'archivada',     // Para compatibilidad con el comando
     ];
 
     protected $casts = [
@@ -216,5 +222,13 @@ class Notificacion extends Model
         return self::where('estado', 'leida')
                   ->where('created_at', '<', Carbon::now()->subDays($dias))
                   ->delete();
+    }
+
+    /**
+     * Relación con el usuario
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

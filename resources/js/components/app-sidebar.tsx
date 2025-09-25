@@ -96,6 +96,11 @@ const mainNavItems: NavItem[] = [
                 href: '/admin/workflow',
                 icon: GitBranch,
             },
+            {
+                title: 'Servicios Externos',
+                href: '/admin/servicios-externos',
+                icon: BellRing,
+            },
         ],
     },
 ];

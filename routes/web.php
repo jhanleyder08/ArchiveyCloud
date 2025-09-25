@@ -61,16 +61,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('expedientes/{expediente}/exportar-directorio', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'exportarDirectorio'])->name('expedientes.exportar-directorio');
         Route::get('expedientes/{expediente}/verificar-integridad', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'verificarIntegridad'])->name('expedientes.verificar-integridad');
         
-        // Sistema de Reportes y Estadísticas routes
-        Route::prefix('reportes')->name('reportes.')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\AdminReportController::class, 'index'])->name('index');
-            Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('dashboard');
-            Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('cumplimiento-normativo');
-            Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('productividad');
-            Route::get('/almacenamiento', [App\Http\Controllers\Admin\AdminReportController::class, 'almacenamiento'])->name('almacenamiento');
-            Route::post('/exportar', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('exportar');
+        // Reportes y estadísticas
+        Route::group(['prefix' => 'reportes'], function () {
+            Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('admin.reportes.dashboard');
+            Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('admin.reportes.cumplimiento-normativo');
+            Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('admin.reportes.productividad');
+            Route::get('/almacenamiento', [App\Http\Controllers\Admin\AdminReportController::class, 'almacenamiento'])->name('admin.reportes.almacenamiento');
+            Route::get('/exportar/{tipo}', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('admin.reportes.exportar');
         });
-        
+
         // Sistema de Firmas Digitales routes
         Route::prefix('firmas')->name('firmas.')->group(function () {
             Route::get('/dashboard', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'dashboard'])->name('dashboard');
@@ -183,6 +182,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Reportes y procesos masivos
             Route::get('/reportes', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'reportes'])->name('reportes');
             Route::post('/procesar-masivo', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'procesarActualizacionesMasivas'])->name('procesar-masivo');
+        });
+        
+        // Servicios externos (Email, SMS)
+        Route::prefix('servicios-externos')->name('servicios-externos.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'index'])->name('index');
+            Route::get('/testing', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testing'])->name('testing');
+            Route::post('/test-email', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testEmail'])->name('test-email');
+            Route::post('/test-sms', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testSms'])->name('test-sms');
+            Route::get('/estadisticas', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'estadisticas'])->name('estadisticas');
+            Route::get('/configuracion', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'configuracion'])->name('configuracion');
+            Route::post('/configuracion', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'actualizarConfiguracion'])->name('actualizar-configuracion');
+            Route::post('/forzar-resumenes', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'forzarResumenes'])->name('forzar-resumenes');
         });
         
         // Ruta de prueba

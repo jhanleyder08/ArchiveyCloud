@@ -1,1 +1,0 @@
-import{r as a}from"./app-DdzhGUu9.js";import{$ as e,a0 as o}from"./PieChart-DGK7ULaO.js";var i=["axis","item"],s=a.forwardRef((r,t)=>a.createElement(e,{chartName:"BarChart",defaultTooltipEventType:"axis",validateTooltipEventTypes:i,tooltipPayloadSearcher:o,categoricalChartProps:r,ref:t}));export{s as B};
