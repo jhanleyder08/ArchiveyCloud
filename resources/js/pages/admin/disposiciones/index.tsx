@@ -453,7 +453,7 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                                                 <TableCell>
                                                     <div className="flex items-center space-x-2">
                                                         <User className="h-4 w-4 text-gray-400" />
-                                                        <span>{disposicion.responsable.name}</span>
+                                                        <span>{disposicion.responsable?.name || 'Sin responsable asignado'}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>

@@ -316,7 +316,7 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
                                         <SelectValue placeholder="Seleccionar TRD (opcional)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Sin TRD específica</SelectItem>
+                                        <SelectItem value="null">Sin TRD específica</SelectItem>
                                         {opciones.trds.map((trd) => (
                                             <SelectItem key={trd.id} value={trd.id.toString()}>
                                                 {trd.codigo} v{trd.version} - {trd.nombre}

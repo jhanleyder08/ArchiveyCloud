@@ -259,7 +259,7 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
                                             <SelectValue placeholder="Todos los tipos" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos los tipos</SelectItem>
+                                            <SelectItem value="all">Todos los tipos</SelectItem>
                                             {Object.entries(opcionesFiltros.tipos_entidad).map(([key, label]) => (
                                                 <SelectItem key={key} value={key}>{label}</SelectItem>
                                             ))}
@@ -274,7 +274,7 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
                                             <SelectValue placeholder="Todos los niveles" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todos los niveles</SelectItem>
+                                            <SelectItem value="all">Todos los niveles</SelectItem>
                                             {Object.entries(opcionesFiltros.niveles_acceso).map(([key, label]) => (
                                                 <SelectItem key={key} value={key}>{label}</SelectItem>
                                             ))}
@@ -289,7 +289,7 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
                                             <SelectValue placeholder="Todas las series" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Todas las series</SelectItem>
+                                            <SelectItem value="all">Todas las series</SelectItem>
                                             {opcionesFiltros.series_documentales.map((serie) => (
                                                 <SelectItem key={serie} value={serie}>{serie}</SelectItem>
                                             ))}

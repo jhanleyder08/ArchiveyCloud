@@ -277,7 +277,7 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                                                 }
                                             </span>
                                             <span className="text-yellow-700">
-                                                {" "}- {prestamo.solicitante.name} (vence en {prestamo.dias_restantes} días)
+                                                {" "}- {prestamo.solicitante?.name || 'Usuario no disponible'} (vence en {prestamo.dias_restantes} días)
                                             </span>
                                         </div>
                                     ))}
@@ -422,8 +422,8 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                                             </TableCell>
                                             <TableCell>
                                                 <div>
-                                                    <p className="font-medium">{prestamo.solicitante.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{prestamo.solicitante.email}</p>
+                                                    <p className="font-medium">{prestamo.solicitante?.name || 'Usuario no disponible'}</p>
+                                                    <p className="text-xs text-muted-foreground">{prestamo.solicitante?.email || 'Email no disponible'}</p>
                                                 </div>
                                             </TableCell>
                                             <TableCell>

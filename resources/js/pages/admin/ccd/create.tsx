@@ -267,7 +267,7 @@ export default function CreateCCD({ opciones }: CreateCCDProps) {
                                             <SelectValue placeholder="Sin elemento padre (raíz)" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Sin elemento padre (raíz)</SelectItem>
+                                            <SelectItem value="null">Sin elemento padre (raíz)</SelectItem>
                                             {padresDisponibles.map((padre) => (
                                                 <SelectItem key={padre.id} value={padre.id.toString()}>
                                                     {padre.codigo} - {padre.nombre}

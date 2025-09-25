@@ -1,0 +1,189 @@
+# ArchiveyCloud - Configuración Optimizada para Producción
+# ===========================================================
+
+# Configuración de la aplicación
+APP_NAME="ArchiveyCloud - Sistema de Gestión Documental"
+APP_ENV=production
+APP_KEY=                            # Generar con: php artisan key:generate
+APP_DEBUG=false                     # NUNCA true en producción
+APP_URL=https://tu-dominio.com      # URL de producción
+
+# Configuración de idioma
+APP_LOCALE=es
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=es_ES
+
+# Configuración de mantenimiento
+APP_MAINTENANCE_DRIVER=cache
+APP_MAINTENANCE_STORE=redis
+
+# Workers para CLI (optimizado para producción)
+PHP_CLI_SERVER_WORKERS=8
+
+# Seguridad - Rounds de encriptación (mayor para producción)
+BCRYPT_ROUNDS=14
+
+# Configuración de logging optimizada
+LOG_CHANNEL=stack
+LOG_STACK=daily,errorlog
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=warning                   # Solo advertencias y errores
+LOG_DAILY_DAYS=14                  # Mantener logs por 14 días
+
+# Base de datos (MySQL recomendado para producción)
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=archiveycloud_prod
+DB_USERNAME=archiveycloud_user
+DB_PASSWORD=                        # Contraseña segura
+DB_CHARSET=utf8mb4
+DB_COLLATION=utf8mb4_unicode_ci
+
+# Pool de conexiones de base de datos
+DB_POOL_SIZE=10
+DB_TIMEOUT=60
+
+# Configuración de sesiones optimizada
+SESSION_DRIVER=redis               # Redis para mejor performance
+SESSION_LIFETIME=480               # 8 horas
+SESSION_ENCRYPT=true               # Encriptar sesiones
+SESSION_PATH=/
+SESSION_DOMAIN=.tu-dominio.com
+SESSION_SECURE_COOKIES=true        # Solo HTTPS
+SESSION_HTTP_ONLY=true
+SESSION_SAME_SITE=strict
+
+# Broadcasting (para notificaciones en tiempo real)
+BROADCAST_CONNECTION=redis
+PUSHER_APP_ID=
+PUSHER_APP_KEY=
+PUSHER_APP_SECRET=
+PUSHER_HOST=
+PUSHER_PORT=443
+PUSHER_SCHEME=https
+PUSHER_APP_CLUSTER=mt1
+
+# Sistema de archivos optimizado
+FILESYSTEM_DISK=s3                 # AWS S3 para almacenamiento
+FILESYSTEM_DOCUMENTS_DISK=s3       # Documentos en S3
+
+# Configuración de colas (Redis para alta performance)
+QUEUE_CONNECTION=redis
+QUEUE_FAILED_DRIVER=database-uuids
+QUEUE_DEFAULT=default
+QUEUE_HIGH_PRIORITY=high
+QUEUE_LOW_PRIORITY=low
+
+# Configuración de caché (Redis)
+CACHE_STORE=redis
+CACHE_PREFIX=archiveycloud_
+CACHE_TTL=3600                     # 1 hora por defecto
+
+# Configuración Redis optimizada
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=                    # Contraseña Redis
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_CACHE_DB=1
+REDIS_SESSION_DB=2
+REDIS_QUEUE_DB=3
+
+# Configuración de conexiones Redis
+REDIS_SENTINEL_SERVICE=mymaster
+REDIS_CLUSTERS=redis-cluster
+REDIS_OPTIONS_SERIALIZER=php
+REDIS_OPTIONS_COMPRESSION=gzip
+
+# Configuración de email (SMTP producción)
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.tu-proveedor.com
+MAIL_PORT=587
+MAIL_USERNAME=noreply@tu-dominio.com
+MAIL_PASSWORD=                     # Contraseña SMTP
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="noreply@tu-dominio.com"
+MAIL_FROM_NAME="ArchiveyCloud - Sistema Documental"
+
+# Configuración SMS (Twilio recomendado)
+SMS_PROVIDER=twilio
+TWILIO_SID=
+TWILIO_TOKEN=
+TWILIO_FROM=
+
+# AWS S3 para almacenamiento de documentos
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=archiveycloud-documents
+AWS_URL=https://s3.amazonaws.com
+AWS_ENDPOINT=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+AWS_PRESIGNED_URL_EXPIRATION=3600
+
+# CloudFront CDN para assets estáticos
+AWS_CLOUDFRONT_URL=https://cdn.tu-dominio.com
+AWS_CLOUDFRONT_KEY_PAIR_ID=
+AWS_CLOUDFRONT_PRIVATE_KEY_PATH=
+
+# Configuración de optimización
+VITE_APP_NAME="${APP_NAME}"
+VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
+VITE_PUSHER_HOST="${PUSHER_HOST}"
+VITE_PUSHER_PORT="${PUSHER_PORT}"
+VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
+VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
+
+# Configuración de seguridad adicional
+SANCTUM_STATEFUL_DOMAINS=tu-dominio.com,www.tu-dominio.com
+SESSION_DOMAIN=.tu-dominio.com
+
+# Configuración de monitoring y logging
+SENTRY_LARAVEL_DSN=                # Para tracking de errores
+NEW_RELIC_LICENSE_KEY=             # Para monitoring de performance
+
+# Configuración de backup
+BACKUP_DISK=s3
+BACKUP_NOTIFICATION_EMAIL=admin@tu-dominio.com
+BACKUP_RETENTION_DAYS=30
+
+# Configuración de OCR (para documentos escaneados)
+TESSERACT_PATH=/usr/bin/tesseract
+OCR_LANGUAGES=spa,eng
+
+# Configuración de firmas digitales
+DIGITAL_SIGNATURE_CERT_PATH=/path/to/certificates/
+DIGITAL_SIGNATURE_PRIVATE_KEY_PATH=/path/to/private/keys/
+
+# Configuración de performance
+OPCACHE_ENABLE=true
+OPCACHE_MEMORY_CONSUMPTION=256
+OPCACHE_MAX_ACCELERATED_FILES=20000
+OPCACHE_VALIDATE_TIMESTAMPS=false
+
+# Configuración de límites
+MAX_EXECUTION_TIME=300
+MEMORY_LIMIT=512M
+POST_MAX_SIZE=100M
+UPLOAD_MAX_FILESIZE=50M
+MAX_FILE_UPLOADS=50
+
+# Configuración de HTTPS
+FORCE_HTTPS=true
+HSTS_MAX_AGE=31536000
+HSTS_INCLUDE_SUBDOMAINS=true
+
+# Configuración de CORS
+CORS_ALLOWED_ORIGINS=https://tu-dominio.com,https://www.tu-dominio.com
+CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,OPTIONS
+CORS_ALLOWED_HEADERS=Accept,Authorization,Content-Type,X-Requested-With
+CORS_EXPOSED_HEADERS=
+CORS_MAX_AGE=0
+CORS_SUPPORTS_CREDENTIALS=true
+
+# Configuración de rate limiting
+THROTTLE_LOGIN_ATTEMPTS=5
+THROTTLE_LOGIN_DECAY_MINUTES=15
+THROTTLE_API_REQUESTS=1000
+THROTTLE_API_DECAY_MINUTES=1

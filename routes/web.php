@@ -63,11 +63,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         // Reportes y estadísticas
         Route::group(['prefix' => 'reportes'], function () {
-            Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('admin.reportes.dashboard');
-            Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('admin.reportes.cumplimiento-normativo');
-            Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('admin.reportes.productividad');
-            Route::get('/almacenamiento', [App\Http\Controllers\Admin\AdminReportController::class, 'almacenamiento'])->name('admin.reportes.almacenamiento');
-            Route::get('/exportar/{tipo}', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('admin.reportes.exportar');
+            Route::get('/', [App\Http\Controllers\Admin\AdminReportController::class, 'index'])->name('reportes.index');
+            Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('reportes.dashboard');
+            Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('reportes.cumplimiento-normativo');
+            Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('reportes.productividad');
+            Route::get('/almacenamiento', [App\Http\Controllers\Admin\AdminReportController::class, 'almacenamiento'])->name('reportes.almacenamiento');
+            Route::get('/exportar/{tipo}', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('reportes.exportar');
         });
 
         // Sistema de Firmas Digitales routes
@@ -126,6 +127,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'index'])->name('index');
             Route::get('/datos-grafico', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'datosGrafico'])->name('datos-grafico');
             Route::post('/exportar-pdf', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'exportarPDF'])->name('exportar-pdf');
+        });
+
+        // Sistema de Optimización y Monitoreo
+        Route::prefix('optimizacion')->name('optimizacion.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\OptimizacionController::class, 'index'])->name('index');
+            Route::get('/cache', [App\Http\Controllers\Admin\OptimizacionController::class, 'cache'])->name('cache');
+            Route::post('/cache/warmup', [App\Http\Controllers\Admin\OptimizacionController::class, 'cacheWarmup'])->name('cache.warmup');
+            Route::post('/cache/flush', [App\Http\Controllers\Admin\OptimizacionController::class, 'cacheFlush'])->name('cache.flush');
+            Route::get('/backups', [App\Http\Controllers\Admin\OptimizacionController::class, 'backups'])->name('backups');
+            Route::post('/backups/create', [App\Http\Controllers\Admin\OptimizacionController::class, 'createBackup'])->name('backups.create');
+            Route::get('/monitoring', [App\Http\Controllers\Admin\OptimizacionController::class, 'monitoring'])->name('monitoring');
+            Route::post('/run-optimization', [App\Http\Controllers\Admin\OptimizacionController::class, 'runOptimization'])->name('run-optimization');
+            Route::get('/system-status', [App\Http\Controllers\Admin\OptimizacionController::class, 'getSystemStatusApi'])->name('system-status');
         });
 
         // Sistema de Notificaciones

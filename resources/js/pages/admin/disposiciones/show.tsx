@@ -447,8 +447,8 @@ export default function DisposicionShow({ disposicion }: Props) {
                                     <div className="flex items-center space-x-2 mt-1">
                                         <User className="h-4 w-4 text-gray-400" />
                                         <div>
-                                            <p className="text-sm font-medium">{disposicion.responsable.name}</p>
-                                            <p className="text-xs text-gray-500">{disposicion.responsable.email}</p>
+                                            <p className="text-sm font-medium">{disposicion.responsable?.name || 'Sin responsable asignado'}</p>
+                                            <p className="text-xs text-gray-500">{disposicion.responsable?.email || 'Email no disponible'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -459,8 +459,8 @@ export default function DisposicionShow({ disposicion }: Props) {
                                         <div className="flex items-center space-x-2 mt-1">
                                             <CheckCircle className="h-4 w-4 text-green-500" />
                                             <div>
-                                                <p className="text-sm font-medium">{disposicion.aprobado_por.name}</p>
-                                                <p className="text-xs text-gray-500">{disposicion.aprobado_por.email}</p>
+                                                <p className="text-sm font-medium">{disposicion.aprobado_por?.name || 'Usuario no disponible'}</p>
+                                                <p className="text-xs text-gray-500">{disposicion.aprobado_por?.email || 'Email no disponible'}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -472,8 +472,8 @@ export default function DisposicionShow({ disposicion }: Props) {
                                         <div className="flex items-center space-x-2 mt-1">
                                             <XCircle className="h-4 w-4 text-red-500" />
                                             <div>
-                                                <p className="text-sm font-medium">{disposicion.rechazado_por.name}</p>
-                                                <p className="text-xs text-gray-500">{disposicion.rechazado_por.email}</p>
+                                                <p className="text-sm font-medium">{disposicion.rechazado_por?.name || 'Usuario no disponible'}</p>
+                                                <p className="text-xs text-gray-500">{disposicion.rechazado_por?.email || 'Email no disponible'}</p>
                                             </div>
                                         </div>
                                     </div>

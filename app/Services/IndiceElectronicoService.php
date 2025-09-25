@@ -240,7 +240,7 @@ class IndiceElectronicoService
         $query = IndiceElectronico::query();
 
         // Filtro por tipo de entidad
-        if (!empty($filtros['tipo_entidad'])) {
+        if (!empty($filtros['tipo_entidad']) && $filtros['tipo_entidad'] !== 'all') {
             $query->porTipo($filtros['tipo_entidad']);
         }
 
@@ -250,12 +250,12 @@ class IndiceElectronicoService
         }
 
         // Filtro por serie documental
-        if (!empty($filtros['serie_documental'])) {
+        if (!empty($filtros['serie_documental']) && $filtros['serie_documental'] !== 'all') {
             $query->porSerie($filtros['serie_documental']);
         }
 
         // Filtro por nivel de acceso
-        if (!empty($filtros['nivel_acceso'])) {
+        if (!empty($filtros['nivel_acceso']) && $filtros['nivel_acceso'] !== 'all') {
             $query->porNivelAcceso($filtros['nivel_acceso']);
         }
 

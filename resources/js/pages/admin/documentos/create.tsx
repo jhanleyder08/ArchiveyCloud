@@ -438,7 +438,7 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                                             <SelectValue placeholder="Seleccionar tipología" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Sin tipología</SelectItem>
+                                            <SelectItem value="null">Sin tipología</SelectItem>
                                             {opciones.tipologias.map((tipologia) => (
                                                 <SelectItem key={tipologia.id} value={tipologia.id.toString()}>
                                                     {tipologia.nombre} ({tipologia.categoria})
