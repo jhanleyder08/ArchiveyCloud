@@ -71,6 +71,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/exportar/{tipo}', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('reportes.exportar');
         });
 
+        // Plantillas Documentales routes
+        Route::resource('plantillas', App\Http\Controllers\Admin\PlantillaDocumentalController::class);
+        Route::group(['prefix' => 'plantillas'], function () {
+            // Rutas específicas de plantillas
+            Route::post('/{plantilla}/version', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'crearVersion'])->name('plantillas.crear-version');
+            Route::patch('/{plantilla}/estado', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'cambiarEstado'])->name('plantillas.cambiar-estado');
+            Route::post('/{plantilla}/generar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'generarDocumento'])->name('plantillas.generar-documento');
+            Route::post('/{plantilla}/previsualizar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'previsualizar'])->name('plantillas.previsualizar');
+            Route::post('/{plantilla}/duplicar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'duplicar'])->name('plantillas.duplicar');
+            
+            // AJAX routes
+            Route::get('/subseries/por-serie', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'obtenerSubseries'])->name('plantillas.subseries');
+            Route::get('/estadisticas/dashboard', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'estadisticas'])->name('plantillas.estadisticas');
+        });
+
         // Sistema de Firmas Digitales routes
         Route::prefix('firmas')->name('firmas.')->group(function () {
             Route::get('/dashboard', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'dashboard'])->name('dashboard');

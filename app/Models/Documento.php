@@ -33,6 +33,7 @@ class Documento extends Model
         'descripcion',
         'expediente_id',
         'tipologia_id',
+        'plantilla_id',
         'tipo_documental',
         'tipo_soporte',
         'formato',
@@ -195,6 +196,14 @@ class Documento extends Model
     public function tipologia(): BelongsTo
     {
         return $this->belongsTo(TipologiaDocumental::class, 'tipologia_id');
+    }
+
+    /**
+     * Relación con plantilla documental (si fue generado desde una plantilla)
+     */
+    public function plantilla(): BelongsTo
+    {
+        return $this->belongsTo(PlantillaDocumental::class, 'plantilla_id');
     }
 
     /**
