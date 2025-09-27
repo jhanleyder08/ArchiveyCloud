@@ -224,6 +224,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/configuracion', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'actualizarConfiguracion'])->name('actualizar-configuracion');
             Route::post('/forzar-resumenes', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'forzarResumenes'])->name('forzar-resumenes');
         });
+
+        // Sistema de Firmas Digitales Avanzado
+        Route::prefix('firmas')->name('firmas.')->group(function () {
+            // Dashboard principal
+            Route::get('/', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'dashboard'])->name('dashboard');
+            
+            // Gestión de certificados digitales
+            Route::get('/certificados', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'certificados'])->name('certificados');
+            
+            // Solicitudes de firma múltiple
+            Route::get('/solicitudes', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'solicitudes'])->name('solicitudes');
+            Route::get('/solicitudes/crear', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'crearSolicitud'])->name('solicitudes.crear');
+            Route::post('/solicitudes', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'almacenarSolicitud'])->name('solicitudes.store');
+            Route::get('/solicitudes/{solicitud}', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'verSolicitud'])->name('solicitud');
+            Route::post('/solicitudes/{solicitud}/firmar', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'firmarDocumento'])->name('solicitud.firmar');
+            Route::post('/solicitudes/{solicitud}/rechazar', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'rechazarFirma'])->name('solicitud.rechazar');
+            Route::post('/solicitudes/{solicitud}/cancelar', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'cancelarSolicitud'])->name('solicitud.cancelar');
+            
+            // Verificación de firmas
+            Route::get('/verificar/{documento}', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'verificarFirmas'])->name('verificar');
+            
+            // API endpoints
+            Route::get('/api/certificados', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'apiCertificados'])->name('api.certificados');
+            Route::get('/api/estadisticas', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'apiEstadisticas'])->name('api.estadisticas');
+        });
         
         // Ruta de prueba
         Route::get('test-simple', function () {

@@ -5,8 +5,12 @@ namespace App\Services;
 use App\Models\Documento;
 use App\Models\User;
 use App\Models\FirmaDigital;
+use App\Models\CertificadoDigital;
+use App\Models\SolicitudFirma;
+use App\Models\FirmanteSolicitud;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class FirmaDigitalService
@@ -227,5 +231,325 @@ class FirmaDigitalService
             'ip' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ]);
+    }
+
+    /**
+     * Firmar documento con certificado PKI
+     */
+    public function firmarConCertificado(
+        Documento $documento, 
+        User $usuario, 
+        CertificadoDigital $certificado,
+        string $motivo = null,
+        ?SolicitudFirma $solicitud = null
+    ): FirmaDigital {
+        // Verificar que el certificado es válido y del usuario
+        if ($certificado->usuario_id !== $usuario->id) {
+            throw new \Exception('El certificado no pertenece al usuario');
+        }
+
+        if (!$certificado->vigente) {
+            throw new \Exception('El certificado digital no está vigente');
+        }
+
+        if (!$certificado->uso_permitido || !in_array(CertificadoDigital::USO_FIRMA_DIGITAL, $certificado->uso_permitido)) {
+            throw new \Exception('El certificado no permite firma digital');
+        }
+
+        // Verificar que el documento existe
+        if (!$documento->existe()) {
+            throw new \Exception('El documento no existe en el almacenamiento');
+        }
+
+        // Generar hash del archivo para integridad
+        $contenidoArchivo = Storage::disk('documentos')->get($documento->ruta_archivo);
+        $hashArchivo = hash('sha256', $contenidoArchivo);
+
+        // Generar sello de tiempo si está disponible
+        $selloTiempo = $this->generarSelloTiempo($contenidoArchivo);
+
+        // Crear firma digital avanzada
+        $firma = FirmaDigital::create([
+            'documento_id' => $documento->id,
+            'usuario_id' => $usuario->id,
+            'certificado_id' => $certificado->id,
+            'solicitud_firma_id' => $solicitud?->id,
+            'hash_documento' => $hashArchivo,
+            'hash_firma' => $this->generarHashFirmaAvanzada($documento, $usuario, $certificado),
+            'certificado_info' => $this->obtenerInfoCertificadoCompleta($certificado),
+            'motivo_firma' => $motivo,
+            'fecha_firma' => now(),
+            'algoritmo_hash' => FirmaDigital::HASH_SHA256,
+            'tipo_firma' => $this->determinarTipoFirma($certificado),
+            'valida' => true,
+            'sello_tiempo' => $selloTiempo,
+            'cadena_certificacion' => $this->obtenerCadenaCertificacion($certificado),
+            'metadata' => [
+                'ip_firma' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'timestamp_servidor' => now()->timestamp,
+                'version_aplicacion' => config('app.version', '1.0'),
+                'metodo_firma' => 'pki_avanzada'
+            ]
+        ]);
+
+        // Actualizar estado del documento
+        $documento->update([
+            'firmado_digitalmente' => true,
+            'fecha_ultima_firma' => now(),
+            'estado_firma' => 'firmado'
+        ]);
+
+        // Si es parte de una solicitud, actualizar el firmante
+        if ($solicitud) {
+            $firmante = $solicitud->firmantes()
+                                ->where('usuario_id', $usuario->id)
+                                ->where('estado', FirmanteSolicitud::ESTADO_PENDIENTE)
+                                ->first();
+            
+            if ($firmante) {
+                $firmante->firmar($motivo, [
+                    'firma_id' => $firma->id,
+                    'certificado_serie' => $certificado->numero_serie
+                ]);
+            }
+        }
+
+        // Registrar en auditoría
+        $this->registrarAuditoria($documento, $usuario, 'documento_firmado_pki');
+
+        return $firma;
+    }
+
+    /**
+     * Crear solicitud de firma múltiple
+     */
+    public function crearSolicitudFirma(
+        Documento $documento,
+        User $solicitante,
+        array $firmantes,
+        array $configuracion = []
+    ): SolicitudFirma {
+        $solicitud = SolicitudFirma::create([
+            'documento_id' => $documento->id,
+            'solicitante_id' => $solicitante->id,
+            'titulo' => $configuracion['titulo'] ?? "Solicitud de firma - {$documento->nombre}",
+            'descripcion' => $configuracion['descripcion'] ?? '',
+            'tipo_flujo' => $configuracion['tipo_flujo'] ?? SolicitudFirma::FLUJO_SECUENCIAL,
+            'prioridad' => $configuracion['prioridad'] ?? SolicitudFirma::PRIORIDAD_NORMAL,
+            'fecha_limite' => isset($configuracion['fecha_limite']) 
+                ? Carbon::parse($configuracion['fecha_limite']) 
+                : now()->addDays(7),
+            'estado' => SolicitudFirma::ESTADO_PENDIENTE,
+            'configuracion_flujo' => $configuracion,
+            'metadata_solicitud' => [
+                'creada_desde' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]
+        ]);
+
+        // Crear firmantes
+        foreach ($firmantes as $index => $firmante) {
+            FirmanteSolicitud::create([
+                'solicitud_firma_id' => $solicitud->id,
+                'usuario_id' => $firmante['usuario_id'],
+                'orden' => $firmante['orden'] ?? $index + 1,
+                'es_obligatorio' => $firmante['es_obligatorio'] ?? true,
+                'rol_firmante' => $firmante['rol'] ?? FirmanteSolicitud::ROL_APROBADOR,
+                'estado' => FirmanteSolicitud::ESTADO_PENDIENTE
+            ]);
+        }
+
+        return $solicitud;
+    }
+
+    /**
+     * Verificar múltiples firmas de un documento
+     */
+    public function verificarFirmasMultiples(Documento $documento): array
+    {
+        $firmas = $documento->firmasDigitales()
+                           ->with(['usuario', 'certificado'])
+                           ->orderBy('fecha_firma')
+                           ->get();
+
+        $resultado = [
+            'total_firmas' => $firmas->count(),
+            'firmas_validas' => 0,
+            'firmas_invalidadas' => 0,
+            'nivel_seguridad_global' => 'basico',
+            'firmas' => []
+        ];
+
+        foreach ($firmas as $firma) {
+            $verificacion = $firma->verificarIntegridad();
+            
+            if ($verificacion['valida']) {
+                $resultado['firmas_validas']++;
+            } else {
+                $resultado['firmas_invalidadas']++;
+            }
+
+            $resultado['firmas'][] = [
+                'id' => $firma->id,
+                'usuario' => $firma->usuario->name,
+                'fecha' => $firma->fecha_firma,
+                'tipo' => $firma->tipo_firma,
+                'nivel_seguridad' => $firma->nivel_seguridad,
+                'valida' => $verificacion['valida'],
+                'errores' => $verificacion['errores'],
+                'certificado' => $firma->certificado ? [
+                    'numero_serie' => $firma->certificado->numero_serie,
+                    'emisor' => $firma->certificado->info_emisor['CN'] ?? 'Desconocido',
+                    'vigente' => $firma->certificado->vigente
+                ] : null
+            ];
+        }
+
+        // Determinar nivel de seguridad global
+        $nivelesSeguridad = $firmas->pluck('nivel_seguridad')->toArray();
+        if (in_array('muy_alto', $nivelesSeguridad)) {
+            $resultado['nivel_seguridad_global'] = 'muy_alto';
+        } elseif (in_array('alto', $nivelesSeguridad)) {
+            $resultado['nivel_seguridad_global'] = 'alto';
+        } elseif (in_array('medio', $nivelesSeguridad)) {
+            $resultado['nivel_seguridad_global'] = 'medio';
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Generar hash avanzado de firma con certificado
+     */
+    private function generarHashFirmaAvanzada(Documento $documento, User $usuario, CertificadoDigital $certificado): string
+    {
+        $datos = [
+            'documento_id' => $documento->id,
+            'usuario_id' => $usuario->id,
+            'certificado_id' => $certificado->id,
+            'documento_hash' => hash('sha256', Storage::disk('documentos')->get($documento->ruta_archivo)),
+            'certificado_huella' => $certificado->huella_digital,
+            'timestamp' => now()->timestamp,
+            'random' => bin2hex(random_bytes(32))
+        ];
+
+        return hash('sha256', json_encode($datos));
+    }
+
+    /**
+     * Obtener información completa del certificado
+     */
+    private function obtenerInfoCertificadoCompleta(CertificadoDigital $certificado): array
+    {
+        return [
+            'numero_serie' => $certificado->numero_serie,
+            'emisor' => $certificado->emisor,
+            'sujeto' => $certificado->sujeto,
+            'algoritmo_firma' => $certificado->algoritmo_firma,
+            'longitud_clave' => $certificado->longitud_clave,
+            'huella_digital' => $certificado->huella_digital,
+            'fecha_emision' => $certificado->fecha_emision,
+            'fecha_vencimiento' => $certificado->fecha_vencimiento,
+            'uso_permitido' => $certificado->uso_permitido,
+            'tipo_certificado' => $certificado->tipo_certificado
+        ];
+    }
+
+    /**
+     * Determinar tipo de firma según certificado
+     */
+    private function determinarTipoFirma(CertificadoDigital $certificado): string
+    {
+        if ($certificado->tipo_certificado === CertificadoDigital::TIPO_CA) {
+            return FirmaDigital::TIPO_CUALIFICADA;
+        }
+
+        if ($certificado->longitud_clave >= 2048) {
+            return FirmaDigital::TIPO_AVANZADA;
+        }
+
+        return FirmaDigital::TIPO_ELECTRONICA;
+    }
+
+    /**
+     * Generar sello de tiempo
+     */
+    private function generarSelloTiempo(string $contenido): ?array
+    {
+        try {
+            // Implementar integración con servidor TSA
+            // Por ahora, generar sello básico
+            return [
+                'timestamp' => now()->timestamp,
+                'authority' => config('archivey.tsa_server', 'internal'),
+                'hash_contenido' => hash('sha256', $contenido),
+                'algoritmo' => 'SHA-256'
+            ];
+        } catch (\Exception $e) {
+            Log::warning('No se pudo generar sello de tiempo: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Obtener cadena de certificación
+     */
+    private function obtenerCadenaCertificacion(CertificadoDigital $certificado): array
+    {
+        $cadena = [];
+        
+        // Implementar construcción de cadena PKI
+        // Por ahora, incluir solo el certificado actual
+        $cadena[] = [
+            'certificado' => $certificado->certificado_x509,
+            'emisor' => $certificado->emisor,
+            'numero_serie' => $certificado->numero_serie,
+            'huella_digital' => $certificado->huella_digital
+        ];
+
+        return $cadena;
+    }
+
+    /**
+     * Obtener estadísticas de firmas digitales
+     */
+    public function obtenerEstadisticas(): array
+    {
+        $totalFirmas = FirmaDigital::count();
+        $firmasHoy = FirmaDigital::whereDate('fecha_firma', today())->count();
+        $firmasEsteMes = FirmaDigital::whereMonth('fecha_firma', now()->month)
+                                   ->whereYear('fecha_firma', now()->year)
+                                   ->count();
+        
+        $firmasValidas = FirmaDigital::where('valida', true)->count();
+        $firmasConCertificado = FirmaDigital::whereNotNull('certificado_id')->count();
+        
+        $certificadosActivos = CertificadoDigital::activos()->count();
+        $certificadosProximosVencer = CertificadoDigital::proximosAVencer()->count();
+        
+        $solicitudesPendientes = SolicitudFirma::pendientes()->count();
+        $solicitudesCompletadas = SolicitudFirma::completadas()->count();
+
+        return [
+            'firmas' => [
+                'total' => $totalFirmas,
+                'hoy' => $firmasHoy,
+                'este_mes' => $firmasEsteMes,
+                'validas' => $firmasValidas,
+                'con_certificado' => $firmasConCertificado,
+                'porcentaje_validez' => $totalFirmas > 0 ? ($firmasValidas / $totalFirmas) * 100 : 0
+            ],
+            'certificados' => [
+                'activos' => $certificadosActivos,
+                'proximos_vencer' => $certificadosProximosVencer,
+                'vencidos' => CertificadoDigital::vencidos()->count()
+            ],
+            'solicitudes' => [
+                'pendientes' => $solicitudesPendientes,
+                'completadas' => $solicitudesCompletadas,
+                'vencidas' => SolicitudFirma::vencidas()->count()
+            ]
+        ];
     }
 }
