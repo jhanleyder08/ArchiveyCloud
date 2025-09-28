@@ -74,27 +74,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Plantillas Documentales routes
         Route::resource('plantillas', App\Http\Controllers\Admin\PlantillaDocumentalController::class);
         Route::group(['prefix' => 'plantillas'], function () {
+            // Editor avanzado
+            Route::get('/editor/{plantilla?}', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'editor'])->name('plantillas.editor');
+            
             // Rutas específicas de plantillas
             Route::post('/{plantilla}/version', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'crearVersion'])->name('plantillas.crear-version');
             Route::patch('/{plantilla}/estado', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'cambiarEstado'])->name('plantillas.cambiar-estado');
             Route::post('/{plantilla}/generar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'generarDocumento'])->name('plantillas.generar-documento');
             Route::post('/{plantilla}/previsualizar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'previsualizar'])->name('plantillas.previsualizar');
             Route::post('/{plantilla}/duplicar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'duplicar'])->name('plantillas.duplicar');
+            Route::get('/{plantilla}/exportar/{formato}', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'exportar'])->name('plantillas.exportar');
+            
+            // Funcionalidades avanzadas
+            Route::post('/crear-desde-documento', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'crearDesdeDocumento'])->name('plantillas.crear-desde-documento');
+            Route::post('/importar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'importar'])->name('plantillas.importar');
+            Route::post('/aplicar', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'aplicarPlantilla'])->name('plantillas.aplicar');
+            Route::post('/validar-estructura', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'validarEstructura'])->name('plantillas.validar-estructura');
             
             // AJAX routes
             Route::get('/subseries/por-serie', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'obtenerSubseries'])->name('plantillas.subseries');
             Route::get('/estadisticas/dashboard', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'estadisticas'])->name('plantillas.estadisticas');
+            Route::get('/documentos-disponibles', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'obtenerDocumentosDisponibles'])->name('plantillas.documentos-disponibles');
         });
 
-        // Sistema de Firmas Digitales routes
-        Route::prefix('firmas')->name('firmas.')->group(function () {
-            Route::get('/dashboard', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'dashboard'])->name('dashboard');
-            Route::get('/documento/{documento}/firmar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'mostrarFormularioFirma'])->name('formulario');
-            Route::post('/documento/{documento}/firmar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'firmarDocumento'])->name('firmar');
-            Route::get('/documento/{documento}/verificar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'verificarFirmas'])->name('verificar');
-            Route::get('/documento/{documento}/certificado', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'generarCertificado'])->name('certificado');
-            Route::get('/firma/{firma}/verificar-especifica', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'verificarFirmaEspecifica'])->name('verificar-especifica');
-        });
+        // Sistema de Firmas Digitales Básico (DESHABILITADO - Conflicto con FirmaDigitalAvanzadaController)
+        // Route::prefix('firmas-basico')->name('firmas-basico.')->group(function () {
+        //     Route::get('/dashboard', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'dashboard'])->name('dashboard');
+        //     Route::get('/documento/{documento}/firmar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'mostrarFormularioFirma'])->name('formulario');
+        //     Route::post('/documento/{documento}/firmar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'firmarDocumento'])->name('firmar');
+        //     Route::get('/documento/{documento}/verificar', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'verificarFirmas'])->name('verificar');
+        //     Route::get('/documento/{documento}/certificado', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'generarCertificado'])->name('certificado');
+        //     Route::get('/firma/{firma}/verificar-especifica', [App\Http\Controllers\Admin\FirmaDigitalController::class, 'verificarFirmaEspecifica'])->name('verificar-especifica');
+        // });
         
         // Sistema de Workflow/Aprobaciones routes
         Route::prefix('workflow')->name('workflow.')->group(function () {
@@ -229,6 +240,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('firmas')->name('firmas.')->group(function () {
             // Dashboard principal
             Route::get('/', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'dashboard'])->name('dashboard');
+            Route::get('/dashboard', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'dashboard'])->name('dashboard-alt');
             
             // Gestión de certificados digitales
             Route::get('/certificados', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'certificados'])->name('certificados');
@@ -262,6 +274,53 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/{apiToken}', [App\Http\Controllers\Admin\ApiTokenController::class, 'destroy'])->name('destroy');
             Route::post('/{apiToken}/revocar', [App\Http\Controllers\Admin\ApiTokenController::class, 'revocar'])->name('revocar');
             Route::post('/{apiToken}/renovar', [App\Http\Controllers\Admin\ApiTokenController::class, 'renovar'])->name('renovar');
+        });
+
+        // Sistema de Certificados Digitales PKI
+        Route::prefix('certificados')->name('certificados.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'store'])->name('store');
+            Route::get('/{certificado}', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'show'])->name('show');
+            Route::post('/{certificado}/revocar', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'revocar'])->name('revocar');
+            Route::post('/{certificado}/renovar', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'renovar'])->name('renovar');
+            Route::get('/{certificado}/descargar/{formato?}', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'descargar'])->name('descargar');
+        });
+
+        // Sistema de Auditoría y Trazabilidad Avanzada
+        Route::prefix('auditoria')->name('auditoria.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'index'])->name('index');
+            Route::get('/analytics', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'analytics'])->name('analytics');
+            Route::get('/patrones', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'patrones'])->name('patrones');
+            Route::get('/{auditoria}', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'show'])->name('show');
+            Route::post('/reporte', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'reporte'])->name('reporte');
+            Route::get('/api/metricas', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'metricas'])->name('metricas');
+        });
+
+        // Sistema de Migración y Importación de Datos
+        Route::prefix('importaciones')->name('importaciones.')->group(function () {
+            // Dashboard principal
+            Route::get('/', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'dashboard'])->name('dashboard');
+            
+            // Gestión de importaciones
+            Route::get('/listado', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'index'])->name('index');
+            Route::get('/crear', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'create'])->name('crear');
+            Route::post('/', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'store'])->name('store');
+            Route::get('/{importacion}', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'show'])->name('ver');
+            Route::delete('/{importacion}', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'destroy'])->name('destroy');
+            
+            // Acciones de procesamiento
+            Route::post('/{importacion}/procesar', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'procesar'])->name('procesar');
+            Route::post('/{importacion}/cancelar', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'cancelar'])->name('cancelar');
+            
+            // Descargas
+            Route::get('/{importacion}/descargar/original', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'descargarOriginal'])->name('descargar.original');
+            Route::get('/{importacion}/descargar/errores', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'descargarErrores'])->name('descargar.errores');
+            Route::get('/{importacion}/descargar/procesado', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'descargarProcesado'])->name('descargar.procesado');
+            
+            // API endpoints
+            Route::get('/{importacion}/progreso', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'progreso'])->name('progreso');
+            Route::get('/api/estadisticas', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'apiEstadisticas'])->name('api.estadisticas');
         });
 
         // Ruta de prueba

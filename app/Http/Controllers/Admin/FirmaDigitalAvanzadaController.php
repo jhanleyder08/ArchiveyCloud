@@ -31,38 +31,97 @@ class FirmaDigitalAvanzadaController extends Controller
      */
     public function dashboard(): Response
     {
-        $estadisticas = $this->firmaService->obtenerEstadisticas();
-        
-        // Solicitudes pendientes para el usuario actual
-        $solicitudesPendientes = SolicitudFirma::paraFirmar(Auth::id())
-                                              ->with(['documento', 'solicitante'])
-                                              ->orderBy('fecha_limite')
-                                              ->take(10)
-                                              ->get();
+        try {
+            $estadisticas = $this->firmaService->obtenerEstadisticas();
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo estadísticas de firmas: ' . $e->getMessage());
+            $estadisticas = [
+                'firmas' => [
+                    'total' => 0,
+                    'hoy' => 0,
+                    'este_mes' => 0,
+                    'validas' => 0,
+                    'con_certificado' => 0,
+                    'porcentaje_validez' => 0
+                ],
+                'certificados' => [
+                    'activos' => 0,
+                    'proximos_vencer' => 0,
+                    'vencidos' => 0
+                ],
+                'solicitudes' => [
+                    'pendientes' => 0,
+                    'completadas' => 0,
+                    'vencidas' => 0
+                ]
+            ];
+        }
 
-        // Mis solicitudes creadas
-        $misSolicitudes = SolicitudFirma::delSolicitante(Auth::id())
-                                       ->with(['documento', 'firmantes.usuario'])
-                                       ->orderBy('created_at', 'desc')
-                                       ->take(10)
-                                       ->get();
+        try {
+            // Solicitudes pendientes para el usuario actual
+            $solicitudesPendientes = SolicitudFirma::paraFirmar(Auth::id())
+                                                  ->with(['documento', 'solicitante'])
+                                                  ->orderBy('fecha_limite')
+                                                  ->take(10)
+                                                  ->get();
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo solicitudes pendientes: ' . $e->getMessage());
+            $solicitudesPendientes = collect([]);
+        }
 
-        // Certificados del usuario
-        $certificados = CertificadoDigital::where('usuario_id', Auth::id())
-                                         ->activos()
-                                         ->get();
+        try {
+            // Mis solicitudes creadas
+            $misSolicitudes = SolicitudFirma::delSolicitante(Auth::id())
+                                           ->with(['documento', 'firmantes.usuario'])
+                                           ->orderBy('created_at', 'desc')
+                                           ->take(10)
+                                           ->get();
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo mis solicitudes: ' . $e->getMessage());
+            $misSolicitudes = collect([]);
+        }
 
-        // Certificados próximos a vencer
-        $certificadosProximosVencer = CertificadoDigital::where('usuario_id', Auth::id())
-                                                       ->proximosAVencer()
-                                                       ->get();
+        try {
+            // Certificados del usuario
+            $certificados = CertificadoDigital::where('usuario_id', Auth::id())
+                                             ->activos()
+                                             ->get();
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo certificados: ' . $e->getMessage());
+            $certificados = collect([]);
+        }
+
+        try {
+            // Certificados próximos a vencer
+            $certificadosProximosVencer = CertificadoDigital::where('usuario_id', Auth::id())
+                                                           ->proximosAVencer()
+                                                           ->get();
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo certificados próximos a vencer: ' . $e->getMessage());
+            $certificadosProximosVencer = collect([]);
+        }
+
+        // Agregar estadísticas del usuario
+        try {
+            $estadisticas['usuario'] = [
+                'certificados_activos' => $certificados->count(),
+                'solicitudes_pendientes' => $solicitudesPendientes->count(),
+                'firmas_realizadas_mes' => 0 // Placeholder, se puede calcular después
+            ];
+        } catch (\Exception $e) {
+            $estadisticas['usuario'] = [
+                'certificados_activos' => 0,
+                'solicitudes_pendientes' => 0,
+                'firmas_realizadas_mes' => 0
+            ];
+        }
 
         return Inertia::render('admin/firmas/dashboard', [
             'estadisticas' => $estadisticas,
-            'solicitudes_pendientes' => $solicitudesPendientes,
-            'mis_solicitudes' => $misSolicitudes,
-            'certificados' => $certificados,
-            'certificados_proximos_vencer' => $certificadosProximosVencer
+            'solicitudes_pendientes' => $solicitudesPendientes->toArray(),
+            'mis_solicitudes' => $misSolicitudes->toArray(),
+            'certificados' => $certificados->toArray(),
+            'certificados_proximos_vencer' => $certificadosProximosVencer->toArray()
         ]);
     }
 

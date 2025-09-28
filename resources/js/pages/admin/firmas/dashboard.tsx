@@ -100,11 +100,11 @@ interface CertificadoDigital {
 }
 
 interface Props {
-    estadisticas: EstadisticasAvanzadas;
-    solicitudes_pendientes: SolicitudPendiente[];
-    mis_solicitudes: MiSolicitud[];
-    certificados: CertificadoDigital[];
-    certificados_proximos_vencer: CertificadoDigital[];
+    estadisticas?: EstadisticasAvanzadas;
+    solicitudes_pendientes?: SolicitudPendiente[];
+    mis_solicitudes?: MiSolicitud[];
+    certificados?: CertificadoDigital[];
+    certificados_proximos_vencer?: CertificadoDigital[];
 }
 
 export default function DashboardFirmas({ 
@@ -114,7 +114,21 @@ export default function DashboardFirmas({
     certificados, 
     certificados_proximos_vencer 
 }: Props) {
-    const [estadisticasUsuario, setEstadisticasUsuario] = useState(estadisticas.usuario);
+    const [estadisticasUsuario, setEstadisticasUsuario] = useState(estadisticas?.usuario);
+
+    // Valores por defecto para arrays que pueden ser undefined
+    const solicitudesPendientes = solicitudes_pendientes || [];
+    const misSolicitudes = mis_solicitudes || [];
+    const misCertificados = certificados || [];
+    const certificadosProximosVencer = certificados_proximos_vencer || [];
+
+    // Valores por defecto para estadísticas
+    const stats = estadisticas || {
+        firmas: { total: 0, hoy: 0, este_mes: 0, validas: 0, con_certificado: 0, porcentaje_validez: 0 },
+        certificados: { activos: 0, proximos_vencer: 0, vencidos: 0 },
+        solicitudes: { pendientes: 0, completadas: 0, vencidas: 0 },
+        usuario: { certificados_activos: 0, solicitudes_pendientes: 0, firmas_realizadas_mes: 0 }
+    };
 
     const formatearFecha = (fecha: string) => {
         return new Date(fecha).toLocaleDateString('es-ES', {
@@ -189,11 +203,11 @@ export default function DashboardFirmas({
                     </div>
 
                     {/* Alertas importantes */}
-                    {certificados_proximos_vencer.length > 0 && (
+                    {certificadosProximosVencer.length > 0 && (
                         <Alert className="mb-6 border-orange-200 bg-orange-50">
                             <AlertCircle className="h-4 w-4 text-orange-600" />
                             <AlertDescription className="text-orange-800">
-                                Tienes {certificados_proximos_vencer.length} certificado(s) próximo(s) a vencer.
+                                Tienes {certificadosProximosVencer.length} certificado(s) próximo(s) a vencer.
                                 <Link href={route('admin.firmas.certificados')} className="ml-2 underline font-medium">
                                     Ver certificados
                                 </Link>
@@ -209,9 +223,9 @@ export default function DashboardFirmas({
                                 <FileCheck className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{estadisticas.firmas.total}</div>
+                                <div className="text-2xl font-bold">{stats.firmas.total}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    {estadisticas.firmas.hoy} hoy
+                                    {stats.firmas.hoy} hoy
                                 </p>
                             </CardContent>
                         </Card>
@@ -222,7 +236,7 @@ export default function DashboardFirmas({
                                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{estadisticas.firmas.este_mes}</div>
+                                <div className="text-2xl font-bold">{stats.firmas.este_mes}</div>
                                 <p className="text-xs text-muted-foreground">
                                     {estadisticasUsuario?.firmas_realizadas_mes || 0} tuyas
                                 </p>
@@ -235,9 +249,9 @@ export default function DashboardFirmas({
                                 <Shield className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{estadisticas.firmas.validas}</div>
+                                <div className="text-2xl font-bold">{stats.firmas.validas}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    {estadisticas.firmas.porcentaje_validez.toFixed(1)}% validez
+                                    {stats.firmas.porcentaje_validez.toFixed(1)}% validez
                                 </p>
                             </CardContent>
                         </Card>
@@ -248,7 +262,7 @@ export default function DashboardFirmas({
                                 <Key className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{estadisticas.certificados.activos}</div>
+                                <div className="text-2xl font-bold">{stats.certificados.activos}</div>
                                 <p className="text-xs text-muted-foreground">
                                     {estadisticasUsuario?.certificados_activos || 0} tuyos
                                 </p>
@@ -260,15 +274,15 @@ export default function DashboardFirmas({
                     <Tabs defaultValue="pendientes" className="space-y-6">
                         <TabsList>
                             <TabsTrigger value="pendientes">
-                                Pendientes de Firma ({solicitudes_pendientes.length})
+                                Pendientes de Firma ({solicitudesPendientes.length})
                             </TabsTrigger>
                             <TabsTrigger value="mis-solicitudes">
-                                Mis Solicitudes ({mis_solicitudes.length})
+                                Mis Solicitudes ({misSolicitudes.length})
                             </TabsTrigger>
                             <TabsTrigger value="certificados">
-                                Mis Certificados ({certificados.length})
+                                Mis Certificados ({misCertificados.length})
                             </TabsTrigger>
-                            <TabsTrigger value="estadisticas">
+                            <TabsTrigger value="stats">
                                 Estadísticas
                             </TabsTrigger>
                         </TabsList>
@@ -285,14 +299,14 @@ export default function DashboardFirmas({
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {solicitudes_pendientes.length === 0 ? (
+                                    {solicitudesPendientes.length === 0 ? (
                                         <div className="text-center py-8 text-gray-500">
                                             <PenTool className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                                             <p>No tienes solicitudes pendientes de firma</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            {solicitudes_pendientes.map((solicitud) => (
+                                            {solicitudesPendientes.map((solicitud) => (
                                                 <div key={solicitud.id} className="border rounded-lg p-4 hover:bg-gray-50">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex-1">
@@ -341,7 +355,7 @@ export default function DashboardFirmas({
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {mis_solicitudes.length === 0 ? (
+                                    {misSolicitudes.length === 0 ? (
                                         <div className="text-center py-8 text-gray-500">
                                             <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                                             <p>No has creado solicitudes de firma</p>
@@ -351,7 +365,7 @@ export default function DashboardFirmas({
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            {mis_solicitudes.map((solicitud) => (
+                                            {misSolicitudes.map((solicitud) => (
                                                 <div key={solicitud.id} className="border rounded-lg p-4 hover:bg-gray-50">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex-1">
@@ -402,28 +416,25 @@ export default function DashboardFirmas({
                                         <Key className="w-5 h-5 mr-2" />
                                         Mis Certificados Digitales
                                     </CardTitle>
-                                    <CardDescription>
-                                        Certificados PKI para firma electrónica
-                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {certificados.length === 0 ? (
+                                    {misCertificados.length === 0 ? (
                                         <div className="text-center py-8 text-gray-500">
                                             <Key className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                                             <p>No tienes certificados digitales</p>
                                             <Link href={route('admin.firmas.certificados')} className="mt-4">
-                                                <Button>Gestionar Certificados</Button>
+                                                <Button>Ver Certificados</Button>
                                             </Link>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            {certificados.map((certificado) => (
+                                            {misCertificados.map((certificado) => (
                                                 <div key={certificado.id} className="border rounded-lg p-4">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex-1">
                                                             <h4 className="font-medium">{certificado.nombre_certificado}</h4>
                                                             <p className="text-sm text-gray-600 mt-1">
-                                                                Serie: {certificado.numero_serie}
+                                                                Tipo: {certificado.tipo_certificado}
                                                             </p>
                                                             <p className="text-xs text-gray-500 mt-1">
                                                                 Vence: {formatearFecha(certificado.fecha_vencimiento)}
@@ -443,7 +454,7 @@ export default function DashboardFirmas({
                             </Card>
                         </TabsContent>
 
-                        <TabsContent value="estadisticas" className="space-y-4">
+                        <TabsContent value="stats" className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <Card>
                                     <CardHeader>
@@ -452,15 +463,15 @@ export default function DashboardFirmas({
                                     <CardContent className="space-y-4">
                                         <div className="flex justify-between">
                                             <span>Total de firmas:</span>
-                                            <span className="font-medium">{estadisticas.firmas.total}</span>
+                                            <span className="font-medium">{stats.firmas.total}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Con certificado PKI:</span>
-                                            <span className="font-medium">{estadisticas.firmas.con_certificado}</span>
+                                            <span className="font-medium">{stats.firmas.con_certificado}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Porcentaje de validez:</span>
-                                            <span className="font-medium">{estadisticas.firmas.porcentaje_validez.toFixed(1)}%</span>
+                                            <span className="font-medium">{stats.firmas.porcentaje_validez.toFixed(1)}%</span>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -472,15 +483,15 @@ export default function DashboardFirmas({
                                     <CardContent className="space-y-4">
                                         <div className="flex justify-between">
                                             <span>Pendientes:</span>
-                                            <span className="font-medium">{estadisticas.solicitudes.pendientes}</span>
+                                            <span className="font-medium">{stats.solicitudes.pendientes}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Completadas:</span>
-                                            <span className="font-medium">{estadisticas.solicitudes.completadas}</span>
+                                            <span className="font-medium">{stats.solicitudes.completadas}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Vencidas:</span>
-                                            <span className="font-medium text-red-600">{estadisticas.solicitudes.vencidas}</span>
+                                            <span className="font-medium text-red-600">{stats.solicitudes.vencidas}</span>
                                         </div>
                                     </CardContent>
                                 </Card>

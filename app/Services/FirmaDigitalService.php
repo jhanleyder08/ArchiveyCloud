@@ -516,40 +516,66 @@ class FirmaDigitalService
      */
     public function obtenerEstadisticas(): array
     {
-        $totalFirmas = FirmaDigital::count();
-        $firmasHoy = FirmaDigital::whereDate('fecha_firma', today())->count();
-        $firmasEsteMes = FirmaDigital::whereMonth('fecha_firma', now()->month)
-                                   ->whereYear('fecha_firma', now()->year)
-                                   ->count();
-        
-        $firmasValidas = FirmaDigital::where('valida', true)->count();
-        $firmasConCertificado = FirmaDigital::whereNotNull('certificado_id')->count();
-        
-        $certificadosActivos = CertificadoDigital::activos()->count();
-        $certificadosProximosVencer = CertificadoDigital::proximosAVencer()->count();
-        
-        $solicitudesPendientes = SolicitudFirma::pendientes()->count();
-        $solicitudesCompletadas = SolicitudFirma::completadas()->count();
+        try {
+            $totalFirmas = FirmaDigital::count();
+            $firmasHoy = FirmaDigital::whereDate('fecha_firma', today())->count();
+            $firmasEsteMes = FirmaDigital::whereMonth('fecha_firma', now()->month)
+                                       ->whereYear('fecha_firma', now()->year)
+                                       ->count();
+            
+            $firmasValidas = FirmaDigital::where('valida', true)->count();
+            $firmasConCertificado = FirmaDigital::whereNotNull('certificado_id')->count();
+            
+            $certificadosActivos = CertificadoDigital::activos()->count();
+            $certificadosProximosVencer = CertificadoDigital::proximosAVencer()->count();
+            
+            $solicitudesPendientes = SolicitudFirma::pendientes()->count();
+            $solicitudesCompletadas = SolicitudFirma::completadas()->count();
 
-        return [
-            'firmas' => [
-                'total' => $totalFirmas,
-                'hoy' => $firmasHoy,
-                'este_mes' => $firmasEsteMes,
-                'validas' => $firmasValidas,
-                'con_certificado' => $firmasConCertificado,
-                'porcentaje_validez' => $totalFirmas > 0 ? ($firmasValidas / $totalFirmas) * 100 : 0
-            ],
-            'certificados' => [
-                'activos' => $certificadosActivos,
-                'proximos_vencer' => $certificadosProximosVencer,
-                'vencidos' => CertificadoDigital::vencidos()->count()
-            ],
-            'solicitudes' => [
-                'pendientes' => $solicitudesPendientes,
-                'completadas' => $solicitudesCompletadas,
-                'vencidas' => SolicitudFirma::vencidas()->count()
-            ]
-        ];
+            return [
+                'firmas' => [
+                    'total' => $totalFirmas,
+                    'hoy' => $firmasHoy,
+                    'este_mes' => $firmasEsteMes,
+                    'validas' => $firmasValidas,
+                    'con_certificado' => $firmasConCertificado,
+                    'porcentaje_validez' => $totalFirmas > 0 ? ($firmasValidas / $totalFirmas) * 100 : 0
+                ],
+                'certificados' => [
+                    'activos' => $certificadosActivos,
+                    'proximos_vencer' => $certificadosProximosVencer,
+                    'vencidos' => CertificadoDigital::vencidos()->count()
+                ],
+                'solicitudes' => [
+                    'pendientes' => $solicitudesPendientes,
+                    'completadas' => $solicitudesCompletadas,
+                    'vencidas' => SolicitudFirma::vencidas()->count()
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerEstadisticas: ' . $e->getMessage());
+            
+            // Valores por defecto en caso de error
+            return [
+                'firmas' => [
+                    'total' => 0,
+                    'hoy' => 0,
+                    'este_mes' => 0,
+                    'validas' => 0,
+                    'con_certificado' => 0,
+                    'porcentaje_validez' => 0
+                ],
+                'certificados' => [
+                    'activos' => 0,
+                    'proximos_vencer' => 0,
+                    'vencidos' => 0
+                ],
+                'solicitudes' => [
+                    'pendientes' => 0,
+                    'completadas' => 0,
+                    'vencidas' => 0
+                ]
+            ];
+        }
     }
 }

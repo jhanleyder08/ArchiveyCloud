@@ -222,6 +222,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Relación con certificados digitales
+     */
+    public function certificados(): HasMany
+    {
+        return $this->hasMany(CertificadoDigital::class, 'usuario_id');
+    }
+
+    /**
      * Scope para usuarios activos
      */
     public function scopeActivos($query)

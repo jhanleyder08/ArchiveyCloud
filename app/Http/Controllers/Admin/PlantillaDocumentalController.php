@@ -8,6 +8,7 @@ use App\Models\SerieDocumental;
 use App\Models\SubserieDocumental;
 use App\Models\User;
 use App\Models\Documento;
+use App\Services\PlantillaEditorService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -18,10 +19,13 @@ use Carbon\Carbon;
 
 class PlantillaDocumentalController extends Controller
 {
-    public function __construct()
+    protected PlantillaEditorService $editorService;
+
+    public function __construct(PlantillaEditorService $editorService)
     {
         $this->middleware('auth');
         $this->middleware('verified');
+        $this->editorService = $editorService;
     }
 
     /**
@@ -282,32 +286,6 @@ class PlantillaDocumentalController extends Controller
         }
     }
 
-    /**
-     * Crear nueva versión de plantilla
-     */
-    public function crearVersion(PlantillaDocumental $plantilla)
-    {
-        $this->authorize('update', $plantilla);
-
-        DB::beginTransaction();
-        try {
-            $nuevaVersion = $plantilla->replicate();
-            $nuevaVersion->version = $plantilla->obtenerSiguienteVersion();
-            $nuevaVersion->plantilla_padre_id = $plantilla->plantilla_padre_id ?: $plantilla->id;
-            $nuevaVersion->estado = PlantillaDocumental::ESTADO_BORRADOR;
-            $nuevaVersion->codigo = null; // Se generará automáticamente
-            $nuevaVersion->save();
-
-            DB::commit();
-
-            return redirect()->route('admin.plantillas.edit', $nuevaVersion)
-                ->with('success', "Nueva versión {$nuevaVersion->version} creada exitosamente.");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al crear nueva versión: ' . $e->getMessage());
-        }
-    }
 
     /**
      * Cambiar estado de plantilla
@@ -497,5 +475,247 @@ class PlantillaDocumentalController extends Controller
             'estadisticas' => $estadisticas,
             'uso_mensual' => $usoMensual
         ]);
+    }
+
+    /**
+     * Editor avanzado de plantillas
+     */
+    public function editor(PlantillaDocumental $plantilla = null)
+    {
+        $datos = [
+            'plantilla' => $plantilla,
+            'categorias' => $this->obtenerCategorias(),
+            'series' => SerieDocumental::select('id', 'codigo', 'nombre')->orderBy('codigo')->get(),
+            'tipos_campo' => [
+                ['value' => 'text', 'label' => 'Texto'],
+                ['value' => 'number', 'label' => 'Número'],
+                ['value' => 'date', 'label' => 'Fecha'],
+                ['value' => 'email', 'label' => 'Email'],
+                ['value' => 'tel', 'label' => 'Teléfono'],
+                ['value' => 'textarea', 'label' => 'Área de texto'],
+                ['value' => 'select', 'label' => 'Lista desplegable'],
+                ['value' => 'checkbox', 'label' => 'Casilla de verificación']
+            ]
+        ];
+
+        if ($plantilla) {
+            $datos['estadisticas_uso'] = $this->editorService->obtenerEstadisticasUso($plantilla);
+        }
+
+        return Inertia::render('admin/plantillas/editor', $datos);
+    }
+
+    /**
+     * Crear plantilla desde documento
+     */
+    public function crearDesdeDocumento(Request $request)
+    {
+        $validated = $request->validate([
+            'documento_id' => 'required|exists:documentos,id',
+            'nombre' => 'required|string|max:255',
+            'descripcion' => 'nullable|string',
+            'categoria' => 'required|string',
+            'tags' => 'nullable|array'
+        ]);
+
+        try {
+            $documento = Documento::findOrFail($validated['documento_id']);
+            
+            $plantilla = $this->editorService->crearPlantillaDesdeDocumento($documento, $validated);
+
+            return redirect()->route('admin.plantillas.editor', $plantilla)
+                ->with('success', 'Plantilla creada exitosamente desde documento.');
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Validar estructura de plantilla
+     */
+    public function validarEstructura(Request $request)
+    {
+        $validated = $request->validate([
+            'contenido_html' => 'required|string'
+        ]);
+
+        $validacion = $this->editorService->validarEstructura($validated['contenido_html']);
+
+        return response()->json($validacion);
+    }
+
+    /**
+     * Crear nueva versión de plantilla
+     */
+    public function crearVersion(PlantillaDocumental $plantilla, Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'nullable|string|max:255',
+            'descripcion' => 'nullable|string',
+            'contenido_html' => 'nullable|string',
+            'contenido_json' => 'nullable|array',
+            'campos_variables' => 'nullable|array',
+            'metadatos_predefinidos' => 'nullable|array',
+            'configuracion_formato' => 'nullable|array',
+            'tags' => 'nullable|array'
+        ]);
+
+        try {
+            $nuevaPlantilla = $this->editorService->crearNuevaVersion($plantilla, $validated);
+
+            return redirect()->route('admin.plantillas.show', $nuevaPlantilla)
+                ->with('success', 'Nueva versión creada exitosamente.');
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Exportar plantilla
+     */
+    public function exportar(PlantillaDocumental $plantilla, string $formato = 'json')
+    {
+        try {
+            $contenido = $this->editorService->exportarPlantilla($plantilla, $formato);
+            
+            $extension = $formato;
+            $mimeType = $this->obtenerMimeType($formato);
+            $nombreArchivo = "plantilla_{$plantilla->codigo}.{$extension}";
+
+            return response($contenido)
+                ->header('Content-Type', $mimeType)
+                ->header('Content-Disposition', "attachment; filename=\"{$nombreArchivo}\"");
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Importar plantilla
+     */
+    public function importar(Request $request)
+    {
+        $validated = $request->validate([
+            'archivo' => 'required|file|mimes:json,html,xml|max:10240', // 10MB max
+            'nombre' => 'required|string|max:255',
+            'descripcion' => 'nullable|string',
+            'categoria' => 'required|string',
+            'serie_documental_id' => 'nullable|exists:series_documentales,id',
+            'es_publica' => 'boolean'
+        ]);
+
+        try {
+            $archivo = $request->file('archivo');
+            $extension = $archivo->getClientOriginalExtension();
+            $rutaArchivo = $archivo->store('temp/plantillas');
+
+            $metadatos = [
+                'nombre' => $validated['nombre'],
+                'descripcion' => $validated['descripcion'] ?? '',
+                'categoria' => $validated['categoria'],
+                'serie_documental_id' => $validated['serie_documental_id'] ?? null,
+                'es_publica' => $validated['es_publica'] ?? false
+            ];
+
+            $plantilla = $this->editorService->importarPlantilla($rutaArchivo, $extension, $metadatos);
+
+            // Limpiar archivo temporal
+            Storage::delete($rutaArchivo);
+
+            return redirect()->route('admin.plantillas.show', $plantilla)
+                ->with('success', 'Plantilla importada exitosamente.');
+
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Aplicar plantilla para generar documento
+     */
+    public function aplicarPlantilla(Request $request)
+    {
+        $validated = $request->validate([
+            'plantilla_id' => 'required|exists:plantillas_documentales,id',
+            'datos' => 'required|array',
+            'nombre_documento' => 'required|string|max:255',
+            'expediente_id' => 'nullable|exists:expedientes,id'
+        ]);
+
+        try {
+            $plantilla = PlantillaDocumental::findOrFail($validated['plantilla_id']);
+            
+            $contenidoGenerado = $this->editorService->aplicarPlantilla($plantilla, $validated['datos']);
+
+            // Crear documento temporal para preview o guardado
+            $documento = [
+                'nombre' => $validated['nombre_documento'],
+                'contenido' => $contenidoGenerado,
+                'plantilla_id' => $plantilla->id,
+                'expediente_id' => $validated['expediente_id'] ?? null
+            ];
+
+            return response()->json([
+                'success' => true,
+                'documento' => $documento,
+                'contenido_generado' => $contenidoGenerado
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Obtener documentos disponibles para crear plantilla
+     */
+    public function obtenerDocumentosDisponibles()
+    {
+        $documentos = Documento::whereDoesntHave('plantillaGenerada')
+            ->select('id', 'nombre', 'tipo_mime', 'created_at')
+            ->with('expediente:id,codigo,nombre')
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        return response()->json($documentos);
+    }
+
+    /**
+     * Obtener categorías disponibles
+     */
+    private function obtenerCategorias(): array
+    {
+        return [
+            ['value' => PlantillaDocumental::CATEGORIA_MEMORANDO, 'label' => 'Memorando'],
+            ['value' => PlantillaDocumental::CATEGORIA_OFICIO, 'label' => 'Oficio'],
+            ['value' => PlantillaDocumental::CATEGORIA_RESOLUCION, 'label' => 'Resolución'],
+            ['value' => PlantillaDocumental::CATEGORIA_ACTA, 'label' => 'Acta'],
+            ['value' => PlantillaDocumental::CATEGORIA_INFORME, 'label' => 'Informe'],
+            ['value' => PlantillaDocumental::CATEGORIA_CIRCULAR, 'label' => 'Circular'],
+            ['value' => PlantillaDocumental::CATEGORIA_COMUNICACION, 'label' => 'Comunicación'],
+            ['value' => PlantillaDocumental::CATEGORIA_OTRO, 'label' => 'Otro']
+        ];
+    }
+
+    /**
+     * Obtener MIME type por formato
+     */
+    private function obtenerMimeType(string $formato): string
+    {
+        $mimeTypes = [
+            'json' => 'application/json',
+            'html' => 'text/html',
+            'xml' => 'application/xml',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+
+        return $mimeTypes[$formato] ?? 'application/octet-stream';
     }
 }
