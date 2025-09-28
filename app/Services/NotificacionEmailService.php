@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use App\Models\ConfiguracionServicio;
 
 class NotificacionEmailService
 {
@@ -17,6 +18,18 @@ class NotificacionEmailService
     public function enviarNotificacion(Notificacion $notificacion): bool
     {
         try {
+            // Respetar configuración persistida (BD primero, cache como fallback)
+            try {
+                $config = ConfiguracionServicio::obtenerConfiguracionServiciosExternos();
+            } catch (\Exception $e) {
+                $config = Cache::get('servicios_externos_config', []);
+            }
+            
+            if (isset($config['email_habilitado']) && $config['email_habilitado'] === false) {
+                Log::info('Envío de email deshabilitado por configuración');
+                return false;
+            }
+
             $usuario = $notificacion->user;
             
             if (!$usuario || !$usuario->email) {
@@ -35,8 +48,9 @@ class NotificacionEmailService
                 return false;
             }
 
-            // Verificar throttling (no más de 5 emails por hora por usuario)
-            if (!$this->verificarThrottling($usuario)) {
+            // Verificar throttling configurable (por defecto 5/hora)
+            $limite = is_array($config) && isset($config['throttling_email']) ? (int) $config['throttling_email'] : 5;
+            if (!$this->verificarThrottling($usuario, $limite)) {
                 Log::warning('Usuario excedió límite de emails por hora', [
                     'user_id' => $usuario->id,
                     'notificacion_id' => $notificacion->id
@@ -121,13 +135,13 @@ class NotificacionEmailService
     /**
      * Verificar throttling de emails
      */
-    private function verificarThrottling(User $usuario): bool
+    private function verificarThrottling(User $usuario, int $limitePorHora = 5): bool
     {
         $cacheKey = "email_throttle_user_{$usuario->id}";
         $enviosUltimaHora = Cache::get($cacheKey, 0);
 
-        // Máximo 5 emails por hora por usuario
-        if ($enviosUltimaHora >= 5) {
+        // Máximo configurable por hora por usuario
+        if ($enviosUltimaHora >= $limitePorHora) {
             return false;
         }
 

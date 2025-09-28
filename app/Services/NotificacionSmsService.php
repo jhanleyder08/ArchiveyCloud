@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use App\Models\ConfiguracionServicio;
 
 class NotificacionSmsService
 {
@@ -29,6 +30,17 @@ class NotificacionSmsService
     public function enviarSms(Notificacion $notificacion): bool
     {
         try {
+            // Respetar configuración persistida (BD primero, cache como fallback)
+            try {
+                $config = ConfiguracionServicio::obtenerConfiguracionServiciosExternos();
+            } catch (\Exception $e) {
+                $config = Cache::get('servicios_externos_config', []);
+            }
+            
+            if (isset($config['sms_habilitado']) && $config['sms_habilitado'] === false) {
+                Log::info('Envío de SMS deshabilitado por configuración');
+                return false;
+            }
             // Solo enviar SMS para notificaciones críticas
             if ($notificacion->prioridad !== 'critica') {
                 return true; // No es crítica, no se envía SMS
@@ -52,8 +64,9 @@ class NotificacionSmsService
                 return false;
             }
 
-            // Verificar throttling (no más de 3 SMS por día por usuario)
-            if (!$this->verificarThrottling($usuario)) {
+            // Verificar throttling configurable (por defecto 3/día)
+            $limite = is_array($config) && isset($config['throttling_sms']) ? (int) $config['throttling_sms'] : 3;
+            if (!$this->verificarThrottling($usuario, $limite)) {
                 Log::warning('Usuario excedió límite de SMS por día', [
                     'user_id' => $usuario->id,
                     'notificacion_id' => $notificacion->id
@@ -182,13 +195,13 @@ class NotificacionSmsService
     /**
      * Verificar throttling de SMS (máximo 3 por día)
      */
-    private function verificarThrottling(User $usuario): bool
+    private function verificarThrottling(User $usuario, int $limitePorDia = 3): bool
     {
         $cacheKey = "sms_throttle_user_{$usuario->id}";
         $enviosDia = Cache::get($cacheKey, 0);
 
-        // Máximo 3 SMS por día por usuario
-        if ($enviosDia >= 3) {
+        // Máximo configurable por día por usuario
+        if ($enviosDia >= $limitePorDia) {
             return false;
         }
 

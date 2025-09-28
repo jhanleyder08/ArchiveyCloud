@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Services\NotificacionEmailService;
 use App\Models\User;
 use App\Models\Notificacion;
+use App\Models\ConfiguracionServicio;
 use Carbon\Carbon;
 
 class SendDailySummary extends Command
@@ -105,7 +106,27 @@ class SendDailySummary extends Command
             return User::where('id', $userId)->get();
         }
 
-        // Usuarios con roles administrativos
+        try {
+            // Obtener configuración de destinatarios específicos
+            $config = ConfiguracionServicio::obtenerConfiguracionServiciosExternos();
+            $destinatariosEspecificos = $config['destinatarios_resumen'] ?? [];
+
+            if (!empty($destinatariosEspecificos)) {
+                $this->line("📋 Usando destinatarios configurados: " . count($destinatariosEspecificos) . " usuarios");
+                
+                return User::whereIn('id', $destinatariosEspecificos)
+                    ->where('estado_cuenta', 'activo')
+                    ->whereNotNull('email')
+                    ->get();
+            }
+
+        } catch (\Exception $e) {
+            $this->warn("⚠️  Error obteniendo configuración de destinatarios: " . $e->getMessage());
+        }
+
+        // Fallback: usuarios con roles administrativos
+        $this->line("📋 Usando destinatarios por roles administrativos");
+        
         return User::whereHas('role', function ($query) {
             $query->whereIn('name', [
                 'Super Administrador',

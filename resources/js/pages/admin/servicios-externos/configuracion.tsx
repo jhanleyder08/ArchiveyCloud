@@ -22,7 +22,9 @@ import {
     CheckCircle,
     Users,
     Send,
-    Loader2
+    Loader2,
+    UserCheck,
+    X
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -32,6 +34,7 @@ interface ConfiguracionActual {
     resumen_diario_hora: string;
     throttling_email: number;
     throttling_sms: number;
+    destinatarios_resumen: number[];
     ambiente: string;
     mail_driver: string;
     queue_connection: string;
@@ -101,6 +104,17 @@ export default function ServiciosExternosConfiguracion({ configuracion_actual, u
             ...prev,
             [key]: value
         }));
+    };
+
+    const toggleDestinatario = (userId: number) => {
+        const destinatarios = config.destinatarios_resumen || [];
+        const isSelected = destinatarios.includes(userId);
+        
+        if (isSelected) {
+            updateConfig('destinatarios_resumen', destinatarios.filter(id => id !== userId));
+        } else {
+            updateConfig('destinatarios_resumen', [...destinatarios, userId]);
+        }
     };
 
     return (
@@ -310,19 +324,47 @@ export default function ServiciosExternosConfiguracion({ configuracion_actual, u
                             </div>
 
                             <div className="pt-4 border-t">
-                                <Label className="text-sm font-medium">Destinatarios automáticos</Label>
-                                <div className="mt-2 space-y-2">
-                                    {usuarios_admin.map((usuario) => (
-                                        <div key={usuario.id} className="flex items-center space-x-2 text-sm">
-                                            <Users className="h-3 w-3 text-gray-400" />
-                                            <span>{usuario.name}</span>
-                                            <Badge variant="outline" className="text-xs">{usuario.email}</Badge>
-                                        </div>
-                                    ))}
-                                </div>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    Solo usuarios con roles administrativos reciben resúmenes
+                                <Label className="text-sm font-medium">Destinatarios de Resúmenes</Label>
+                                <p className="text-xs text-gray-500 mt-1 mb-3">
+                                    Selecciona usuarios específicos para recibir resúmenes diarios
                                 </p>
+                                
+                                <div className="space-y-2 max-h-32 overflow-y-auto">
+                                    {usuarios_admin.map((usuario) => {
+                                        const isSelected = (config.destinatarios_resumen || []).includes(usuario.id);
+                                        return (
+                                            <div 
+                                                key={usuario.id} 
+                                                className={`flex items-center justify-between p-2 rounded-md border cursor-pointer transition-colors ${
+                                                    isSelected 
+                                                        ? 'bg-blue-50 border-blue-200' 
+                                                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                                onClick={() => toggleDestinatario(usuario.id)}
+                                            >
+                                                <div className="flex items-center space-x-2">
+                                                    <UserCheck className={`h-3 w-3 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`} />
+                                                    <span className="text-sm">{usuario.name}</span>
+                                                    <Badge variant="outline" className="text-xs">{usuario.email}</Badge>
+                                                </div>
+                                                {isSelected && (
+                                                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                                    <span>
+                                        {(config.destinatarios_resumen || []).length} de {usuarios_admin.length} seleccionados
+                                    </span>
+                                    {(config.destinatarios_resumen || []).length === 0 && (
+                                        <span className="text-orange-600">
+                                            ⚠️ Sin destinatarios específicos, se enviará a todos los admin
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             <Button

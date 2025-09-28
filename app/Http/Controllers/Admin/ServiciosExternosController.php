@@ -9,16 +9,23 @@ use App\Services\NotificacionEmailService;
 use App\Services\NotificacionSmsService;
 use App\Models\User;
 use App\Models\Notificacion;
+use App\Models\ConfiguracionServicio;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class ServiciosExternosController extends Controller
 {
+    private const CONFIG_CACHE_KEY = 'servicios_externos_config';
     private $emailService;
     private $smsService;
 
     public function __construct()
     {
         $this->middleware('auth');
+        // Solo roles administrativos pueden cambiar configuración o forzar procesos
+        $this->middleware('role:Super Administrador,Administrador SGDEA')->only([
+            'configuracion', 'actualizarConfiguracion', 'forzarResumenes'
+        ]);
         $this->emailService = new NotificacionEmailService();
         $this->smsService = new NotificacionSmsService();
     }
@@ -161,13 +168,41 @@ class ServiciosExternosController extends Controller
      */
     public function actualizarConfiguracion(Request $request)
     {
-        // En una implementación real, esto actualizaría configuraciones en base de datos
-        // Por ahora, solo retornamos confirmación
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Configuración actualizada exitosamente'
-        ]);
+        try {
+            // Validar payload de configuración
+            $data = $request->validate([
+                'email_habilitado' => 'required|boolean',
+                'sms_habilitado' => 'required|boolean',
+                'resumen_diario_hora' => ['required','regex:/^\\d{2}:\\d{2}$/'],
+                'throttling_email' => 'required|integer|min:1|max:100',
+                'throttling_sms' => 'required|integer|min:1|max:100',
+                'destinatarios_resumen' => 'nullable|array',
+                'destinatarios_resumen.*' => 'integer|exists:users,id',
+            ]);
+
+            // Guardar en base de datos usando el modelo
+            $configuracion = ConfiguracionServicio::actualizarConfiguracionServiciosExternos($data);
+
+            // Mantener también en caché para compatibilidad con servicios existentes
+            $payload = array_merge($configuracion, [
+                'updated_at' => now()->toISOString(),
+            ]);
+            Cache::forever(self::CONFIG_CACHE_KEY, $payload);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Configuración actualizada exitosamente',
+                'configuracion' => $configuracion
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error actualizando configuración servicios externos: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno actualizando configuración'
+            ], 500);
+        }
     }
 
     /**
@@ -240,20 +275,42 @@ class ServiciosExternosController extends Controller
     }
 
     /**
-     * Obtener configuración actual
+     * Método privado para obtener configuración
      */
     private function obtenerConfiguracion(): array
     {
-        return [
-            'email_habilitado' => true,
-            'sms_habilitado' => config('app.env') !== 'production', // Solo en desarrollo
-            'resumen_diario_hora' => '08:00',
-            'throttling_email' => 5, // por hora
-            'throttling_sms' => 3,   // por día
-            'ambiente' => config('app.env'),
-            'mail_driver' => config('mail.default'),
-            'queue_connection' => config('queue.default')
-        ];
+        try {
+            // Obtener configuración desde base de datos
+            $configuracion = ConfiguracionServicio::obtenerConfiguracionServiciosExternos();
+            
+            // Mantener también en caché para compatibilidad
+            Cache::forever(self::CONFIG_CACHE_KEY, $configuracion);
+            
+            return $configuracion;
+            
+        } catch (\Exception $e) {
+            \Log::warning('Error obteniendo configuración desde BD, usando caché: ' . $e->getMessage());
+            
+            // Fallback al caché si falla la BD
+            $defaults = [
+                'email_habilitado' => true,
+                'sms_habilitado' => config('app.env') !== 'production',
+                'resumen_diario_hora' => '08:00',
+                'throttling_email' => 5,
+                'throttling_sms' => 3,
+                'destinatarios_resumen' => [],
+            ];
+
+            $persisted = Cache::get(self::CONFIG_CACHE_KEY, []);
+            $merged = array_merge($defaults, is_array($persisted) ? $persisted : []);
+
+            // Información dinámica del entorno
+            $merged['ambiente'] = config('app.env');
+            $merged['mail_driver'] = config('mail.default');
+            $merged['queue_connection'] = config('queue.default');
+
+            return $merged;
+        }
     }
 
     /**

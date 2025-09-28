@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\DocumentoApiController;
+use App\Http\Controllers\Api\ExpedienteApiController;
+use App\Http\Controllers\Api\ApiTokenController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -12,11 +15,69 @@ Route::get('/health/ping', [HealthController::class, 'ping']);
 // Public authentication routes
 Route::post('/login', [AuthController::class, 'login']);
 
-// Protected routes
+// Protected routes with Sanctum (para aplicación web)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     
     // Métricas detalladas (requiere autenticación)
     Route::get('/health/metrics', [HealthController::class, 'metrics']);
+});
+
+// API Externa protegida con tokens personalizados
+Route::middleware(['api.token.auth', 'api.rate.limit'])->prefix('v1')->name('api.')->group(function () {
+    
+    // Documentos API
+    Route::prefix('documentos')->name('documentos.')->group(function () {
+        Route::get('/', [DocumentoApiController::class, 'index'])->name('index');
+        Route::get('/estadisticas', [DocumentoApiController::class, 'estadisticas'])->name('estadisticas');
+        Route::get('/{id}', [DocumentoApiController::class, 'show'])->name('show');
+        Route::post('/', [DocumentoApiController::class, 'store'])->name('store');
+        Route::put('/{id}', [DocumentoApiController::class, 'update'])->name('update');
+        Route::delete('/{id}', [DocumentoApiController::class, 'destroy'])->name('destroy');
+        Route::get('/{id}/download', [DocumentoApiController::class, 'download'])->name('download');
+    });
+
+    // Expedientes API
+    Route::prefix('expedientes')->name('expedientes.')->group(function () {
+        Route::get('/', [ExpedienteApiController::class, 'index'])->name('index');
+        Route::get('/estadisticas', [ExpedienteApiController::class, 'estadisticas'])->name('estadisticas');
+        Route::get('/{id}', [ExpedienteApiController::class, 'show'])->name('show');
+        Route::post('/', [ExpedienteApiController::class, 'store'])->name('store');
+        Route::put('/{id}', [ExpedienteApiController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ExpedienteApiController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/cerrar', [ExpedienteApiController::class, 'cerrar'])->name('cerrar');
+        Route::post('/{id}/reabrir', [ExpedienteApiController::class, 'reabrir'])->name('reabrir');
+        Route::get('/{id}/documentos', [ExpedienteApiController::class, 'documentos'])->name('documentos');
+    });
+
+    // Gestión de Tokens API (solo para administradores)
+    Route::prefix('tokens')->name('tokens.')->group(function () {
+        Route::get('/', [ApiTokenController::class, 'index'])->name('index');
+        Route::get('/{id}', [ApiTokenController::class, 'show'])->name('show');
+        Route::post('/', [ApiTokenController::class, 'store'])->name('store');
+        Route::put('/{id}', [ApiTokenController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ApiTokenController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/renovar', [ApiTokenController::class, 'renovar'])->name('renovar');
+        Route::post('/{id}/revocar', [ApiTokenController::class, 'revocar'])->name('revocar');
+        Route::get('/{id}/estadisticas', [ApiTokenController::class, 'estadisticas'])->name('estadisticas');
+    });
+
+    // Información de la API
+    Route::get('/info', function () {
+        return response()->json([
+            'success' => true,
+            'message' => 'ArchiveyCloud API v1.0',
+            'data' => [
+                'version' => '1.0.0',
+                'endpoints' => [
+                    'documentos' => '/api/v1/documentos',
+                    'expedientes' => '/api/v1/expedientes',
+                    'tokens' => '/api/v1/tokens',
+                ],
+                'documentation' => url('/api/docs'),
+                'timestamp' => now()->toISOString(),
+            ]
+        ]);
+    })->name('info');
 });
