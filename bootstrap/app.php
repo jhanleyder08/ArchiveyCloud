@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\ApiPermissionMiddleware;
+use App\Http\Middleware\ApiTokenAuthentication;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PerformanceOptimization;
@@ -30,12 +32,14 @@ return Application::configure(basePath: dirname(__DIR__))
             VerifyUserActive::class, // Verificar usuarios activos en todas las rutas web
         ]);
 
-        // Registrar middleware de roles
+        // Registrar middleware de roles y API
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'user.active' => VerifyUserActive::class,
             'track.activity' => TrackUserActivity::class,
             'performance' => PerformanceOptimization::class,
+            'api.token' => ApiTokenAuthentication::class,
+            'api.permission' => ApiPermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

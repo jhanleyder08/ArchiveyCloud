@@ -313,22 +313,7 @@ class ApiToken extends Model
             return null;
         }
         
-        return round(($this->usos_realizados / $this->limite_usos) * 100, 2);
-    }
-
-    /**
-     * Scope para buscar tokens
-     */
-    public function scopeBuscar($query, string $termino)
-    {
-        return $query->where(function ($q) use ($termino) {
-            $q->where('nombre', 'LIKE', "%{$termino}%")
-              ->orWhere('descripcion', 'LIKE', "%{$termino}%")
-              ->orWhereHas('usuario', function ($uq) use ($termino) {
-                  $uq->where('name', 'LIKE', "%{$termino}%")
-                    ->orWhere('email', 'LIKE', "%{$termino}%");
-              });
-        });
+        return ($this->usos_realizados / $this->limite_usos) * 100;
     }
 
     /**

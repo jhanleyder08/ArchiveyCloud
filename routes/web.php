@@ -250,6 +250,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/api/estadisticas', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'apiEstadisticas'])->name('api.estadisticas');
         });
         
+        // Sistema de API Tokens
+        Route::prefix('api-tokens')->name('api-tokens.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\ApiTokenController::class, 'index'])->name('index');
+            Route::get('/dashboard', [App\Http\Controllers\Admin\ApiTokenController::class, 'dashboard'])->name('dashboard');
+            Route::get('/create', [App\Http\Controllers\Admin\ApiTokenController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\ApiTokenController::class, 'store'])->name('store');
+            Route::get('/{apiToken}', [App\Http\Controllers\Admin\ApiTokenController::class, 'show'])->name('show');
+            Route::get('/{apiToken}/edit', [App\Http\Controllers\Admin\ApiTokenController::class, 'edit'])->name('edit');
+            Route::put('/{apiToken}', [App\Http\Controllers\Admin\ApiTokenController::class, 'update'])->name('update');
+            Route::delete('/{apiToken}', [App\Http\Controllers\Admin\ApiTokenController::class, 'destroy'])->name('destroy');
+            Route::post('/{apiToken}/revocar', [App\Http\Controllers\Admin\ApiTokenController::class, 'revocar'])->name('revocar');
+            Route::post('/{apiToken}/renovar', [App\Http\Controllers\Admin\ApiTokenController::class, 'renovar'])->name('renovar');
+        });
+
         // Ruta de prueba
         Route::get('test-simple', function () {
             return Inertia::render('test-simple');

@@ -3,7 +3,10 @@
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\DocumentoApiController;
 use App\Http\Controllers\Api\ExpedienteApiController;
-use App\Http\Controllers\Api\ApiTokenController;
+use App\Http\Controllers\Api\V1\ApiController;
+use App\Http\Controllers\Api\V1\DocumentoApiController as V1DocumentoApiController;
+use App\Http\Controllers\Api\V1\ExpedienteApiController as V1ExpedienteApiController;
+use App\Http\Controllers\Admin\ApiTokenController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -24,8 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/health/metrics', [HealthController::class, 'metrics']);
 });
 
-// API Externa protegida con tokens personalizados
-Route::middleware(['api.token.auth', 'api.rate.limit'])->prefix('v1')->name('api.')->group(function () {
+// API Externa protegida con tokens API
+Route::middleware(['api.token'])->prefix('v1')->name('api.')->group(function () {
     
     // Documentos API
     Route::prefix('documentos')->name('documentos.')->group(function () {
@@ -63,21 +66,6 @@ Route::middleware(['api.token.auth', 'api.rate.limit'])->prefix('v1')->name('api
         Route::get('/{id}/estadisticas', [ApiTokenController::class, 'estadisticas'])->name('estadisticas');
     });
 
-    // Información de la API
-    Route::get('/info', function () {
-        return response()->json([
-            'success' => true,
-            'message' => 'ArchiveyCloud API v1.0',
-            'data' => [
-                'version' => '1.0.0',
-                'endpoints' => [
-                    'documentos' => '/api/v1/documentos',
-                    'expedientes' => '/api/v1/expedientes',
-                    'tokens' => '/api/v1/tokens',
-                ],
-                'documentation' => url('/api/docs'),
-                'timestamp' => now()->toISOString(),
-            ]
-        ]);
-    })->name('info');
+    // Información de la API (versión legacy)
+    Route::get('/info', [ApiController::class, 'info'])->name('info');
 });

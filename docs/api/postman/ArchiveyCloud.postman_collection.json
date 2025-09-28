@@ -1,0 +1,589 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-1234-1234-123456789abc",
+		"name": "ArchiveyCloud API v1",
+		"description": "Colección de Postman para la API de ArchiveyCloud\n\n## Configuración Inicial\n\n1. **Variables de entorno**: Crea un entorno con las siguientes variables:\n   - `base_url`: URL base de tu servidor (ej: https://tu-servidor.com)\n   - `api_token`: Tu token de API (ej: at_1234567890abcdef)\n\n2. **Autenticación**: Todas las rutas usan Bearer Token automáticamente con la variable `{{api_token}}`\n\n## Funcionalidades Incluidas\n\n- ✅ Información de la API\n- ✅ Gestión completa de documentos (CRUD + descarga)\n- ✅ Gestión completa de expedientes (CRUD + documentos)\n- ✅ Ejemplos de requests y respuestas\n- ✅ Tests automatizados básicos\n\n**Documentación completa**: https://docs.archiveycloud.com/api",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Sistema",
+			"item": [
+				{
+					"name": "Información de la API",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/info",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"info"
+							]
+						},
+						"description": "Obtiene información general de la API y detalles del token utilizado."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de información general del sistema"
+		},
+		{
+			"name": "Documentos",
+			"item": [
+				{
+					"name": "Listar Documentos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documentos?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documentos"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Número de página"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Documentos por página (máx: 100)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Buscar por nombre o contenido",
+									"disabled": true
+								},
+								{
+									"key": "tipo",
+									"value": "",
+									"description": "Filtrar por tipo de documento",
+									"disabled": true
+								},
+								{
+									"key": "expediente_id",
+									"value": "",
+									"description": "Filtrar por expediente",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista documentos con paginación y filtros opcionales."
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Documento",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "nombre",
+									"value": "Documento de Prueba",
+									"description": "Nombre del documento (requerido)",
+									"type": "text"
+								},
+								{
+									"key": "descripcion",
+									"value": "Documento creado desde Postman",
+									"description": "Descripción opcional",
+									"type": "text"
+								},
+								{
+									"key": "tipo_documento",
+									"value": "Prueba",
+									"description": "Tipo de documento",
+									"type": "text"
+								},
+								{
+									"key": "expediente_id",
+									"value": "1",
+									"description": "ID del expediente (requerido)",
+									"type": "text"
+								},
+								{
+									"key": "archivo",
+									"description": "Archivo a subir (requerido)",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "palabras_clave",
+									"value": "[\"api\", \"prueba\", \"postman\"]",
+									"description": "Array de palabras clave (JSON)",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documentos",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documentos"
+							]
+						},
+						"description": "Crea un nuevo documento. Requiere archivo y expediente_id."
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Documento",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documentos/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documentos",
+								"1"
+							]
+						},
+						"description": "Obtiene un documento específico por su ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Documento",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre\": \"Documento Actualizado\",\n    \"descripcion\": \"Descripción actualizada desde API\",\n    \"tipo_documento\": \"Documento Actualizado\",\n    \"palabras_clave\": [\"api\", \"actualizado\", \"postman\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documentos/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documentos",
+								"1"
+							]
+						},
+						"description": "Actualiza los metadatos de un documento existente."
+					},
+					"response": []
+				},
+				{
+					"name": "Descargar Documento",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documentos/1/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documentos",
+								"1",
+								"download"
+							]
+						},
+						"description": "Descarga el archivo físico del documento."
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Documento",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documentos/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documentos",
+								"1"
+							]
+						},
+						"description": "Elimina un documento y su archivo asociado."
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión completa de documentos (CRUD + descarga)",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{api_token}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "Expedientes",
+			"item": [
+				{
+					"name": "Listar Expedientes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expedientes?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expedientes"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Número de página"
+								},
+								{
+									"key": "per_page",
+									"value": "15",
+									"description": "Expedientes por página (máx: 100)"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Buscar por código o asunto",
+									"disabled": true
+								},
+								{
+									"key": "estado",
+									"value": "",
+									"description": "Filtrar por estado",
+									"disabled": true
+								},
+								{
+									"key": "serie_id",
+									"value": "",
+									"description": "Filtrar por serie documental",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista expedientes con paginación y filtros opcionales."
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Expediente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"asunto\": \"Expediente creado desde API\",\n    \"descripcion\": \"Descripción del expediente de prueba creado desde Postman\",\n    \"serie_id\": 1,\n    \"subserie_id\": null,\n    \"usuario_responsable_id\": null,\n    \"nivel_acceso\": \"publico\",\n    \"palabras_clave\": [\"api\", \"prueba\", \"postman\"],\n    \"ubicacion_fisica\": \"Archivo Central - Estante A\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expedientes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expedientes"
+							]
+						},
+						"description": "Crea un nuevo expediente. Requiere asunto y serie_id."
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Expediente",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expedientes/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expedientes",
+								"1"
+							]
+						},
+						"description": "Obtiene un expediente específico con sus documentos."
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Expediente",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"asunto\": \"Expediente actualizado desde API\",\n    \"descripcion\": \"Descripción actualizada\",\n    \"nivel_acceso\": \"restringido\",\n    \"palabras_clave\": [\"api\", \"actualizado\"],\n    \"estado\": \"tramite\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/expedientes/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expedientes",
+								"1"
+							]
+						},
+						"description": "Actualiza un expediente existente."
+					},
+					"response": []
+				},
+				{
+					"name": "Documentos del Expediente",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expedientes/1/documentos?page=1&per_page=15",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expedientes",
+								"1",
+								"documentos"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								}
+							]
+						},
+						"description": "Lista los documentos de un expediente específico."
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Expediente",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/expedientes/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"expedientes",
+								"1"
+							]
+						},
+						"description": "Elimina un expediente (solo si no tiene documentos)."
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión completa de expedientes",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{api_token}}",
+						"type": "string"
+					}
+				]
+			}
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{api_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Validar que el token API esté configurado",
+					"if (!pm.environment.get('api_token')) {",
+					"    console.log('⚠️ WARNING: Variable api_token no configurada');",
+					"    console.log('Configura la variable api_token en tu entorno de Postman');",
+					"}",
+					"",
+					"// Validar que la URL base esté configurada",
+					"if (!pm.environment.get('base_url')) {",
+					"    console.log('⚠️ WARNING: Variable base_url no configurada');",
+					"    console.log('Configura la variable base_url en tu entorno de Postman');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Tests básicos para todas las respuestas",
+					"pm.test('Status code es válido', function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+					"});",
+					"",
+					"pm.test('Response time es aceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"pm.test('Response tiene formato JSON válido', function () {",
+					"    pm.response.to.have.jsonBody();",
+					"});",
+					"",
+					"// Test específico para respuestas de la API",
+					"if (pm.response.code === 200 || pm.response.code === 201) {",
+					"    pm.test('Response tiene estructura success/data', function () {",
+					"        const responseJson = pm.response.json();",
+					"        pm.expect(responseJson).to.have.property('success');",
+					"        pm.expect(responseJson.success).to.be.true;",
+					"        pm.expect(responseJson).to.have.property('data');",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string",
+			"description": "URL base del servidor ArchiveyCloud"
+		},
+		{
+			"key": "api_token",
+			"value": "at_tu_token_aqui",
+			"type": "string",
+			"description": "Token de autenticación API"
+		}
+	]
+}

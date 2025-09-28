@@ -5,7 +5,28 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 // import { dashboard } from '@/routes/index'; // Comentado temporalmente para evitar errores
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Settings, Users, HelpCircle, FileText, FolderTree, File, Clock, Bell, Archive, BarChart3, Briefcase, BellRing, Shield, GitBranch, Database, TrendingUp, Zap, FileType } from 'lucide-react';
+import { 
+    Archive,
+    BarChart3,
+    BellRing,
+    BookOpen,
+    Briefcase,
+    Database,
+    File,
+    FileText,
+    FileType,
+    Folder,
+    FolderTree,
+    GitBranch,
+    HelpCircle,
+    Key,
+    LayoutGrid,
+    Settings,
+    Shield,
+    TrendingUp,
+    Users,
+    Zap,
+} from 'lucide-react';
 import AppLogo from './app-logo';
 import SupportModal from './support-modal';
 import { useState } from 'react';
@@ -110,6 +131,11 @@ const mainNavItems: NavItem[] = [
                 title: 'Optimización del Sistema',
                 href: '/admin/optimizacion',
                 icon: Zap,
+            },
+            {
+                title: 'API Tokens',
+                href: '/admin/api-tokens',
+                icon: Key,
             },
         ],
     },
