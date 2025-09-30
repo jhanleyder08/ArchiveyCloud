@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { 
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
     Search, 
     Database,
@@ -27,7 +33,10 @@ import {
     Eye,
     Trash2,
     RefreshCw,
-    AlertTriangle
+    AlertTriangle,
+    ChevronDown,
+    FileSpreadsheet,
+    FileImage
 } from 'lucide-react';
 
 interface IndiceElectronico {
@@ -83,6 +92,7 @@ interface Props {
 
 export default function IndicesIndex({ indices, estadisticas, filtros, opcionesFiltros }: Props) {
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
+    const [exportandoFormato, setExportandoFormato] = useState<string | null>(null);
     
     const { data, setData, get, processing } = useForm({
         busqueda_texto: filtros.busqueda_texto || '',
@@ -137,6 +147,46 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
             'critico': 'bg-red-100 text-red-800'
         };
         return <Badge className={colores[estado as keyof typeof colores] || 'bg-gray-100 text-gray-800'}>{etiqueta}</Badge>;
+    };
+
+    const exportarIndices = async (formato: 'csv' | 'excel' | 'pdf') => {
+        setExportandoFormato(formato);
+        
+        try {
+            await router.post('/admin/indices/exportar', {
+                formato: formato,
+                filtros: data
+            }, {
+                preserveState: true,
+                onSuccess: () => {
+                    // El archivo se descarga automáticamente
+                },
+                onError: (errors) => {
+                    console.error('Error al exportar:', errors);
+                    alert('Error al exportar los índices. Por favor, inténtelo de nuevo.');
+                },
+                onFinish: () => {
+                    setExportandoFormato(null);
+                }
+            });
+        } catch (error) {
+            console.error('Error al exportar:', error);
+            alert('Error al exportar los índices. Por favor, inténtelo de nuevo.');
+            setExportandoFormato(null);
+        }
+    };
+
+    const regenerarIndices = () => {
+        router.post('/admin/indices/regenerar', {
+            tipo: 'todos',
+            solo_faltantes: false
+        }, {
+            preserveState: true,
+            onSuccess: () => {
+                // Refrescar la página para mostrar los nuevos índices
+                router.reload();
+            }
+        });
     };
 
     return (
@@ -372,13 +422,37 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
                                 </CardDescription>
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="outline" size="sm">
-                                    <Download className="w-4 h-4 mr-1" />
-                                    Exportar
-                                </Button>
-                                <Button variant="outline" size="sm">
-                                    <RefreshCw className="w-4 h-4 mr-1" />
-                                    Regenerar
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm" disabled={exportandoFormato !== null}>
+                                            <Download className="w-4 h-4 mr-1" />
+                                            {exportandoFormato ? `Exportando ${exportandoFormato.toUpperCase()}...` : 'Exportar'}
+                                            <ChevronDown className="w-3 h-3 ml-1" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => exportarIndices('csv')} disabled={exportandoFormato !== null}>
+                                            <FileText className="w-4 h-4 mr-2" />
+                                            Exportar CSV
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => exportarIndices('excel')} disabled={exportandoFormato !== null}>
+                                            <FileSpreadsheet className="w-4 h-4 mr-2" />
+                                            Exportar Excel
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => exportarIndices('pdf')} disabled={exportandoFormato !== null}>
+                                            <FileImage className="w-4 h-4 mr-2" />
+                                            Exportar PDF
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={regenerarIndices}
+                                    disabled={processing}
+                                >
+                                    <RefreshCw className={`w-4 h-4 mr-1 ${processing ? 'animate-spin' : ''}`} />
+                                    {processing ? 'Regenerando...' : 'Regenerar'}
                                 </Button>
                             </div>
                         </div>

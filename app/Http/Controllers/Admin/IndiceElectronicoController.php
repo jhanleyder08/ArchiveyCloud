@@ -7,8 +7,11 @@ use App\Models\IndiceElectronico;
 use App\Models\Expediente;
 use App\Models\Documento;
 use App\Services\IndiceElectronicoService;
+use App\Services\PdfExportService;
+use App\Exports\IndicesElectronicosExport;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class IndiceElectronicoController extends Controller
 {
@@ -258,43 +261,30 @@ class IndiceElectronicoController extends Controller
             'filtros' => 'array'
         ]);
 
-        // Aplicar los mismos filtros que en el índice
-        $filtros = $request->get('filtros', []);
-        $indices = $this->indiceService->busquedaAvanzada(array_merge($filtros, ['per_page' => 10000]));
+        try {
+            // Aplicar los mismos filtros que en el índice
+            $filtros = $request->get('filtros', []);
+            
+            // Para exportación, obtenemos todos los registros sin paginación
+            $filtrosSinPaginacion = array_merge($filtros, ['per_page' => null]);
+            $query = $this->indiceService->construirConsultaBusqueda($filtrosSinPaginacion);
+            $indices = $query->get();
 
-        // Preparar datos para exportación
-        $datosExportar = $indices->map(function ($indice) {
-            return [
-                'ID' => $indice->id,
-                'Tipo' => ucfirst($indice->tipo_entidad),
-                'Código' => $indice->getCodigoCompleto(),
-                'Título' => $indice->titulo,
-                'Serie' => $indice->serie_documental,
-                'Subserie' => $indice->subserie_documental,
-                'Fecha Inicio' => $indice->fecha_inicio?->format('d/m/Y'),
-                'Fecha Fin' => $indice->fecha_fin?->format('d/m/Y'),
-                'Responsable' => $indice->responsable,
-                'Nivel Acceso' => $indice->getEtiquetaNivelAcceso(),
-                'Estado Conservación' => $indice->getEtiquetaEstadoConservacion(),
-                'Folios' => $indice->cantidad_folios,
-                'Tamaño' => $indice->getTamaño(),
-                'Es Vital' => $indice->es_vital ? 'Sí' : 'No',
-                'Es Histórico' => $indice->es_historico ? 'Sí' : 'No',
-                'Fecha Indexación' => $indice->fecha_indexacion?->format('d/m/Y H:i'),
-                'Ubicación Física' => $indice->ubicacion_fisica,
-                'Palabras Clave' => implode(', ', $indice->palabras_clave ?? []),
-            ];
-        });
+            $nombreArchivo = 'indices_electronicos_' . now()->format('Y-m-d_H-i-s');
 
-        $nombreArchivo = 'indices_electronicos_' . now()->format('Y-m-d_H-i-s');
-
-        switch ($request->formato) {
-            case 'csv':
-                return $this->exportarCSV($datosExportar, $nombreArchivo);
-            case 'excel':
-                return $this->exportarExcel($datosExportar, $nombreArchivo);
-            case 'pdf':
-                return $this->exportarPDF($datosExportar, $nombreArchivo);
+            switch ($request->formato) {
+                case 'csv':
+                    return $this->exportarCSV($indices, $nombreArchivo, $filtros);
+                case 'excel':
+                    return $this->exportarExcel($indices, $filtros);
+                case 'pdf':
+                    return $this->exportarPDF($indices, $filtros);
+                default:
+                    return back()->withErrors(['formato' => 'Formato no soportado']);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error en exportación de índices: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Error al exportar: ' . $e->getMessage()]);
         }
     }
 
@@ -333,31 +323,86 @@ class IndiceElectronicoController extends Controller
         ]);
     }
 
-    // Métodos privados para exportación
-    private function exportarCSV($datos, $nombreArchivo)
+    /**
+     * Método para obtener datos de auditoría y logs
+     */
+    public function auditoria()
+    {
+        $logActividad = [
+            'indices_creados_hoy' => IndiceElectronico::whereDate('fecha_indexacion', today())->count(),
+            'indices_actualizados_hoy' => IndiceElectronico::whereDate('fecha_ultima_actualizacion', today())->count(),
+            'usuarios_activos' => IndiceElectronico::distinct('usuario_indexacion_id')
+                ->whereDate('fecha_indexacion', '>=', now()->subDays(30))
+                ->count(),
+            'errores_recientes' => [], // Se podría implementar un sistema de logs de errores
+        ];
+
+        return Inertia::render('admin/indices/auditoria', [
+            'logActividad' => $logActividad,
+        ]);
+    }
+
+    // Métodos privados para exportación avanzada
+    private function exportarCSV($indices, $nombreArchivo, $filtros = [])
     {
         $headers = [
-            'Content-type' => 'text/csv',
+            'Content-type' => 'text/csv; charset=utf-8',
             'Content-Disposition' => "attachment; filename={$nombreArchivo}.csv",
             'Pragma' => 'no-cache',
             'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
             'Expires' => '0'
         ];
 
-        $callback = function() use ($datos) {
+        $callback = function() use ($indices, $filtros) {
             $file = fopen('php://output', 'w');
             
             // Agregar BOM para UTF-8
             fwrite($file, "\xEF\xBB\xBF");
             
-            // Encabezados
-            if ($datos->isNotEmpty()) {
-                fputcsv($file, array_keys($datos->first()), ';');
-                
-                // Datos
-                foreach ($datos as $fila) {
-                    fputcsv($file, array_values($fila), ';');
+            // Metadatos de exportación
+            fputcsv($file, ['Reporte de Índices Electrónicos - ArchiveyCloud'], ';');
+            fputcsv($file, ['Fecha de exportación: ' . now()->format('d/m/Y H:i:s')], ';');
+            fputcsv($file, ['Total de registros: ' . $indices->count()], ';');
+            
+            if (!empty($filtros)) {
+                $filtrosTexto = [];
+                foreach ($filtros as $key => $value) {
+                    if (!empty($value) && $value !== 'all') {
+                        $filtrosTexto[] = ucfirst($key) . ': ' . $value;
+                    }
                 }
+                if (!empty($filtrosTexto)) {
+                    fputcsv($file, ['Filtros aplicados: ' . implode(' | ', $filtrosTexto)], ';');
+                }
+            }
+            
+            fputcsv($file, [], ';'); // Línea vacía
+            
+            // Encabezados
+            fputcsv($file, [
+                'ID', 'Tipo', 'Código', 'Título', 'Serie Documental', 'Subserie', 
+                'Responsable', 'Nivel Acceso', 'Folios', 'Tamaño', 'Es Vital', 
+                'Es Histórico', 'Fecha Indexación', 'Ubicación Física'
+            ], ';');
+            
+            // Datos
+            foreach ($indices as $indice) {
+                fputcsv($file, [
+                    $indice->id,
+                    ucfirst($indice->tipo_entidad),
+                    $indice->getCodigoCompleto(),
+                    $indice->titulo,
+                    $indice->serie_documental ?? '',
+                    $indice->subserie_documental ?? '',
+                    $indice->responsable ?? '',
+                    $indice->getEtiquetaNivelAcceso(),
+                    $indice->cantidad_folios ?? 0,
+                    $indice->getTamaño(),
+                    $indice->es_vital ? 'Sí' : 'No',
+                    $indice->es_historico ? 'Sí' : 'No',
+                    $indice->fecha_indexacion ? $indice->fecha_indexacion->format('d/m/Y H:i') : '',
+                    $indice->ubicacion_fisica ?? ''
+                ], ';');
             }
             
             fclose($file);
@@ -366,20 +411,26 @@ class IndiceElectronicoController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    private function exportarExcel($datos, $nombreArchivo)
+    private function exportarExcel($indices, $filtros = [])
     {
-        // Implementación usando maatwebsite/excel si está disponible
-        // Por ahora devolvemos CSV con extensión xlsx
-        return $this->exportarCSV($datos, $nombreArchivo);
+        try {
+            return Excel::download(
+                new IndicesElectronicosExport($indices, $filtros),
+                'indices_electronicos_' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+            );
+        } catch (\Exception $e) {
+            \Log::error('Error exportando Excel: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Error al generar archivo Excel: ' . $e->getMessage()]);
+        }
     }
 
-    private function exportarPDF($datos, $nombreArchivo)
+    private function exportarPDF($indices, $filtros = [])
     {
-        // Implementación básica de PDF
-        // En producción se usaría una librería como DomPDF o TCPDF
-        return response()->json([
-            'message' => 'Exportación PDF en desarrollo',
-            'datos_count' => $datos->count()
-        ]);
+        try {
+            return PdfExportService::exportIndicesElectronicos($indices, $filtros);
+        } catch (\Exception $e) {
+            \Log::error('Error exportando PDF: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Error al generar archivo PDF: ' . $e->getMessage()]);
+        }
     }
 }

@@ -16,6 +16,10 @@ class ConfiguracionServicio extends Model
 
     protected $fillable = [
         'clave',
+        'valor',
+        'categoria',
+        'descripcion',
+        'tipo',
         'email_habilitado',
         'sms_habilitado',
         'resumen_diario_hora',
@@ -26,7 +30,9 @@ class ConfiguracionServicio extends Model
         'mail_driver',
         'queue_connection',
         'metadata',
-        'activa'
+        'activa',
+        'activo',
+        'actualizado_por'
     ];
 
     protected $casts = [
@@ -38,6 +44,8 @@ class ConfiguracionServicio extends Model
         'destinatarios_resumen' => 'array',
         'metadata' => 'array',
         'activa' => 'boolean',
+        'activo' => 'boolean',
+        'actualizado_por' => 'integer',
     ];
 
     /**
@@ -119,6 +127,14 @@ class ConfiguracionServicio extends Model
     public function destinatarios(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'configuracion_destinatarios', 'configuracion_id', 'user_id');
+    }
+
+    /**
+     * Relación con usuario que actualizó la configuración
+     */
+    public function actualizadoPor()
+    {
+        return $this->belongsTo(User::class, 'actualizado_por');
     }
 
     /**

@@ -154,6 +154,11 @@ const mainNavItems: NavItem[] = [
                 href: '/admin/importaciones',
                 icon: Download,
             },
+            {
+                title: 'Configuración del Sistema',
+                href: '/admin/configuracion',
+                icon: Settings,
+            },
         ],
     },
 ];

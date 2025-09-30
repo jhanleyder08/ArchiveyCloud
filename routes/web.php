@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         // Gestión de Series Documentales
         Route::resource('series', App\Http\Controllers\Admin\AdminSeriesController::class);
+        Route::get('series-dashboard', [App\Http\Controllers\Admin\AdminSeriesController::class, 'dashboard'])->name('series.dashboard');
         Route::post('series/{serie}/duplicate', [App\Http\Controllers\Admin\AdminSeriesController::class, 'duplicate'])->name('series.duplicate');
         Route::patch('series/{serie}/toggle-active', [App\Http\Controllers\Admin\AdminSeriesController::class, 'toggleActive'])->name('series.toggle-active');
         Route::get('series/export/{format?}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'export'])->name('series.export');
@@ -295,6 +296,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/{auditoria}', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'show'])->name('show');
             Route::post('/reporte', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'reporte'])->name('reporte');
             Route::get('/api/metricas', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'metricas'])->name('metricas');
+        });
+
+        // Sistema de Configuración Avanzada
+        Route::prefix('configuracion')->name('configuracion.')->group(function () {
+            // Dashboard principal
+            Route::get('/', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'index'])->name('index');
+            
+            // Actualización de configuraciones
+            Route::put('/{clave}', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'actualizar'])->name('actualizar');
+            
+            // Branding y personalización
+            Route::get('/branding', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'branding'])->name('branding');
+            Route::post('/branding/upload', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'subirArchivoBranding'])->name('branding.upload');
+            
+            // Configuración por roles
+            Route::get('/roles', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'roles'])->name('roles');
+            Route::put('/roles/{role}', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'actualizarConfiguracionRol'])->name('roles.update');
+            Route::put('/roles/update', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'actualizarConfiguracionesRoles'])->name('roles.update-batch');
+            
+            // Branding adicional
+            Route::put('/branding/update', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'actualizarBranding'])->name('branding.update');
+            Route::delete('/branding/logo/{tipo}', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'eliminarLogo'])->name('branding.logo.delete');
+            
+            // Mantenimiento del sistema
+            Route::get('/mantenimiento', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'mantenimiento'])->name('mantenimiento');
+            Route::post('/mantenimiento/comando', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'ejecutarComando'])->name('mantenimiento.comando');
+            
+            // Import/Export configuraciones
+            Route::get('/exportar', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'exportar'])->name('exportar');
+            Route::post('/importar', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'importar'])->name('importar');
         });
 
         // Sistema de Migración y Importación de Datos

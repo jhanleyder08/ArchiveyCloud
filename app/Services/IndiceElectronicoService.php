@@ -233,9 +233,9 @@ class IndiceElectronicoService
     }
 
     /**
-     * Búsqueda avanzada en índices
+     * Construir consulta base para búsqueda
      */
-    public function busquedaAvanzada(array $filtros): \Illuminate\Pagination\LengthAwarePaginator
+    public function construirConsultaBusqueda(array $filtros)
     {
         $query = IndiceElectronico::query();
 
@@ -289,6 +289,15 @@ class IndiceElectronicoService
         // Incluir relaciones
         $query->with(['usuarioIndexacion', 'usuarioActualizacion']);
 
+        return $query;
+    }
+
+    /**
+     * Búsqueda avanzada en índices
+     */
+    public function busquedaAvanzada(array $filtros): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        $query = $this->construirConsultaBusqueda($filtros);
         return $query->paginate($filtros['per_page'] ?? 15);
     }
 

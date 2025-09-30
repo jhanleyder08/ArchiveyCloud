@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { ArrowLeft, Save, Eye, Code, Download, Upload, FileText, Settings, Plus, Trash2, Edit, Check, X } from 'lucide-react';
+import { WysiwygEditor } from '../../../components/ui/wysiwyg-editor';
 import AppLayout from '../../../layouts/app/app-sidebar-layout';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';

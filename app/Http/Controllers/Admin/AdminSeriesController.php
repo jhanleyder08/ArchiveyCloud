@@ -6,7 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\SerieDocumental;
 use App\Models\TablaRetencionDocumental;
 use App\Models\CuadroClasificacionDocumental;
+use App\Models\SubserieDocumental;
+use App\Models\Expediente;
+use App\Models\Documento;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -127,28 +131,37 @@ class AdminSeriesController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource with advanced analytics.
      */
     public function show(SerieDocumental $serie)
     {
-        $serie->load([
-            'tablaRetencion',
-            'cuadroClasificacion',
-            'usuarioResponsable',
-            'subseries' => function ($query) {
-                $query->where('activa', true)->orderBy('codigo');
-            },
-            'expedientes' => function ($query) {
-                $query->orderBy('codigo')->limit(10);
-            }
-        ]);
+        try {
+            // Cargar relaciones necesarias
+            $serie->load([
+                'tablaRetencion',
+                'subseries' => function($query) {
+                    $query->withCount(['expedientes', 'documentos']);
+                },
+                'expedientes' => function($query) {
+                    $query->latest()->take(10)->withCount('documentos');
+                }
+            ]);
 
-        $estadisticas = $serie->getEstadisticas();
+            // Obtener estadísticas específicas de la serie
+            $estadisticas = $this->obtenerEstadisticasSerie($serie);
 
-        return Inertia::render('admin/series/show', [
-            'serie' => $serie,
-            'estadisticas' => $estadisticas
-        ]);
+            return Inertia::render('admin/series/show', [
+                'serie' => array_merge($serie->toArray(), [
+                    'estadisticas' => $estadisticas,
+                    'expedientes_recientes' => $this->formatearExpedientesRecientes($serie->expedientes)
+                ])
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error mostrando serie: ' . $e->getMessage());
+            
+            return redirect()->route('admin.series.index')
+                ->with('error', 'Error al cargar la serie documental');
+        }
     }
 
     /**
@@ -398,5 +411,251 @@ class AdminSeriesController extends Controller
             'Content-Type' => 'application/xml',
             'Content-Disposition' => 'attachment; filename="series_documentales_' . now()->format('Y-m-d') . '.xml"'
         ]);
+    }
+
+    /**
+     * Dashboard de estadísticas de series documentales
+     */
+    public function dashboard()
+    {
+        try {
+            $estadisticas = $this->obtenerEstadisticasSeries();
+            
+            return Inertia::render('admin/series/dashboard', [
+                'estadisticas' => $estadisticas
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo estadísticas de series: ' . $e->getMessage());
+            
+            return Inertia::render('admin/series/dashboard', [
+                'estadisticas' => $this->getEstadisticasDefault()
+            ]);
+        }
+    }
+
+
+    /**
+     * Obtener estadísticas generales del sistema de series
+     */
+    private function obtenerEstadisticasSeries()
+    {
+        $totalSeries = SerieDocumental::count();
+        $seriesActivas = SerieDocumental::where('activa', true)->count();
+        $totalSubseries = SubserieDocumental::count();
+        $totalExpedientes = Expediente::count();
+
+        // Series por TRD
+        $seriesPorTrd = SerieDocumental::join('tablas_retencion_documental as trd', 'series_documentales.tabla_retencion_id', '=', 'trd.id')
+            ->selectRaw('trd.nombre as trd, COUNT(*) as cantidad')
+            ->groupBy('trd.id', 'trd.nombre')
+            ->get()
+            ->map(function($item, $index) {
+                return [
+                    'trd' => $item->trd,
+                    'cantidad' => $item->cantidad,
+                    'color' => $this->getColorByIndex($index)
+                ];
+            });
+
+        // Distribución por disposición final
+        $distribucionDisposicion = SerieDocumental::selectRaw('disposicion_final as tipo, COUNT(*) as cantidad')
+            ->groupBy('disposicion_final')
+            ->get()
+            ->map(function($item, $index) {
+                return [
+                    'tipo' => $item->tipo,
+                    'cantidad' => $item->cantidad,
+                    'color' => $this->getColorByIndex($index)
+                ];
+            });
+
+        // Series más utilizadas
+        $seriesMasUsadas = SerieDocumental::withCount(['expedientes', 'subseries'])
+            ->orderBy('expedientes_count', 'desc')
+            ->take(5)
+            ->get()
+            ->map(function($serie) {
+                return [
+                    'serie' => $serie->nombre,
+                    'expedientes' => $serie->expedientes_count ?? 0,
+                    'subseries' => $serie->subseries_count ?? 0
+                ];
+            });
+
+        // Actividad mensual (últimos 12 meses)
+        $actividadMensual = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $fecha = Carbon::now()->subMonths($i);
+            $seriesCreadas = SerieDocumental::whereMonth('created_at', $fecha->month)
+                ->whereYear('created_at', $fecha->year)
+                ->count();
+            
+            $expedientesCreados = Expediente::whereMonth('created_at', $fecha->month)
+                ->whereYear('created_at', $fecha->year)
+                ->count();
+
+            $actividadMensual[] = [
+                'mes' => $fecha->format('M Y'),
+                'series_creadas' => $seriesCreadas,
+                'expedientes_creados' => $expedientesCreados
+            ];
+        }
+
+        // Análisis de tiempos de retención
+        $tiemposRetencion = [
+            ['rango' => '0-5 años', 'cantidad' => SerieDocumental::where('tiempo_archivo_gestion', '<=', 5)->count()],
+            ['rango' => '6-10 años', 'cantidad' => SerieDocumental::whereBetween('tiempo_archivo_gestion', [6, 10])->count()],
+            ['rango' => '11-15 años', 'cantidad' => SerieDocumental::whereBetween('tiempo_archivo_gestion', [11, 15])->count()],
+            ['rango' => '16+ años', 'cantidad' => SerieDocumental::where('tiempo_archivo_gestion', '>', 15)->count()],
+        ];
+
+        return [
+            'total_series' => $totalSeries,
+            'series_activas' => $seriesActivas,
+            'series_inactivas' => $totalSeries - $seriesActivas,
+            'total_subseries' => $totalSubseries,
+            'total_expedientes' => $totalExpedientes,
+            'series_por_trd' => $seriesPorTrd,
+            'distribucion_disposicion' => $distribucionDisposicion,
+            'series_mas_usadas' => $seriesMasUsadas,
+            'actividad_mensual' => $actividadMensual,
+            'tiempos_retencion' => $tiemposRetencion
+        ];
+    }
+
+    /**
+     * Obtener estadísticas específicas de una serie
+     */
+    private function obtenerEstadisticasSerie(SerieDocumental $serie)
+    {
+        $totalSubseries = $serie->subseries()->count();
+        $totalExpedientes = $serie->expedientes()->count();
+        $totalDocumentos = Documento::whereHas('expediente.serieDocumental', function($query) use ($serie) {
+            $query->where('id', $serie->id);
+        })->count();
+
+        // Tamaño total
+        $tamañoTotal = Documento::whereHas('expediente.serieDocumental', function($query) use ($serie) {
+            $query->where('id', $serie->id);
+        })->sum('tamano_bytes') ?? 0;
+
+        // Expedientes por estado
+        $expedientesPorEstado = $serie->expedientes()
+            ->selectRaw('estado_ciclo_vida as estado, COUNT(*) as cantidad')
+            ->groupBy('estado_ciclo_vida')
+            ->get()
+            ->map(function($item, $index) {
+                return [
+                    'estado' => $item->estado,
+                    'cantidad' => $item->cantidad,
+                    'color' => $this->getColorByIndex($index)
+                ];
+            });
+
+        // Actividad mensual de la serie (últimos 6 meses)
+        $actividadMensual = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $fecha = Carbon::now()->subMonths($i);
+            
+            $expedientes = $serie->expedientes()
+                ->whereMonth('created_at', $fecha->month)
+                ->whereYear('created_at', $fecha->year)
+                ->count();
+            
+            $documentos = Documento::whereHas('expediente.serieDocumental', function($query) use ($serie) {
+                $query->where('id', $serie->id);
+            })
+            ->whereMonth('created_at', $fecha->month)
+            ->whereYear('created_at', $fecha->year)
+            ->count();
+
+            $actividadMensual[] = [
+                'mes' => $fecha->format('M Y'),
+                'expedientes' => $expedientes,
+                'documentos' => $documentos
+            ];
+        }
+
+        // Distribución de expedientes por subseries
+        $distribucionSubseries = $serie->subseries()
+            ->withCount('expedientes')
+            ->get()
+            ->map(function($subserie) {
+                return [
+                    'subserie' => $subserie->nombre,
+                    'expedientes' => $subserie->expedientes_count ?? 0
+                ];
+            });
+
+        return [
+            'total_subseries' => $totalSubseries,
+            'total_expedientes' => $totalExpedientes,
+            'total_documentos' => $totalDocumentos,
+            'tamaño_total' => $this->formatBytes($tamañoTotal),
+            'expedientes_por_estado' => $expedientesPorEstado,
+            'actividad_mensual' => $actividadMensual,
+            'distribucion_subseries' => $distribucionSubseries
+        ];
+    }
+
+    /**
+     * Formatear expedientes recientes para la vista
+     */
+    private function formatearExpedientesRecientes($expedientes)
+    {
+        return $expedientes->map(function($expediente) {
+            return [
+                'id' => $expediente->id,
+                'numero_expediente' => $expediente->numero_expediente,
+                'titulo' => $expediente->titulo,
+                'estado_ciclo_vida' => $expediente->estado_ciclo_vida,
+                'fecha_apertura' => $expediente->fecha_apertura,
+                'fecha_cierre' => $expediente->fecha_cierre,
+                'documentos_count' => $expediente->documentos_count ?? 0,
+                'tamaño_total' => $this->formatBytes($expediente->documentos()->sum('tamano_bytes') ?? 0)
+            ];
+        });
+    }
+
+    /**
+     * Obtener estadísticas por defecto en caso de error
+     */
+    private function getEstadisticasDefault()
+    {
+        return [
+            'total_series' => 0,
+            'series_activas' => 0,
+            'series_inactivas' => 0,
+            'total_subseries' => 0,
+            'total_expedientes' => 0,
+            'series_por_trd' => [],
+            'distribucion_disposicion' => [],
+            'series_mas_usadas' => [],
+            'actividad_mensual' => [],
+            'tiempos_retencion' => []
+        ];
+    }
+
+    /**
+     * Obtener color por índice
+     */
+    private function getColorByIndex($index)
+    {
+        $colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+        return $colors[$index % count($colors)];
+    }
+
+    /**
+     * Formatear bytes a formato legible
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, $precision) . ' ' . $units[$i];
     }
 }
