@@ -20,16 +20,72 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Soporte Técnico (Modal)
     Route::post('support', [App\Http\Controllers\SupportController::class, 'store'])->name('support.store');
 
+    // Sistema de Búsqueda Avanzada (Elasticsearch)
+    Route::prefix('search')->name('search.')->group(function () {
+        Route::get('/', [App\Http\Controllers\SearchController::class, 'index'])->name('index');
+        Route::post('/simple', [App\Http\Controllers\SearchController::class, 'search'])->name('simple');
+        Route::post('/advanced', [App\Http\Controllers\SearchController::class, 'searchAdvanced'])->name('advanced');
+        Route::get('/autocomplete', [App\Http\Controllers\SearchController::class, 'autocomplete'])->name('autocomplete');
+    });
+
+    // Autenticación de Dos Factores (MFA)
+    Route::prefix('two-factor')->name('two-factor.')->group(function () {
+        Route::get('/challenge', [App\Http\Controllers\TwoFactorChallengeController::class, 'show'])->name('challenge');
+        Route::post('/verify', [App\Http\Controllers\TwoFactorChallengeController::class, 'verify'])->name('verify');
+        Route::post('/resend', [App\Http\Controllers\TwoFactorChallengeController::class, 'resend'])->name('resend');
+        
+        Route::get('/settings', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'index'])->name('settings');
+        Route::post('/enable', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'enable'])->name('enable');
+        Route::post('/confirm', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'confirm'])->name('confirm');
+        Route::post('/disable', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'disable'])->name('disable');
+        Route::post('/recovery-codes/regenerate', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'regenerateRecoveryCodes'])->name('recovery-codes.regenerate');
+        Route::get('/recovery-codes', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'showRecoveryCodes'])->name('recovery-codes.show');
+    });
+
+    // OCR (Optical Character Recognition)
+    Route::prefix('ocr')->name('ocr.')->group(function () {
+        Route::post('/process/{documento}', [App\Http\Controllers\OCRController::class, 'process'])->name('process');
+        Route::post('/batch', [App\Http\Controllers\OCRController::class, 'processBatch'])->name('batch');
+        Route::get('/status/{documento}', [App\Http\Controllers\OCRController::class, 'status'])->name('status');
+    });
+
+    // Captura de Correos Electrónicos
+    Route::prefix('email-accounts')->name('email-accounts.')->group(function () {
+        Route::get('/', [App\Http\Controllers\EmailAccountController::class, 'index'])->name('index');
+        Route::post('/', [App\Http\Controllers\EmailAccountController::class, 'store'])->name('store');
+        Route::patch('/{emailAccount}', [App\Http\Controllers\EmailAccountController::class, 'update'])->name('update');
+        Route::delete('/{emailAccount}', [App\Http\Controllers\EmailAccountController::class, 'destroy'])->name('destroy');
+        Route::post('/{emailAccount}/test', [App\Http\Controllers\EmailAccountController::class, 'testConnection'])->name('test');
+        Route::post('/{emailAccount}/capture', [App\Http\Controllers\EmailAccountController::class, 'capture'])->name('capture');
+        Route::get('/{emailAccount}/captures', [App\Http\Controllers\EmailAccountController::class, 'captures'])->name('captures');
+        Route::post('/capture-all', [App\Http\Controllers\EmailAccountController::class, 'captureAll'])->name('capture-all');
+    });
+
     // Administración
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', App\Http\Controllers\Admin\AdminUserController::class);
         Route::patch('users/{user}/toggle-status', [App\Http\Controllers\Admin\AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         
         // Gestión de Tablas de Retención Documental (TRD)
-        Route::resource('trd', App\Http\Controllers\Admin\AdminTRDController::class);
-        Route::post('trd/{trd}/duplicate', [App\Http\Controllers\Admin\AdminTRDController::class, 'duplicate'])->name('trd.duplicate');
-        Route::patch('trd/{trd}/vigencia', [App\Http\Controllers\Admin\AdminTRDController::class, 'toggleVigencia'])->name('trd.toggle-vigencia');
-        Route::get('trd/{trd}/export', [App\Http\Controllers\Admin\AdminTRDController::class, 'export'])->name('trd.export');
+        Route::prefix('trd')->name('trd.')->group(function () {
+            Route::get('/', [App\Http\Controllers\TRDController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\TRDController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\TRDController::class, 'store'])->name('store');
+            Route::get('/{trd}', [App\Http\Controllers\TRDController::class, 'show'])->name('show');
+            Route::get('/{trd}/edit', [App\Http\Controllers\TRDController::class, 'edit'])->name('edit');
+            Route::put('/{trd}', [App\Http\Controllers\TRDController::class, 'update'])->name('update');
+            Route::delete('/{trd}', [App\Http\Controllers\TRDController::class, 'destroy'])->name('destroy');
+            
+            // Acciones especiales
+            Route::post('/{trd}/aprobar', [App\Http\Controllers\TRDController::class, 'aprobar'])->name('aprobar');
+            Route::post('/{trd}/archivar', [App\Http\Controllers\TRDController::class, 'archivar'])->name('archivar');
+            Route::post('/{trd}/version', [App\Http\Controllers\TRDController::class, 'crearVersion'])->name('version');
+            Route::post('/{trd}/serie', [App\Http\Controllers\TRDController::class, 'agregarSerie'])->name('agregarSerie');
+            
+            // Importación/Exportación
+            Route::post('/importar', [App\Http\Controllers\TRDController::class, 'importar'])->name('importar');
+            Route::get('/{trd}/exportar', [App\Http\Controllers\TRDController::class, 'exportar'])->name('exportar');
+        });
         
         // Gestión de Series Documentales
         Route::resource('series', App\Http\Controllers\Admin\AdminSeriesController::class);
@@ -45,9 +101,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('subseries/export/{format?}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'export'])->name('subseries.export');
         
         // Cuadros de Clasificación Documental (CCD) routes
-        Route::resource('ccd', App\Http\Controllers\Admin\AdminCCDController::class);
-        Route::post('ccd/{ccd}/duplicate', [App\Http\Controllers\Admin\AdminCCDController::class, 'duplicate'])->name('ccd.duplicate');
-        Route::patch('ccd/{ccd}/toggle-active', [App\Http\Controllers\Admin\AdminCCDController::class, 'toggleActive'])->name('ccd.toggle-active');
+        Route::prefix('ccd')->name('ccd.')->group(function () {
+            Route::get('/', [App\Http\Controllers\CCDController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\CCDController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\CCDController::class, 'store'])->name('store');
+            Route::get('/{ccd}', [App\Http\Controllers\CCDController::class, 'show'])->name('show');
+            Route::get('/{ccd}/edit', [App\Http\Controllers\CCDController::class, 'edit'])->name('edit');
+            Route::put('/{ccd}', [App\Http\Controllers\CCDController::class, 'update'])->name('update');
+            Route::delete('/{ccd}', [App\Http\Controllers\CCDController::class, 'destroy'])->name('destroy');
+            
+            // Acciones especiales
+            Route::post('/{ccd}/aprobar', [App\Http\Controllers\CCDController::class, 'aprobar'])->name('aprobar');
+            Route::post('/{ccd}/archivar', [App\Http\Controllers\CCDController::class, 'archivar'])->name('archivar');
+            Route::post('/{ccd}/version', [App\Http\Controllers\CCDController::class, 'crearVersion'])->name('version');
+            
+            // Gestión de niveles
+            Route::post('/{ccd}/nivel', [App\Http\Controllers\CCDController::class, 'agregarNivel'])->name('agregarNivel');
+            Route::put('/nivel/{nivel}', [App\Http\Controllers\CCDController::class, 'actualizarNivel'])->name('actualizarNivel');
+            Route::delete('/nivel/{nivel}', [App\Http\Controllers\CCDController::class, 'eliminarNivel'])->name('eliminarNivel');
+            Route::post('/nivel/{nivel}/mover', [App\Http\Controllers\CCDController::class, 'moverNivel'])->name('moverNivel');
+            
+            // Estructura
+            Route::get('/{ccd}/estructura', [App\Http\Controllers\CCDController::class, 'getEstructura'])->name('estructura');
+        });
         
         // Gestión de Documentos routes
         Route::resource('documentos', App\Http\Controllers\Admin\AdminDocumentController::class);
@@ -56,11 +132,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
         
         // Gestión de Expedientes routes
-        Route::resource('expedientes', App\Http\Controllers\Admin\AdminExpedienteController::class);
-        Route::get('expedientes/dashboard', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'dashboard'])->name('expedientes.dashboard');
-        Route::post('expedientes/{expediente}/cambiar-estado', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'cambiarEstado'])->name('expedientes.cambiar-estado');
-        Route::get('expedientes/{expediente}/exportar-directorio', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'exportarDirectorio'])->name('expedientes.exportar-directorio');
-        Route::get('expedientes/{expediente}/verificar-integridad', [App\Http\Controllers\Admin\AdminExpedienteController::class, 'verificarIntegridad'])->name('expedientes.verificar-integridad');
+        Route::prefix('expedientes')->name('expedientes.')->group(function () {
+            Route::get('/', [App\Http\Controllers\ExpedienteController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\ExpedienteController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\ExpedienteController::class, 'store'])->name('store');
+            Route::get('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'show'])->name('show');
+            Route::get('/{expediente}/edit', [App\Http\Controllers\ExpedienteController::class, 'edit'])->name('edit');
+            Route::put('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'update'])->name('update');
+            Route::delete('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'destroy'])->name('destroy');
+            
+            // Acciones especiales
+            Route::post('/{expediente}/cambiar-estado', [App\Http\Controllers\ExpedienteController::class, 'cambiarEstado'])->name('cambiarEstado');
+            Route::post('/{expediente}/cerrar', [App\Http\Controllers\ExpedienteController::class, 'cerrar'])->name('cerrar');
+            Route::post('/{expediente}/agregar-documento', [App\Http\Controllers\ExpedienteController::class, 'agregarDocumento'])->name('agregarDocumento');
+            Route::post('/{expediente}/transferencia', [App\Http\Controllers\ExpedienteController::class, 'crearTransferencia'])->name('crearTransferencia');
+            Route::get('/{expediente}/verificar-integridad', [App\Http\Controllers\ExpedienteController::class, 'verificarIntegridad'])->name('verificarIntegridad');
+        });
         
         // Reportes y estadísticas
         Route::group(['prefix' => 'reportes'], function () {

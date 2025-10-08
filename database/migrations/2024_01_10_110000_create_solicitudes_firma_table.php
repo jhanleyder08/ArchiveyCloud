@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('solicitudes_firma', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('documento_id')->constrained('documentos')->onDelete('cascade');
+            $table->unsignedBigInteger('documento_id'); // Foreign key sin constraint por orden de migraciones
             $table->foreignId('solicitante_id')->constrained('users')->onDelete('cascade');
             $table->string('titulo');
             $table->text('descripcion')->nullable();

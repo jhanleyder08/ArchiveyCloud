@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('series_documentales', function (Blueprint $table) {
+        if (!Schema::hasTable('series_documentales')) {
+            Schema::create('series_documentales', function (Blueprint $table) {
             $table->id();
             $table->string('codigo')->unique();
             $table->string('nombre');
@@ -36,7 +37,8 @@ return new class extends Migration
             $table->index('disposicion_final');
             $table->index('codigo');
             $table->index('activa');
-        });
+            });
+        }
     }
 
     /**

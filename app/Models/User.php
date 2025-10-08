@@ -629,6 +629,23 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Relación con autenticación de dos factores (MFA)
+     * REQ-CS-003
+     */
+    public function twoFactorAuthentication()
+    {
+        return $this->hasOne(TwoFactorAuthentication::class);
+    }
+
+    /**
+     * Verificar si el usuario tiene 2FA habilitado
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->twoFactorAuthentication && $this->twoFactorAuthentication->enabled;
+    }
+
+    /**
      * Send the email verification notification using our custom Gmail SMTP template.
      *
      * @return void

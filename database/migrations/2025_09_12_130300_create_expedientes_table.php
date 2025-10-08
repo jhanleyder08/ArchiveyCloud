@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expedientes', function (Blueprint $table) {
+        if (!Schema::hasTable('expedientes')) {
+            Schema::create('expedientes', function (Blueprint $table) {
             $table->id();
             $table->string('numero_expediente')->unique();
             $table->string('titulo');
@@ -46,7 +47,8 @@ return new class extends Migration
             $table->index('fecha_apertura');
             $table->index('tipo_expediente');
             $table->index('estado_ciclo_vida');
-        });
+            });
+        }
     }
 
     /**

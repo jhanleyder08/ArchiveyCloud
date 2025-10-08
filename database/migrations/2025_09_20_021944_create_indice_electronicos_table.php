@@ -48,7 +48,11 @@ return new class extends Migration
             $table->index(['fecha_inicio', 'fecha_fin'], 'idx_fechas');
             $table->index(['nivel_acceso']);
             $table->index(['es_vital', 'es_historico'], 'idx_importancia');
-            $table->fullText(['titulo', 'descripcion'], 'idx_busqueda_texto');
+            
+            // Fulltext index solo en MySQL (SQLite no lo soporta)
+            if (config('database.default') !== 'sqlite') {
+                $table->fullText(['titulo', 'descripcion'], 'idx_busqueda_texto');
+            }
         });
     }
 

@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('certificados_digitales', function (Blueprint $table) {
+        if (!Schema::hasTable('certificados_digitales')) {
+            Schema::create('certificados_digitales', function (Blueprint $table) {
             $table->id();
             
             // Relación con el usuario propietario
@@ -59,7 +60,8 @@ return new class extends Migration
             $table->index(['tipo_certificado', 'estado']);
             $table->index(['fecha_vencimiento', 'estado']);
             $table->index(['estado', 'created_at']);
-        });
+            });
+        }
     }
 
     /**
