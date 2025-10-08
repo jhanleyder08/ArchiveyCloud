@@ -19,7 +19,7 @@ return new class extends Migration
                 $table->string('titulo', 500);
                 $table->text('descripcion')->nullable();
                 
-                // Clasificación archivística
+                // Clasificacion archivistica
                 $table->foreignId('serie_id')->constrained('series_documentales');
                 $table->foreignId('subserie_id')->nullable()->constrained('subseries_documentales');
                 $table->foreignId('ccd_nivel_id')->nullable()->constrained('ccd_niveles');
@@ -58,7 +58,7 @@ return new class extends Migration
             $table->date('fecha_transferencia_archivo_historico')->nullable();
             $table->date('fecha_eliminacion')->nullable();
             
-            // Retención (calculada desde TRD)
+            // Retencion (calculada desde TRD)
             $table->integer('anos_archivo_gestion')->nullable();
             $table->integer('anos_archivo_central')->nullable();
             $table->enum('disposicion_final', [
@@ -69,14 +69,14 @@ return new class extends Migration
                 'digitalizacion'
             ])->nullable();
             
-            // Ubicación física y digital
+            // Ubicacion fisica y digital
             $table->string('ubicacion_fisica', 500)->nullable();
             $table->string('estante', 50)->nullable();
             $table->string('caja', 50)->nullable();
             $table->string('carpeta', 50)->nullable();
             $table->string('ubicacion_digital', 500)->nullable();
             
-            // Metadatos de gestión
+            // Metadatos de gestion
             $table->foreignId('responsable_id')->constrained('users');
             $table->unsignedBigInteger('dependencia_id')->nullable();
             $table->unsignedBigInteger('unidad_administrativa_id')->nullable();
@@ -86,7 +86,7 @@ return new class extends Migration
             $table->timestamp('fecha_ultima_verificacion')->nullable();
             $table->boolean('verificado')->default(false);
             
-            // Información adicional
+            // Informacion adicional
             $table->integer('numero_documentos')->default(0);
             $table->bigInteger('tamano_total_bytes')->default(0);
             $table->json('palabras_clave')->nullable();
@@ -115,7 +115,7 @@ return new class extends Migration
             });
         }
 
-        // Relación Expediente-Documentos (muchos a muchos)
+        // Relacion Expediente-Documentos (muchos a muchos)
         if (!Schema::hasTable('expediente_documento')) {
             Schema::create('expediente_documento', function (Blueprint $table) {
                 $table->id();
@@ -183,7 +183,7 @@ return new class extends Migration
             });
         }
 
-        // Valoración y disposición final
+        // Valoracion y disposicion final
         if (!Schema::hasTable('expediente_valoraciones')) {
             Schema::create('expediente_valoraciones', function (Blueprint $table) {
                 $table->id();
@@ -214,7 +214,7 @@ return new class extends Migration
             });
         }
 
-        // Préstamos y consultas del expediente
+        // Prestamos y consultas del expediente
         if (!Schema::hasTable('expediente_prestamos')) {
             Schema::create('expediente_prestamos', function (Blueprint $table) {
                 $table->id();
@@ -237,7 +237,7 @@ return new class extends Migration
             });
         }
 
-        // Auditoría de accesos al expediente
+        // Auditoria de accesos al expediente
         if (!Schema::hasTable('expediente_accesos')) {
             Schema::create('expediente_accesos', function (Blueprint $table) {
                 $table->id();
@@ -255,16 +255,16 @@ return new class extends Migration
             });
         }
 
-        // Índices de documentos del expediente (inventario)
+        // Indices de documentos del expediente (inventario)
         if (!Schema::hasTable('expediente_indices')) {
             Schema::create('expediente_indices', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('expediente_id')->constrained('expedientes')->onDelete('cascade');
                 $table->string('tipo_indice', 50); // cronologico, alfabetico, tematico, documental
-                $table->json('estructura_indice'); // Estructura del índice
+                $table->json('estructura_indice'); // Estructura del indice
                 $table->date('fecha_elaboracion');
                 $table->foreignId('elaborado_por')->constrained('users');
-                $table->string('archivo_indice', 500)->nullable(); // PDF del índice
+                $table->string('archivo_indice', 500)->nullable(); // PDF del indice
                 $table->timestamps();
                 
                 $table->index('expediente_id');
