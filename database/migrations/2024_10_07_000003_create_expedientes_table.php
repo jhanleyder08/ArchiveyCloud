@@ -260,11 +260,11 @@ return new class extends Migration
             Schema::create('expediente_indices', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('expediente_id')->constrained('expedientes')->onDelete('cascade');
-                $table->string('tipo_indice', 50); // cronologico, alfabetico, tematico, documental
-                $table->json('estructura_indice'); // Estructura del indice
+                $table->string('tipo_indice', 50);
+                $table->json('estructura_indice');
                 $table->date('fecha_elaboracion');
                 $table->foreignId('elaborado_por')->constrained('users');
-                $table->string('archivo_indice', 500)->nullable(); // PDF del indice
+                $table->string('archivo_indice', 500)->nullable();
                 $table->timestamps();
                 
                 $table->index('expediente_id');
