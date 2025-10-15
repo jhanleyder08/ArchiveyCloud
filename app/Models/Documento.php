@@ -42,6 +42,14 @@ class Documento extends Model
         'ruta_archivo',
         'ruta_miniatura',
         'hash_integridad',
+        'hash_sha256',
+        'rutas_conversiones',
+        'contenido_ocr',
+        'estado_procesamiento',
+        'error_procesamiento',
+        'fecha_procesamiento',
+        'metadatos_archivo',
+        'configuracion_procesamiento',
         'firma_digital',
         'fecha_creacion',
         'fecha_modificacion',
@@ -67,11 +75,15 @@ class Documento extends Model
         'fecha_creacion' => 'datetime',
         'fecha_modificacion' => 'datetime',
         'fecha_digitalizacion' => 'datetime',
+        'fecha_procesamiento' => 'datetime',
         'fecha_ultima_firma' => 'datetime',
         'es_version_principal' => 'boolean',
         'firmado_digitalmente' => 'boolean',
         'palabras_clave' => 'array',
         'metadatos_documento' => 'array',
+        'metadatos_archivo' => 'array',
+        'rutas_conversiones' => 'array',
+        'configuracion_procesamiento' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime'
@@ -97,6 +109,13 @@ class Documento extends Model
     const CONFIDENCIALIDAD_CONFIDENCIAL = 'confidencial';
     const CONFIDENCIALIDAD_RESERVADA = 'reservada';
     const CONFIDENCIALIDAD_CLASIFICADA = 'clasificada';
+
+    // Estados de procesamiento avanzado
+    const PROCESAMIENTO_PENDIENTE = 'pendiente';
+    const PROCESAMIENTO_PROCESANDO = 'procesando';
+    const PROCESAMIENTO_COMPLETADO = 'completado';
+    const PROCESAMIENTO_ERROR = 'error';
+    const PROCESAMIENTO_FALLIDO = 'fallido';
 
     // Formatos soportados por categoría
     const FORMATOS_TEXTO = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt'];
@@ -551,18 +570,6 @@ class Documento extends Model
         $this->hash_integridad = hash('sha256', $contenido);
     }
 
-    /**
-     * Verificar integridad del archivo
-     */
-    public function verificarIntegridad()
-    {
-        if (!$this->hash_integridad) {
-            return false;
-        }
-        
-        $hashActual = hash('sha256', Storage::get($this->ruta_archivo));
-        return $hashActual === $this->hash_integridad;
-    }
 
     /**
      * REQ-CD-003: Convertir formato de archivo
@@ -776,15 +783,176 @@ class Documento extends Model
                 $xml->addChild($key, htmlspecialchars($value));
             }
         }
-        
         return $xml->asXML();
     }
 
     /**
-     * Relación con notificaciones (polimórfica)
+     * REQ-CP-007: Métodos para procesamiento avanzado
      */
-    public function notificaciones(): MorphMany
+
+    /**
+     * Verificar si el documento requiere procesamiento
+     */
+    public function requiereProcesamiento(): bool
     {
-        return $this->morphMany(Notificacion::class, 'relacionado', 'relacionado_tipo', 'relacionado_id');
+        return $this->estado_procesamiento === self::PROCESAMIENTO_PENDIENTE;
+    }
+
+    /**
+     * Verificar si el documento está siendo procesado
+     */
+    public function estaProcesando(): bool
+    {
+        return $this->estado_procesamiento === self::PROCESAMIENTO_PROCESANDO;
+    }
+
+    /**
+     * Verificar si el procesamiento está completado
+     */
+    public function procesamientoCompletado(): bool
+    {
+        return $this->estado_procesamiento === self::PROCESAMIENTO_COMPLETADO;
+    }
+
+    /**
+     * Verificar si hubo error en el procesamiento
+     */
+    public function tieneErrorProcesamiento(): bool
+    {
+        return in_array($this->estado_procesamiento, [
+            self::PROCESAMIENTO_ERROR,
+            self::PROCESAMIENTO_FALLIDO
+        ]);
+    }
+
+    /**
+     * Obtener el contenido OCR extraído
+     */
+    public function getContenidoOcr(): ?string
+    {
+        return $this->contenido_ocr;
+    }
+
+    /**
+     * Verificar si tiene contenido OCR
+     */
+    public function tieneOcr(): bool
+    {
+        return !empty($this->contenido_ocr);
+    }
+
+    /**
+     * Obtener URL de la miniatura
+     */
+    public function getUrlMiniatura(): ?string
+    {
+        if (!$this->ruta_miniatura) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->ruta_miniatura);
+    }
+
+    /**
+     * Verificar si tiene miniatura
+     */
+    public function tieneMiniatura(): bool
+    {
+        return !empty($this->ruta_miniatura) && 
+               Storage::disk('public')->exists($this->ruta_miniatura);
+    }
+
+    /**
+     * Obtener metadatos de archivo procesado
+     */
+    public function getMetadatosArchivo(): array
+    {
+        return $this->metadatos_archivo ?? [];
+    }
+
+    /**
+     * Obtener configuración de procesamiento aplicada
+     */
+    public function getConfiguracionProcesamiento(): array
+    {
+        return $this->configuracion_procesamiento ?? [];
+    }
+
+    /**
+     * Obtener rutas de conversiones realizadas
+     */
+    public function getRutasConversiones(): array
+    {
+        return $this->rutas_conversiones ?? [];
+    }
+
+    /**
+     * Verificar integridad del archivo usando hash SHA-256
+     */
+    public function verificarIntegridad(): bool
+    {
+        if (!$this->hash_sha256 || !$this->ruta_archivo) {
+            return false;
+        }
+
+        if (!Storage::disk('public')->exists($this->ruta_archivo)) {
+            return false;
+        }
+
+        $rutaCompleta = storage_path('app/public/' . $this->ruta_archivo);
+        $hashActual = hash_file('sha256', $rutaCompleta);
+
+        return $hashActual === $this->hash_sha256;
+    }
+
+    /**
+     * Actualizar hash de integridad
+     */
+    public function actualizarHashIntegridad(): bool
+    {
+        if (!$this->ruta_archivo || !Storage::disk('public')->exists($this->ruta_archivo)) {
+            return false;
+        }
+
+        $rutaCompleta = storage_path('app/public/' . $this->ruta_archivo);
+        $this->hash_sha256 = hash_file('sha256', $rutaCompleta);
+        $this->save();
+
+        return true;
+    }
+
+    /**
+     * Marcar como procesado correctamente
+     */
+    public function marcarProcesamientoCompletado(array $metadatos = []): void
+    {
+        $this->update([
+            'estado_procesamiento' => self::PROCESAMIENTO_COMPLETADO,
+            'fecha_procesamiento' => now(),
+            'error_procesamiento' => null,
+            'metadatos_archivo' => array_merge($this->getMetadatosArchivo(), $metadatos)
+        ]);
+    }
+
+    /**
+     * Marcar como error en procesamiento
+     */
+    public function marcarErrorProcesamiento(string $error): void
+    {
+        $this->update([
+            'estado_procesamiento' => self::PROCESAMIENTO_ERROR,
+            'error_procesamiento' => $error
+        ]);
+    }
+
+    /**
+     * Iniciar procesamiento
+     */
+    public function iniciarProcesamiento(): void
+    {
+        $this->update([
+            'estado_procesamiento' => self::PROCESAMIENTO_PROCESANDO,
+            'error_procesamiento' => null
+        ]);
     }
 }

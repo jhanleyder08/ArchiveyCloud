@@ -26,6 +26,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/simple', [App\Http\Controllers\SearchController::class, 'search'])->name('simple');
         Route::post('/advanced', [App\Http\Controllers\SearchController::class, 'searchAdvanced'])->name('advanced');
         Route::get('/autocomplete', [App\Http\Controllers\SearchController::class, 'autocomplete'])->name('autocomplete');
+        
+        // REQ-BP-005: Nuevas rutas para búsqueda avanzada
+        Route::post('/similar/{document}', [App\Http\Controllers\SearchController::class, 'searchSimilar'])->name('similar');
+        Route::get('/stats', [App\Http\Controllers\SearchController::class, 'getSearchStats'])->name('stats');
+        Route::post('/suggestions', [App\Http\Controllers\SearchController::class, 'searchWithSuggestions'])->name('suggestions');
+    });
+
+    // Sistema de Validaciones y Reglas de Negocio
+    Route::prefix('validations')->name('validations.')->group(function () {
+        Route::post('/estructura-trd', [App\Http\Controllers\ValidationController::class, 'validarEstructuraTRD'])->name('estructura-trd');
+        Route::post('/reglas-expediente/{expediente}', [App\Http\Controllers\ValidationController::class, 'validarReglasExpediente'])->name('reglas-expediente');
+        Route::post('/metadatos', [App\Http\Controllers\ValidationController::class, 'validarMetadatos'])->name('metadatos');
+        Route::post('/integridad', [App\Http\Controllers\ValidationController::class, 'validarIntegridad'])->name('integridad');
+        Route::post('/asistente', [App\Http\Controllers\ValidationController::class, 'generarAsistente'])->name('asistente');
+        Route::post('/completa', [App\Http\Controllers\ValidationController::class, 'validacionCompleta'])->name('completa');
+        Route::get('/options', [App\Http\Controllers\ValidationController::class, 'getValidationOptions'])->name('options');
     });
 
     // Autenticación de Dos Factores (MFA)
@@ -130,6 +146,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'uploadMasivo'])->name('documentos.upload-masivo');
         Route::post('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'procesarSubidaMasiva'])->name('documentos.procesar-masivo');
         Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
+        
+        // REQ-CP-007: Nuevas rutas para validación avanzada de documentos
+        Route::post('documentos/validar-archivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'validarArchivoApi'])->name('documentos.validar-archivo');
+        Route::get('documentos/configuracion-formatos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'getConfiguracionFormatos'])->name('documentos.configuracion-formatos');
+        
+        // REQ-CP-012: Nuevas rutas para procesamiento masivo avanzado
+        Route::post('documentos/estado-procesamiento-masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'estadoProcesamientoMasivo'])->name('documentos.estado-procesamiento-masivo');
+        Route::post('documentos/reprocesar', [App\Http\Controllers\Admin\AdminDocumentController::class, 'reprocesarDocumentos'])->name('documentos.reprocesar');
+
+        // REQ-FD-001: Sistema de Firmas Digitales
+        Route::prefix('firmas')->name('firmas.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'index'])->name('index');
+            Route::get('documento/{documento}/firmar', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'firmarDocumento'])->name('documento.firmar');
+            Route::post('documento/{documento}/procesar', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'procesarFirma'])->name('documento.procesar');
+            Route::post('contrafirma/{firma}', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'procesarContrafirma'])->name('contrafirma');
+            Route::post('validar/{firma}', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'validarFirma'])->name('validar');
+            Route::get('detalle/{firma}', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'mostrarFirma'])->name('detalle');
+            Route::get('descargar/{firma}', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'descargarArchivoFirmado'])->name('descargar');
+        });
+
+        // REQ-CD-001: Gestión de Certificados Digitales  
+        Route::prefix('certificados')->name('certificados.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'gestionCertificados'])->name('index');
+            Route::post('importar', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'importarCertificado'])->name('importar');
+            Route::post('verificar/{certificado}', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'verificarCertificado'])->name('verificar');
+        });
+
+        // REQ-WF-001: Sistema de Workflow y Flujos de Trabajo
+        Route::prefix('workflow')->name('workflow.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\WorkflowController::class, 'index'])->name('index');
+            Route::get('create', [App\Http\Controllers\Admin\WorkflowController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\WorkflowController::class, 'store'])->name('store');
+            Route::get('{instancia}', [App\Http\Controllers\Admin\WorkflowController::class, 'show'])->name('show');
+            Route::post('tarea/{tarea}/completar', [App\Http\Controllers\Admin\WorkflowController::class, 'completarTarea'])->name('completar-tarea');
+            Route::post('{instancia}/cancelar', [App\Http\Controllers\Admin\WorkflowController::class, 'cancelar'])->name('cancelar');
+            Route::get('reportes/dashboard', [App\Http\Controllers\Admin\WorkflowController::class, 'reportes'])->name('reportes');
+        });
         
         // Gestión de Expedientes routes
         Route::prefix('expedientes')->name('expedientes.')->group(function () {

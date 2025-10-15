@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Documento;
 use App\Models\Expediente;
 use App\Models\TipologiaDocumental;
+use App\Services\DocumentProcessingService;
+use App\Services\BusinessRulesService;
+use App\Jobs\ProcessDocumentJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +28,15 @@ use Carbon\Carbon;
  */
 class AdminDocumentController extends Controller
 {
+    protected DocumentProcessingService $documentProcessor;
+    protected BusinessRulesService $businessRules;
+
+    public function __construct(DocumentProcessingService $documentProcessor, BusinessRulesService $businessRules)
+    {
+        $this->documentProcessor = $documentProcessor;
+        $this->businessRules = $businessRules;
+    }
+
     /**
      * REQ-CP-001: Formatos permitidos por categoría
      */
@@ -152,8 +164,9 @@ class AdminDocumentController extends Controller
                 ['value' => Documento::CONFIDENCIALIDAD_RESERVADA, 'label' => 'Reservada'],
                 ['value' => Documento::CONFIDENCIALIDAD_CLASIFICADA, 'label' => 'Clasificada'],
             ],
-            'formatos_permitidos' => self::FORMATOS_PERMITIDOS,
+            'formatos_permitidos' => DocumentProcessingService::getFormatosSoportados(),
             'tamaños_maximos' => self::TAMAÑOS_MAXIMOS,
+            'configuracion_multimedia' => $this->documentProcessor->getConfiguracionMultimedia(),
         ];
 
         return Inertia::render('admin/documentos/create', [
@@ -194,46 +207,118 @@ class AdminDocumentController extends Controller
             'palabras_clave.*' => 'string|max:50',
             'ubicacion_fisica' => 'nullable|string|max:255',
             'observaciones' => 'nullable|string',
-            'archivo' => 'nullable|file|max:' . (max(self::TAMAÑOS_MAXIMOS) * 1024), // Max en KB
+            'archivo' => 'nullable|file|max:' . (2048 * 1024), // 2GB máximo
+            // Opciones de procesamiento
+            'procesamiento' => 'nullable|array',
+            'procesamiento.ocr' => 'nullable|boolean',
+            'procesamiento.convertir' => 'nullable|boolean',
+            'procesamiento.generar_miniatura' => 'nullable|boolean'
         ]);
 
         DB::beginTransaction();
         
         try {
+            // REQ-VN-001: Validar estructura TRD/CCD antes de crear
+            $expediente = null;
+            if ($request->expediente_id) {
+                $expediente = Expediente::with('serie')->find($request->expediente_id);
+            }
+
+            $validacionEstructura = $this->businessRules->validarEstructuraTRD([
+                'serie_id' => $expediente ? $expediente->serie_id : null,
+                'subserie_id' => $expediente ? $expediente->subserie_id : null,
+                'tipologia_id' => $request->tipologia_id,
+            ]);
+
+            if (!$validacionEstructura['valido']) {
+                throw new \Exception('Errores en estructura TRD: ' . implode(', ', $validacionEstructura['errores']));
+            }
+
+            // Mostrar advertencias de estructura si las hay
+            if (!empty($validacionEstructura['advertencias'])) {
+                session()->flash('trd_warnings', $validacionEstructura['advertencias']);
+            }
+
             $documento = new Documento();
-            $documento->fill($request->except(['archivo']));
+            $documento->fill($request->except(['archivo', 'procesamiento']));
             $documento->usuario_creador_id = auth()->id();
             
-            // REQ-CP-007: Procesar archivo si se subió
+            // REQ-CP-007: Validación y procesamiento avanzado de archivo
             if ($request->hasFile('archivo')) {
                 $archivo = $request->file('archivo');
-                $formato = strtolower($archivo->getClientOriginalExtension());
                 
-                // Validar formato
-                $this->validarFormato($formato, $request->tipologia_id);
+                // 1. Validación avanzada con el nuevo servicio
+                $validacion = $this->documentProcessor->validarArchivo(
+                    $archivo, 
+                    $request->tipologia_id
+                );
                 
-                // Validar tamaño según tipo
-                $this->validarTamaño($archivo, $formato);
+                if (!$validacion['valido']) {
+                    throw new \Exception('Errores de validación: ' . implode(', ', $validacion['errores']));
+                }
                 
-                // Guardar archivo
-                $rutaArchivo = $this->guardarArchivo($archivo, $documento);
+                // Mostrar advertencias si las hay
+                if (!empty($validacion['advertencias'])) {
+                    session()->flash('warnings', $validacion['advertencias']);
+                }
                 
-                $documento->formato = $formato;
+                // 2. Procesar archivo con el servicio avanzado
+                $procesamiento = $this->documentProcessor->procesarArchivo(
+                    $archivo, 
+                    $documento, 
+                    $request->input('procesamiento', [])
+                );
+                
+                if (!$procesamiento['success']) {
+                    throw new \Exception('Error procesando el archivo');
+                }
+                
+                // 3. Asignar datos del archivo procesado
+                $documento->formato = strtolower($archivo->getClientOriginalExtension());
                 $documento->tamaño = $archivo->getSize();
-                $documento->ruta_archivo = $rutaArchivo;
+                $documento->ruta_archivo = $procesamiento['archivo_procesado'];
+                $documento->hash_sha256 = $procesamiento['metadatos']['hash_sha256'] ?? null;
+                
+                // 4. Datos adicionales del procesamiento
+                if ($procesamiento['ocr_texto']) {
+                    $documento->contenido_ocr = $procesamiento['ocr_texto'];
+                }
+                
+                if ($procesamiento['miniatura']) {
+                    $documento->ruta_miniatura = $procesamiento['miniatura'];
+                }
+                
+                // 5. Metadatos adicionales
+                $documento->metadatos_archivo = json_encode([
+                    'validacion' => $validacion,
+                    'procesamiento' => $procesamiento['metadatos'],
+                    'conversiones' => $procesamiento['conversiones'] ?? []
+                ]);
             }
             
             $documento->save();
-            
-            // Generar miniatura si es necesario
-            if ($documento->ruta_archivo && $this->requiereMiniatura($documento->formato)) {
-                $documento->generarMiniatura();
+
+            // REQ-VN-003: Validar metadatos obligatorios
+            $validacionMetadatos = $this->businessRules->validarMetadatosObligatorios($documento, 'documento');
+            if (!empty($validacionMetadatos['advertencias'])) {
+                session()->flash('metadata_warnings', $validacionMetadatos['advertencias']);
+            }
+
+            // REQ-VN-004: Validar integridad referencial
+            $validacionIntegridad = $this->businessRules->validarIntegridadReferencial($documento, 'create');
+            if (!$validacionIntegridad['valido']) {
+                throw new \Exception('Errores de integridad: ' . implode(', ', $validacionIntegridad['errores']));
             }
             
             DB::commit();
             
+            $mensaje = 'Documento creado exitosamente.';
+            if (!empty($validacion['advertencias'] ?? [])) {
+                $mensaje .= ' Nota: ' . implode(', ', $validacion['advertencias']);
+            }
+            
             return redirect()->route('admin.documentos.index')
-                           ->with('success', 'Documento creado exitosamente.');
+                           ->with('success', $mensaje);
                            
         } catch (\Exception $e) {
             DB::rollback();
@@ -382,51 +467,101 @@ class AdminDocumentController extends Controller
     }
 
     /**
-     * REQ-CP-015: Procesar subida masiva
+     * REQ-CP-015: Procesar subida masiva mejorada con colas
      */
     public function procesarSubidaMasiva(Request $request)
     {
         $request->validate([
-            'archivos' => 'required|array|min:1|max:50',
-            'archivos.*' => 'file|max:' . (max(self::TAMAÑOS_MAXIMOS) * 1024),
+            'archivos' => 'required|array|min:1|max:100', // Incrementado límite
+            'archivos.*' => 'file|max:' . (2048 * 1024), // 2GB máximo
             'expediente_id' => 'required|exists:expedientes,id',
             'configuracion' => 'required|array',
+            'configuracion.procesamiento_automatico' => 'boolean',
+            'configuracion.usar_colas' => 'boolean',
+            'configuracion.prioridad' => 'nullable|in:low,normal,high',
         ]);
 
         $resultados = [
-            'exitosos' => 0,
-            'errores' => 0,
-            'detalles' => []
+            'documentos_creados' => [],
+            'errores_validacion' => [],
+            'procesamiento_cola' => 0,
+            'procesamiento_inmediato' => 0
         ];
+
+        $usarColas = $request->input('configuracion.usar_colas', true);
+        $procesamientoAutomatico = $request->input('configuracion.procesamiento_automatico', true);
+        $prioridad = $request->input('configuracion.prioridad', 'normal');
 
         DB::beginTransaction();
         
         try {
-            foreach ($request->file('archivos') as $archivo) {
+            foreach ($request->file('archivos') as $index => $archivo) {
                 try {
-                    $documento = $this->procesarArchivoMasivo($archivo, $request->all());
-                    $resultados['exitosos']++;
-                    $resultados['detalles'][] = [
+                    // 1. Validación previa del archivo
+                    $validacion = $this->documentProcessor->validarArchivo(
+                        $archivo,
+                        $request->input('configuracion.tipologia_id')
+                    );
+
+                    if (!$validacion['valido']) {
+                        $resultados['errores_validacion'][] = [
+                            'archivo' => $archivo->getClientOriginalName(),
+                            'errores' => $validacion['errores']
+                        ];
+                        continue;
+                    }
+
+                    // 2. Crear documento básico
+                    $documento = $this->crearDocumentoBasico($archivo, $request->all());
+                    
+                    if ($procesamientoAutomatico) {
+                        if ($usarColas) {
+                            // 3. Procesamiento en cola (recomendado para archivos grandes)
+                            $this->despacharProcesamientoEnCola($documento, $request, $prioridad);
+                            $resultados['procesamiento_cola']++;
+                        } else {
+                            // 4. Procesamiento inmediato (solo para archivos pequeños)
+                            $this->procesarArchivoInmediato($documento, $archivo, $request);
+                            $resultados['procesamiento_inmediato']++;
+                        }
+                    }
+
+                    $resultados['documentos_creados'][] = [
+                        'id' => $documento->id,
+                        'codigo' => $documento->codigo,
+                        'nombre' => $documento->nombre,
                         'archivo' => $archivo->getClientOriginalName(),
-                        'estado' => 'exitoso',
-                        'codigo' => $documento->codigo
+                        'estado_procesamiento' => $documento->estado_procesamiento
                     ];
+
                 } catch (\Exception $e) {
-                    $resultados['errores']++;
-                    $resultados['detalles'][] = [
+                    $resultados['errores_validacion'][] = [
                         'archivo' => $archivo->getClientOriginalName(),
-                        'estado' => 'error',
-                        'mensaje' => $e->getMessage()
+                        'error' => $e->getMessage()
                     ];
                 }
             }
             
             DB::commit();
             
+            $mensaje = sprintf(
+                "Subida masiva completada: %d documentos creados, %d en cola de procesamiento, %d procesados inmediatamente, %d errores.",
+                count($resultados['documentos_creados']),
+                $resultados['procesamiento_cola'],
+                $resultados['procesamiento_inmediato'],
+                count($resultados['errores_validacion'])
+            );
+            
             return response()->json([
                 'success' => true,
-                'mensaje' => "Procesados {$resultados['exitosos']} archivos exitosamente, {$resultados['errores']} errores.",
-                'resultados' => $resultados
+                'mensaje' => $mensaje,
+                'resultados' => $resultados,
+                'estadisticas' => [
+                    'total_archivos' => count($request->file('archivos')),
+                    'exitosos' => count($resultados['documentos_creados']),
+                    'errores' => count($resultados['errores_validacion']),
+                    'en_cola' => $resultados['procesamiento_cola']
+                ]
             ]);
             
         } catch (\Exception $e) {
@@ -466,6 +601,54 @@ class AdminDocumentController extends Controller
                 'mensaje' => 'Error al crear versión: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * REQ-CP-007: Validación de archivo en tiempo real (API)
+     */
+    public function validarArchivoApi(Request $request)
+    {
+        $request->validate([
+            'archivo' => 'required|file',
+            'tipologia_id' => 'nullable|exists:tipologias_documentales,id'
+        ]);
+
+        try {
+            $archivo = $request->file('archivo');
+            $validacion = $this->documentProcessor->validarArchivo(
+                $archivo,
+                $request->tipologia_id
+            );
+
+            return response()->json([
+                'success' => $validacion['valido'],
+                'validacion' => $validacion,
+                'archivo_info' => [
+                    'nombre' => $archivo->getClientOriginalName(),
+                    'tamaño' => $archivo->getSize(),
+                    'tipo' => $archivo->getMimeType(),
+                    'extension' => $archivo->getClientOriginalExtension()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Error validando archivo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * REQ-CP-002: Obtener configuración de formatos multimedia
+     */
+    public function getConfiguracionFormatos()
+    {
+        return response()->json([
+            'formatos_soportados' => DocumentProcessingService::getFormatosSoportados(),
+            'configuracion_multimedia' => $this->documentProcessor->getConfiguracionMultimedia(),
+            'tamaños_maximos' => self::TAMAÑOS_MAXIMOS
+        ]);
     }
 
     /**
@@ -616,5 +799,170 @@ class AdminDocumentController extends Controller
         $documento->save();
         
         return $documento;
+    }
+
+    /**
+     * REQ-CP-012: Crear documento básico para procesamiento masivo
+     */
+    private function crearDocumentoBasico($archivo, $data): Documento
+    {
+        $documento = new Documento();
+        $documento->nombre = $archivo->getClientOriginalName();
+        $documento->expediente_id = $data['expediente_id'];
+        $documento->tipologia_id = $data['configuracion']['tipologia_id'] ?? null;
+        $documento->tipo_soporte = Documento::SOPORTE_ELECTRONICO;
+        $documento->estado = $data['configuracion']['estado_default'] ?? Documento::ESTADO_BORRADOR;
+        $documento->confidencialidad = $data['configuracion']['confidencialidad_default'] ?? Documento::CONFIDENCIALIDAD_INTERNA;
+        $documento->usuario_creador_id = auth()->id();
+        
+        // Información del archivo
+        $documento->formato = strtolower($archivo->getClientOriginalExtension());
+        $documento->tamaño = $archivo->getSize();
+        
+        // Guardar archivo inmediatamente
+        $documento->ruta_archivo = $this->guardarArchivo($archivo, $documento);
+        
+        // Estado de procesamiento inicial
+        $documento->estado_procesamiento = Documento::PROCESAMIENTO_PENDIENTE;
+        
+        // Configuración de procesamiento
+        $documento->configuracion_procesamiento = $data['configuracion']['procesamiento'] ?? [
+            'ocr' => true,
+            'convertir' => true,
+            'generar_miniatura' => true
+        ];
+        
+        $documento->save();
+        
+        return $documento;
+    }
+
+    /**
+     * REQ-CP-012: Despachar procesamiento en cola con prioridades
+     */
+    private function despacharProcesamientoEnCola(Documento $documento, Request $request, string $prioridad): void
+    {
+        $opciones = $request->input('configuracion.procesamiento', []);
+        
+        // Mapear prioridad a cola específica
+        $cola = match($prioridad) {
+            'high' => 'high-priority',
+            'low' => 'low-priority',
+            default => 'default'
+        };
+        
+        // Configurar delay según prioridad
+        $delay = match($prioridad) {
+            'high' => 0, // Inmediato
+            'low' => 300, // 5 minutos
+            default => 60 // 1 minuto
+        };
+        
+        ProcessDocumentJob::dispatch($documento->id, $opciones, auth()->id())
+            ->onQueue($cola)
+            ->delay(now()->addSeconds($delay));
+    }
+
+    /**
+     * REQ-CP-028: Procesamiento inmediato para archivos pequeños
+     */
+    private function procesarArchivoInmediato(Documento $documento, $archivo, Request $request): void
+    {
+        try {
+            $documento->iniciarProcesamiento();
+            
+            $procesamiento = $this->documentProcessor->procesarArchivo(
+                $archivo,
+                $documento,
+                $request->input('configuracion.procesamiento', [])
+            );
+            
+            if ($procesamiento['success']) {
+                // Actualizar con resultados
+                $documento->update([
+                    'hash_sha256' => $procesamiento['metadatos']['hash_sha256'] ?? null,
+                    'contenido_ocr' => $procesamiento['ocr_texto'],
+                    'ruta_miniatura' => $procesamiento['miniatura'],
+                    'metadatos_archivo' => json_encode($procesamiento['metadatos'])
+                ]);
+                
+                $documento->marcarProcesamientoCompletado();
+            } else {
+                $documento->marcarErrorProcesamiento('Error en procesamiento inmediato');
+            }
+            
+        } catch (\Exception $e) {
+            $documento->marcarErrorProcesamiento($e->getMessage());
+        }
+    }
+
+    /**
+     * REQ-CP-012: Obtener estado de procesamiento masivo
+     */
+    public function estadoProcesamientoMasivo(Request $request)
+    {
+        $request->validate([
+            'documento_ids' => 'required|array',
+            'documento_ids.*' => 'integer|exists:documentos,id'
+        ]);
+
+        $documentos = Documento::whereIn('id', $request->documento_ids)
+            ->select('id', 'codigo', 'nombre', 'estado_procesamiento', 'error_procesamiento', 'fecha_procesamiento')
+            ->get();
+
+        $estadisticas = [
+            'pendiente' => $documentos->where('estado_procesamiento', Documento::PROCESAMIENTO_PENDIENTE)->count(),
+            'procesando' => $documentos->where('estado_procesamiento', Documento::PROCESAMIENTO_PROCESANDO)->count(),
+            'completado' => $documentos->where('estado_procesamiento', Documento::PROCESAMIENTO_COMPLETADO)->count(),
+            'error' => $documentos->where('estado_procesamiento', Documento::PROCESAMIENTO_ERROR)->count(),
+            'fallido' => $documentos->where('estado_procesamiento', Documento::PROCESAMIENTO_FALLIDO)->count(),
+        ];
+
+        return response()->json([
+            'documentos' => $documentos,
+            'estadisticas' => $estadisticas,
+            'completado' => $estadisticas['completado'] + $estadisticas['error'] + $estadisticas['fallido'],
+            'total' => $documentos->count()
+        ]);
+    }
+
+    /**
+     * REQ-CP-012: Reenviar documentos con errores de procesamiento
+     */
+    public function reprocesarDocumentos(Request $request)
+    {
+        $request->validate([
+            'documento_ids' => 'required|array',
+            'documento_ids.*' => 'integer|exists:documentos,id',
+            'prioridad' => 'nullable|in:low,normal,high'
+        ]);
+
+        $documentos = Documento::whereIn('id', $request->documento_ids)
+            ->where('estado_procesamiento', 'error')
+            ->get();
+
+        $reprocesados = 0;
+        foreach ($documentos as $documento) {
+            try {
+                $documento->update(['estado_procesamiento' => Documento::PROCESAMIENTO_PENDIENTE]);
+                
+                ProcessDocumentJob::dispatch(
+                    $documento->id, 
+                    $documento->getConfiguracionProcesamiento(),
+                    auth()->id()
+                )->onQueue($request->input('prioridad', 'normal') . '-priority');
+                
+                $reprocesados++;
+            } catch (\Exception $e) {
+                // Log error pero continúa
+                \Log::error("Error reprocesando documento {$documento->id}: " . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'mensaje' => "Se enviaron {$reprocesados} documentos para reprocesamiento.",
+            'reprocesados' => $reprocesados
+        ]);
     }
 }

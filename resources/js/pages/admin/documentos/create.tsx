@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { 
     ArrowLeft, 
     Save, 
@@ -51,6 +52,11 @@ interface CreateDocumentProps {
         confidencialidad: { value: string; label: string; }[];
         formatos_permitidos: Record<string, string[]>;
         tamaños_maximos: Record<string, number>;
+        configuracion_multimedia?: {
+            audio: any;
+            video: any;
+            imagen: any;
+        };
     };
 }
 
@@ -68,6 +74,12 @@ interface FormData {
     ubicacion_fisica: string;
     observaciones: string;
     archivo: File | null;
+    // Opciones de procesamiento avanzado
+    procesamiento: {
+        ocr: boolean;
+        convertir: boolean;
+        generar_miniatura: boolean;
+    };
 }
 
 export default function CreateDocument({ opciones }: CreateDocumentProps) {
@@ -92,6 +104,11 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
         ubicacion_fisica: '',
         observaciones: '',
         archivo: null,
+        procesamiento: {
+            ocr: true,
+            convertir: true,
+            generar_miniatura: true
+        }
     });
 
     const breadcrumbItems = [
@@ -233,6 +250,35 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    // Obtener opciones de procesamiento disponibles según el tipo de archivo
+    const getAvailableProcessing = (fileName: string) => {
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        const features = [];
+        
+        if (!extension) return 'No se puede determinar el tipo de archivo';
+        
+        // OCR disponible para imágenes y PDFs
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'pdf'].includes(extension)) {
+            features.push('✓ OCR (Reconocimiento de texto)');
+        }
+        
+        // Miniatura para imágenes y videos
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'mp4', 'avi', 'mov', 'wmv', 'pdf'].includes(extension)) {
+            features.push('✓ Generación de miniatura');
+        }
+        
+        // Conversión para la mayoría de formatos
+        if (['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'mp4', 'mp3'].includes(extension)) {
+            features.push('✓ Conversión automática');
+        }
+        
+        // Análisis de metadatos
+        features.push('✓ Extracción de metadatos');
+        features.push('✓ Verificación de integridad');
+        
+        return features.length > 0 ? features.join(', ') : 'Procesamiento básico disponible';
     };
 
     return (
@@ -613,6 +659,98 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                                     rows={3}
                                 />
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Opciones de Procesamiento Avanzado */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Monitor className="h-5 w-5" />
+                                Procesamiento Avanzado
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Alert>
+                                <Info className="h-4 w-4" />
+                                <AlertDescription>
+                                    Configura las opciones de procesamiento automático que se aplicarán al documento.
+                                </AlertDescription>
+                            </Alert>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* OCR para imágenes */}
+                                <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="ocr">Reconocimiento OCR</Label>
+                                        <p className="text-sm text-gray-500">
+                                            Extraer texto de imágenes y documentos escaneados
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="ocr"
+                                        checked={data.procesamiento.ocr}
+                                        onCheckedChange={(checked) => 
+                                            setData('procesamiento', { 
+                                                ...data.procesamiento, 
+                                                ocr: checked 
+                                            })
+                                        }
+                                    />
+                                </div>
+
+                                {/* Conversión automática */}
+                                <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="convertir">Conversión Automática</Label>
+                                        <p className="text-sm text-gray-500">
+                                            Convertir a formatos optimizados para archivo
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="convertir"
+                                        checked={data.procesamiento.convertir}
+                                        onCheckedChange={(checked) => 
+                                            setData('procesamiento', { 
+                                                ...data.procesamiento, 
+                                                convertir: checked 
+                                            })
+                                        }
+                                    />
+                                </div>
+
+                                {/* Generar miniatura */}
+                                <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="miniatura">Generar Miniatura</Label>
+                                        <p className="text-sm text-gray-500">
+                                            Crear vista previa para imágenes y videos
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="miniatura"
+                                        checked={data.procesamiento.generar_miniatura}
+                                        onCheckedChange={(checked) => 
+                                            setData('procesamiento', { 
+                                                ...data.procesamiento, 
+                                                generar_miniatura: checked 
+                                            })
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Información de formatos soportados */}
+                            {data.archivo && (
+                                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                                    <h4 className="font-medium text-blue-900 mb-2">
+                                        Procesamiento disponible para este archivo:
+                                    </h4>
+                                    <div className="text-sm text-blue-700">
+                                        {getAvailableProcessing(data.archivo.name)}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

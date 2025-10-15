@@ -8,6 +8,7 @@ use App\Http\Middleware\PerformanceOptimization;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\TrackUserActivity;
 use App\Http\Middleware\TwoFactorAuthentication;
+use App\Http\Middleware\ValidateBusinessRules;
 use App\Http\Middleware\VerifyUserActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -42,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.token' => ApiTokenAuthentication::class,
             'api.permission' => ApiPermissionMiddleware::class,
             'two-factor' => TwoFactorAuthentication::class,
+            'validate.business' => ValidateBusinessRules::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
