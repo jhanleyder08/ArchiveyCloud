@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\DocumentoApiController;
 use App\Http\Controllers\Api\ExpedienteApiController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\V1\ApiController;
 use App\Http\Controllers\Api\V1\DocumentoApiController as V1DocumentoApiController;
 use App\Http\Controllers\Api\V1\ExpedienteApiController as V1ExpedienteApiController;
@@ -25,6 +26,12 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Métricas detalladas (requiere autenticación)
     Route::get('/health/metrics', [HealthController::class, 'metrics']);
+    
+    // Dashboard Ejecutivo
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/executive', [DashboardController::class, 'executive']);
+        Route::post('/export', [DashboardController::class, 'export']);
+    });
 });
 
 // API Externa protegida con tokens API

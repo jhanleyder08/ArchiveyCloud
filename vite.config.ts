@@ -27,12 +27,12 @@ export default defineConfig({
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
     },
     server: {
-        host: '192.168.2.202', // IP específica de la máquina
+        host: 'localhost', // Cambiado a localhost para compatibilidad
         port: 5173,
-        strictPort: true,
+        strictPort: false,
         hmr: {
+            host: 'localhost',
             port: 5173,
-            // Eliminar host fijo para permitir HMR desde red externa
         },
         cors: {
             origin: '*', // Permite cualquier origen

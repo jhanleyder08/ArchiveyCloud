@@ -21,14 +21,14 @@ return new class extends Migration
     {
         Schema::table('documentos', function (Blueprint $table) {
             // REQ-CP-014: Contenido OCR extraído
-            $table->longText('contenido_ocr')->nullable()->after('observaciones');
+            $table->longText('contenido_ocr')->nullable();
             
             // REQ-CP-007: Hash de integridad SHA-256
-            $table->string('hash_sha256', 64)->nullable()->after('tamaño');
+            $table->string('hash_sha256', 64)->nullable();
             
             // Rutas de archivos procesados
-            $table->string('ruta_miniatura')->nullable()->after('ruta_archivo');
-            $table->json('rutas_conversiones')->nullable()->after('ruta_miniatura');
+            $table->string('ruta_miniatura')->nullable();
+            $table->json('rutas_conversiones')->nullable();
             
             // Estado del procesamiento en background
             $table->enum('estado_procesamiento', [
@@ -37,16 +37,16 @@ return new class extends Migration
                 'completado', 
                 'error', 
                 'fallido'
-            ])->default('pendiente')->after('estado');
+            ])->default('pendiente');
             
-            $table->text('error_procesamiento')->nullable()->after('estado_procesamiento');
-            $table->timestamp('fecha_procesamiento')->nullable()->after('error_procesamiento');
+            $table->text('error_procesamiento')->nullable();
+            $table->timestamp('fecha_procesamiento')->nullable();
             
             // Metadatos del archivo (JSON)
-            $table->json('metadatos_archivo')->nullable()->after('fecha_procesamiento');
+            $table->json('metadatos_archivo')->nullable();
             
             // Configuración de procesamiento aplicada
-            $table->json('configuracion_procesamiento')->nullable()->after('metadatos_archivo');
+            $table->json('configuracion_procesamiento')->nullable();
             
             // Índices para búsqueda y rendimiento
             $table->index('hash_sha256');
