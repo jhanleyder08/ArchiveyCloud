@@ -41,7 +41,7 @@ class TRDController extends Controller
         $trds = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return Inertia::render('Admin/TRD/Index', [
+        return Inertia::render('admin/trd/index', [
             'trds' => $trds,
             'filters' => $request->only(['estado', 'search']),
             'estadisticas' => $this->trdService->obtenerEstadisticasGenerales(),
@@ -53,7 +53,7 @@ class TRDController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Admin/TRD/Create');
+        return Inertia::render('admin/trd/create');
     }
 
     /**
@@ -75,7 +75,7 @@ class TRDController extends Controller
             $trd = $this->trdService->crear($validated, $request->user());
 
             return redirect()
-                ->route('trds.show', $trd->id)
+                ->route('admin.trd.show', $trd->id)
                 ->with('success', 'TRD creada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al crear TRD', ['error' => $e->getMessage()]);
@@ -98,7 +98,7 @@ class TRDController extends Controller
             'aprobador'
         ]);
 
-        return Inertia::render('Admin/TRD/Show', [
+        return Inertia::render('admin/trd/show', [
             'trd' => $trd,
             'estadisticas' => $trd->getEstadisticas(),
             'errores_validacion' => $this->trdService->validar($trd),
@@ -110,7 +110,7 @@ class TRDController extends Controller
      */
     public function edit(TRD $trd): Response
     {
-        return Inertia::render('Admin/TRD/Edit', [
+        return Inertia::render('admin/trd/edit', [
             'trd' => $trd,
         ]);
     }
@@ -134,7 +134,7 @@ class TRDController extends Controller
             $trd = $this->trdService->actualizar($trd, $validated, $request->user());
 
             return redirect()
-                ->route('trds.show', $trd->id)
+                ->route('admin.trd.show', $trd->id)
                 ->with('success', 'TRD actualizada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al actualizar TRD', ['error' => $e->getMessage()]);
@@ -159,7 +159,7 @@ class TRDController extends Controller
             $trd = $this->trdService->aprobar($trd, $request->user());
 
             return redirect()
-                ->route('trds.show', $trd->id)
+                ->route('admin.trd.show', $trd->id)
                 ->with('success', 'TRD aprobada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al aprobar TRD', ['error' => $e->getMessage()]);
@@ -176,7 +176,7 @@ class TRDController extends Controller
             $trd->archivar();
 
             return redirect()
-                ->route('trds.index')
+                ->route('admin.trd.index')
                 ->with('success', 'TRD archivada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al archivar TRD', ['error' => $e->getMessage()]);
@@ -203,7 +203,7 @@ class TRDController extends Controller
             );
 
             return redirect()
-                ->route('trds.show', $trd->id)
+                ->route('admin.trd.show', $trd->id)
                 ->with('success', 'Nueva versión creada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al crear versión', ['error' => $e->getMessage()]);
@@ -260,7 +260,7 @@ class TRDController extends Controller
             );
 
             return redirect()
-                ->route('trds.show', $importacion->trd_id)
+                ->route('admin.trd.show', $importacion->trd_id)
                 ->with('success', 'TRD importada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al importar TRD', ['error' => $e->getMessage()]);
@@ -305,7 +305,7 @@ class TRDController extends Controller
             $trd->delete();
 
             return redirect()
-                ->route('trds.index')
+                ->route('admin.trd.index')
                 ->with('success', 'TRD eliminada exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al eliminar TRD', ['error' => $e->getMessage()]);

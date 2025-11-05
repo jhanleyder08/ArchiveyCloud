@@ -49,7 +49,7 @@ class ExpedienteController extends Controller
         $expedientes = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return Inertia::render('Admin/Expedientes/Index', [
+        return Inertia::render('admin/expedientes/index', [
             'expedientes' => $expedientes,
             'filters' => $request->only(['estado', 'serie_id', 'tipo', 'search']),
             'estadisticas' => $this->getEstadisticasGenerales(),
@@ -61,7 +61,7 @@ class ExpedienteController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Admin/Expedientes/Create', [
+        return Inertia::render('admin/expedientes/create', [
             'series' => \App\Models\SerieDocumental::where('activo', true)->get(),
             'dependencias' => \App\Models\Dependencia::all(),
         ]);
@@ -116,7 +116,7 @@ class ExpedienteController extends Controller
             'creador',
         ]);
 
-        return Inertia::render('Admin/Expedientes/Show', [
+        return Inertia::render('admin/expedientes/show', [
             'expediente' => $expediente,
             'estadisticas' => $this->expedienteService->getEstadisticas($expediente),
             'integridad' => $this->expedienteService->verificarIntegridad($expediente),
@@ -139,7 +139,7 @@ class ExpedienteController extends Controller
                 ->with('error', 'No se puede editar un expediente cerrado');
         }
 
-        return Inertia::render('Admin/Expedientes/Edit', [
+        return Inertia::render('admin/expedientes/edit', [
             'expediente' => $expediente,
             'series' => \App\Models\SerieDocumental::where('activo', true)->get(),
             'dependencias' => \App\Models\Dependencia::all(),

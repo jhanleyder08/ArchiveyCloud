@@ -62,8 +62,8 @@ interface Stats {
 }
 
 interface Props {
-    trds: PaginatedTRDs;
-    stats: Stats;
+    trds?: PaginatedTRDs;
+    stats?: Stats;
     flash?: {
         success?: string;
         error?: string;
@@ -71,6 +71,24 @@ interface Props {
 }
 
 export default function AdminTRDIndex({ trds, stats, flash }: Props) {
+    // Valores por defecto para evitar errores
+    const safeStats = stats || {
+        total: 0,
+        vigentes: 0,
+        borradores: 0,
+        aprobadas: 0,
+    };
+    
+    const safeTrds = trds || {
+        data: [],
+        current_page: 1,
+        last_page: 1,
+        per_page: 15,
+        total: 0,
+        from: 0,
+        to: 0,
+        links: [],
+    };
     const [searchQuery, setSearchQuery] = useState('');
     const [estadoFilter, setEstadoFilter] = useState('');
     const [vigenciaFilter, setVigenciaFilter] = useState('');
@@ -459,7 +477,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Total TRDs</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.total}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{safeStats.total}</p>
                                 <p className="text-xs text-gray-400">Tablas registradas</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
@@ -472,7 +490,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Vigentes</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.vigentes}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{safeStats.vigentes}</p>
                                 <p className="text-xs text-gray-400">En funcionamiento</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
@@ -485,7 +503,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Borradores</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.borradores}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{safeStats.borradores}</p>
                                 <p className="text-xs text-gray-400">En elaboración</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
@@ -498,7 +516,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Aprobadas</p>
-                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.aprobadas}</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{safeStats.aprobadas}</p>
                                 <p className="text-xs text-gray-400">Listas para uso</p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
@@ -566,14 +584,14 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                                {trds.data.length === 0 ? (
+                                {safeTrds.data.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="py-8 px-6 text-center text-gray-500">
                                             No se encontraron TRDs.
                                         </td>
                                     </tr>
                                 ) : (
-                                    trds.data.map((trd) => (
+                                    safeTrds.data.map((trd) => (
                                         <tr key={trd.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="py-4 px-6">
                                                 <div>
@@ -697,14 +715,14 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                     </div>
 
                     {/* Pagination */}
-                    {trds.total > trds.per_page && (
+                    {safeTrds.total > safeTrds.per_page && (
                         <div className="px-6 py-4 border-t bg-gray-50">
                             <div className="flex items-center justify-between">
                                 <div className="text-sm text-gray-600">
-                                    Mostrando {trds.from} a {trds.to} de {trds.total} TRDs
+                                    Mostrando {safeTrds.from} a {safeTrds.to} de {safeTrds.total} TRDs
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {trds.links.map((link, index) => (
+                                    {safeTrds.links.map((link, index) => (
                                         <Button
                                             key={index}
                                             variant={link.active ? "default" : "outline"}

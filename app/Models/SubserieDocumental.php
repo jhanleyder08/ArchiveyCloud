@@ -23,7 +23,7 @@ class SubserieDocumental extends Model
         'codigo',
         'nombre',
         'descripcion',
-        'serie_documental_id',
+        'serie_id',
         'tiempo_archivo_gestion',
         'tiempo_archivo_central',
         'disposicion_final',
@@ -62,7 +62,7 @@ class SubserieDocumental extends Model
             }
             
             // REQ-CL-016 y REQ-CL-017: Heredar metadatos y tiempos de la serie
-            if ($subserie->serie_documental_id) {
+            if ($subserie->serie_id) {
                 $subserie->heredarDeSerie();
             }
         });
@@ -91,7 +91,7 @@ class SubserieDocumental extends Model
      */
     public function serie()
     {
-        return $this->belongsTo(SerieDocumental::class, 'serie_documental_id');
+        return $this->belongsTo(SerieDocumental::class, 'serie_id');
     }
 
     /**
@@ -139,7 +139,7 @@ class SubserieDocumental extends Model
      */
     public function scopePorSerie($query, $serieId)
     {
-        return $query->where('serie_documental_id', $serieId);
+        return $query->where('serie_id', $serieId);
     }
 
     /**
