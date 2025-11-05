@@ -74,7 +74,7 @@ class AdminUserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role_id' => 'required|exists:roles,id',
             'verify_email' => 'nullable|boolean', // Opcional: verificar email automáticamente
@@ -82,7 +82,7 @@ class AdminUserController extends Controller
             'name.required' => 'El nombre es obligatorio',
             'email.required' => 'El email es obligatorio',
             'email.email' => 'El email debe ser válido',
-            'email.unique' => 'Este email ya está registrado',
+            'email.unique' => 'Este email ya está registrado en un usuario activo',
             'password.required' => 'La contraseña es obligatoria',
             'password.confirmed' => 'Las contraseñas no coinciden',
             'role_id.required' => 'Debe seleccionar un rol',
@@ -158,7 +158,7 @@ class AdminUserController extends Controller
         
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id . ',id,deleted_at,NULL',
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'role_id' => 'required|exists:roles,id',
             'active' => 'boolean',
