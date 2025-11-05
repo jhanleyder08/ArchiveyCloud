@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Auth\Events\Registered;
 
 class AdminUserController extends Controller
 {
@@ -71,24 +72,57 @@ class AdminUserController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role_id' => 'required|exists:roles,id',
+            'verify_email' => 'nullable|boolean', // Opcional: verificar email automáticamente
+        ], [
+            'name.required' => 'El nombre es obligatorio',
+            'email.required' => 'El email es obligatorio',
+            'email.email' => 'El email debe ser válido',
+            'email.unique' => 'Este email ya está registrado',
+            'password.required' => 'La contraseña es obligatoria',
+            'password.confirmed' => 'Las contraseñas no coinciden',
+            'role_id.required' => 'Debe seleccionar un rol',
+            'role_id.exists' => 'El rol seleccionado no existe',
         ]);
 
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role_id' => $request->role_id,
+        // Convertir role_id a entero si viene como string
+        $roleId = is_numeric($validated['role_id']) ? (int)$validated['role_id'] : $validated['role_id'];
+        
+        // Verificar si se debe verificar el email automáticamente
+        $verifyEmail = $request->has('verify_email') && 
+                      ($request->input('verify_email') === true || 
+                       $request->input('verify_email') === 'true' || 
+                       $request->input('verify_email') === '1' ||
+                       $request->boolean('verify_email'));
+        
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role_id' => $roleId,
             'active' => true,
-            'email_verified_at' => now(), // Verificado automáticamente por admin
+            'estado_cuenta' => User::ESTADO_ACTIVO,
+            // Si el admin marca verificar email, se verifica automáticamente
+            // Si no, se deja null para que el usuario verifique por correo
+            'email_verified_at' => $verifyEmail ? now() : null,
         ]);
+
+        // Disparar evento Registered para enviar correo de verificación
+        // Solo si el email NO está verificado automáticamente
+        if (!$verifyEmail) {
+            event(new Registered($user));
+        }
+
+        $message = $verifyEmail
+            ? 'Usuario creado exitosamente. El email fue verificado automáticamente.'
+            : 'Usuario creado exitosamente. Se ha enviado un correo de verificación.';
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario creado exitosamente.');
+            ->with('success', $message);
     }
 
     /**

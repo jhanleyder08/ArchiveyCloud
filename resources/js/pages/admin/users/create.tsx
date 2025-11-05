@@ -1,6 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, User, Mail, Lock, Shield, Eye, EyeOff } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 
 const breadcrumbItems = [
@@ -29,6 +31,7 @@ export default function CreateUser({ roles }: Props) {
         password: '',
         password_confirmation: '',
         role_id: 1,
+        verify_email: false,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -210,6 +213,23 @@ export default function CreateUser({ roles }: Props) {
                             )}
                         </div>
 
+                        {/* Verificar Email */}
+                        <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="verify-email"
+                                    checked={data.verify_email}
+                                    onCheckedChange={(checked) => setData('verify_email', checked === true)}
+                                />
+                                <Label htmlFor="verify-email" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                    Verificar email automáticamente (no enviar correo de verificación)
+                                </Label>
+                            </div>
+                            <p className="text-xs text-gray-500 ml-6">
+                                Si no marca esta opción, se enviará un correo de verificación al usuario.
+                            </p>
+                        </div>
+
                         {/* Información adicional */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div className="flex items-start gap-3">
@@ -220,7 +240,7 @@ export default function CreateUser({ roles }: Props) {
                                     <p className="font-medium mb-1">Información importante:</p>
                                     <ul className="space-y-1 text-blue-700">
                                         <li>• El usuario será creado con estado activo</li>
-                                        <li>• El email será verificado automáticamente</li>
+                                        <li>• {data.verify_email ? 'El email será verificado automáticamente' : 'Se enviará un correo de verificación al usuario'}</li>
                                         <li>• Se recomienda una contraseña de al menos 8 caracteres</li>
                                         <li>• El usuario podrá cambiar su contraseña al primer login</li>
                                     </ul>

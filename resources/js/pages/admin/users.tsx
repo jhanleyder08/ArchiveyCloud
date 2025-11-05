@@ -8,6 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
+import InputError from '@/components/input-error';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const breadcrumbItems = [
@@ -89,8 +93,9 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
     const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState<User | null>(null);
-    const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'user', password: '', password_confirmation: '' });
-    const [editForm, setEditForm] = useState({ name: '', email: '', role: 'user', active: true });
+    const [createForm, setCreateForm] = useState({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
+    const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+    const [editForm, setEditForm] = useState({ name: '', email: '', role_id: '', active: true });
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
 
@@ -171,20 +176,61 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                     Complete los siguientes datos para crear un nuevo usuario en el sistema.
                                 </DialogDescription>
                             </DialogHeader>
+                            {/* Mostrar errores generales si existen */}
+                            {Object.keys(createErrors).length > 0 && (
+                                <Alert variant="destructive" className="mb-4">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertDescription>
+                                        <strong>Por favor corrija los siguientes errores:</strong>
+                                        <ul className="list-disc list-inside mt-2 space-y-1">
+                                            {Object.entries(createErrors).map(([key, message]) => (
+                                                <li key={key} className="text-sm">{message}</li>
+                                            ))}
+                                        </ul>
+                                    </AlertDescription>
+                                </Alert>
+                            )}
                             <form onSubmit={(e) => {
                                 e.preventDefault();
-                                const { role, ...formDataWithoutRole } = createForm;
+                                // Validar que el formulario esté completo antes de enviar
+                                if (!createForm.name || !createForm.email || !createForm.role_id || !createForm.password || !createForm.password_confirmation) {
+                                    alert('Por favor complete todos los campos requeridos');
+                                    return;
+                                }
+                                
+                                // Validar que las contraseñas coincidan
+                                if (createForm.password !== createForm.password_confirmation) {
+                                    alert('Las contraseñas no coinciden');
+                                    return;
+                                }
+                                
+                                // Preparar datos para enviar
                                 const formData = {
-                                    ...formDataWithoutRole,
-                                    role_id: role === 'admin' ? 1 : 2  // Mapeo correcto
+                                    name: createForm.name.trim(),
+                                    email: createForm.email.trim().toLowerCase(),
+                                    password: createForm.password,
+                                    password_confirmation: createForm.password_confirmation,
+                                    role_id: createForm.role_id ? parseInt(createForm.role_id) : null,
+                                    verify_email: Boolean(createForm.verify_email),
                                 };
+                                
                                 router.post('/admin/users', formData, {
                                     onSuccess: () => {
                                         setShowCreateModal(false);
-                                        setCreateForm({ name: '', email: '', role: 'user', password: '', password_confirmation: '' });
+                                        setCreateForm({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
+                                        setCreateErrors({});
                                     },
                                     onError: (errors) => {
                                         console.error('Error al crear usuario:', errors);
+                                        // Guardar errores para mostrar en el formulario
+                                        const errorMap: Record<string, string> = {};
+                                        if (errors) {
+                                            Object.keys(errors).forEach(key => {
+                                                const errorMessage = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
+                                                errorMap[key] = errorMessage;
+                                            });
+                                        }
+                                        setCreateErrors(errorMap);
                                     }
                                 });
                             }} className="space-y-4">
@@ -194,10 +240,15 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                         id="create-name"
                                         type="text"
                                         value={createForm.name}
-                                        onChange={(e) => setCreateForm({...createForm, name: e.target.value})}
+                                        onChange={(e) => {
+                                            setCreateForm({...createForm, name: e.target.value});
+                                            if (createErrors.name) setCreateErrors({...createErrors, name: ''});
+                                        }}
                                         placeholder="Nombre completo del usuario"
                                         required
+                                        className={createErrors.name ? 'border-red-500' : ''}
                                     />
+                                    <InputError message={createErrors.name} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="create-email">Email</Label>
@@ -205,10 +256,15 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                         id="create-email"
                                         type="email"
                                         value={createForm.email}
-                                        onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
+                                        onChange={(e) => {
+                                            setCreateForm({...createForm, email: e.target.value});
+                                            if (createErrors.email) setCreateErrors({...createErrors, email: ''});
+                                        }}
                                         placeholder="usuario@ejemplo.com"
                                         required
+                                        className={createErrors.email ? 'border-red-500' : ''}
                                     />
+                                    <InputError message={createErrors.email} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="create-password">Contraseña</Label>
@@ -216,11 +272,16 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                         id="create-password"
                                         type="password"
                                         value={createForm.password}
-                                        onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
+                                        onChange={(e) => {
+                                            setCreateForm({...createForm, password: e.target.value});
+                                            if (createErrors.password) setCreateErrors({...createErrors, password: ''});
+                                        }}
                                         placeholder="Contraseña temporal"
                                         required
                                         minLength={8}
+                                        className={createErrors.password ? 'border-red-500' : ''}
                                     />
+                                    <InputError message={createErrors.password} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="create-password-confirmation">Confirmar Contraseña</Label>
@@ -228,16 +289,24 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                         id="create-password-confirmation"
                                         type="password"
                                         value={createForm.password_confirmation}
-                                        onChange={(e) => setCreateForm({...createForm, password_confirmation: e.target.value})}
+                                        onChange={(e) => {
+                                            setCreateForm({...createForm, password_confirmation: e.target.value});
+                                            if (createErrors.password_confirmation) setCreateErrors({...createErrors, password_confirmation: ''});
+                                        }}
                                         placeholder="Confirmar contraseña"
                                         required
                                         minLength={8}
+                                        className={createErrors.password_confirmation ? 'border-red-500' : ''}
                                     />
+                                    <InputError message={createErrors.password_confirmation} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="create-role">Rol</Label>
-                                    <Select value={createForm.role} onValueChange={(value) => setCreateForm({...createForm, role: value})}>
-                                        <SelectTrigger>
+                                    <Select value={createForm.role_id} onValueChange={(value) => {
+                                        setCreateForm({...createForm, role_id: value});
+                                        if (createErrors.role_id) setCreateErrors({...createErrors, role_id: ''});
+                                    }}>
+                                        <SelectTrigger className={createErrors.role_id ? 'border-red-500' : ''}>
                                             <SelectValue placeholder="Selecciona un rol" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -248,6 +317,20 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    <InputError message={createErrors.role_id} />
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="verify-email"
+                                        checked={createForm.verify_email}
+                                        onCheckedChange={(checked) => setCreateForm({...createForm, verify_email: checked === true})}
+                                    />
+                                    <Label htmlFor="verify-email" className="text-sm font-normal cursor-pointer">
+                                        Verificar email automáticamente (no enviar correo de verificación)
+                                    </Label>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    Si no marca esta opción, se enviará un correo de verificación al usuario.
                                 </div>
                                 <DialogFooter>
                                     <Button
@@ -255,7 +338,8 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                         variant="outline"
                                         onClick={() => {
                                             setShowCreateModal(false);
-                                            setCreateForm({ name: '', email: '', role: roles.length > 0 ? roles[roles.length - 1].id.toString() : '5', password: '', password_confirmation: '' });
+                                            setCreateForm({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
+                                            setCreateErrors({});
                                         }}
                                     >
                                         Cancelar
@@ -399,7 +483,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                                             setEditForm({ 
                                                                                 name: user.name, 
                                                                                 email: user.email, 
-                                                                                role: user.role?.id?.toString() || user.role_id?.toString() || '5',
+                                                                                role_id: user.role?.id?.toString() || user.role_id?.toString() || '',
                                                                                 active: user.active !== undefined ? user.active : true
                                                                             });
                                                                             setShowEditModal(user);
@@ -535,7 +619,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                 <Dialog open={!!showEditModal} onOpenChange={(open) => {
                     if (!open) {
                         setShowEditModal(null);
-                        setEditForm({ name: '', email: '', role: 'user', active: true });
+                        setEditForm({ name: '', email: '', role_id: '', active: true });
                     }
                 }}>
                     <DialogContent className="sm:max-w-[425px]">
@@ -550,10 +634,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                         <form onSubmit={(e) => {
                             e.preventDefault();
                             if (showEditModal) {
-                                const formData = {
-                                    ...editForm,
-                                    role_id: editForm.role  // Cambiar 'role' a 'role_id' para el backend
-                                };
+                                const formData = editForm;
                                 
                                 console.log('Enviando datos:', formData);
                                 console.log('Usuario a editar:', showEditModal.id);
@@ -562,7 +643,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                     onSuccess: () => {
                                         console.log('Usuario actualizado exitosamente');
                                         setShowEditModal(null);
-                                        setEditForm({ name: '', email: '', role: 'user', active: true });
+                                        setEditForm({ name: '', email: '', role_id: '', active: true });
                                     },
                                     onError: (errors) => {
                                         console.error('Errores de validación:', errors);
@@ -594,7 +675,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-role">Rol</Label>
-                                    <Select value={editForm.role} onValueChange={(value) => setEditForm({...editForm, role: value})}>
+                                    <Select value={editForm.role_id} onValueChange={(value) => setEditForm({...editForm, role_id: value})}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecciona un rol" />
                                         </SelectTrigger>
