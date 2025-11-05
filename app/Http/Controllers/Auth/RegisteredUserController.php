@@ -47,8 +47,11 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
+        // Hacer login pero redirigir a verificación de email (no al dashboard)
         Auth::login($user);
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Redirigir a la pantalla de verificación de email en lugar del dashboard
+        // El middleware 'verified' bloqueará el acceso al dashboard hasta que se verifique
+        return redirect()->route('verification.notice');
     }
 }

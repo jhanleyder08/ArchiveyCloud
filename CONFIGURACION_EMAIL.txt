@@ -1,0 +1,36 @@
+# ======================================
+# CONFIGURACIÓN DE EMAIL PARA GMAIL
+# ======================================
+# 
+# INSTRUCCIONES:
+# 1. Abre tu archivo .env (en la raíz del proyecto)
+# 2. Busca las líneas que empiezan con MAIL_
+# 3. Reemplázalas con las siguientes líneas
+# 4. IMPORTANTE: Reemplaza "TU_EMAIL@gmail.com" con tu email real de Gmail
+# ======================================
+
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=TU_EMAIL@gmail.com
+MAIL_PASSWORD=dkrnhloiknzfzohw
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=TU_EMAIL@gmail.com
+MAIL_FROM_NAME="Archivey Cloud SGDEA"
+
+# ======================================
+# DESPUÉS DE EDITAR EL .env:
+# ======================================
+# Ejecuta estos comandos en tu terminal:
+#
+# php artisan config:clear
+# php artisan cache:clear
+# php artisan config:cache
+#
+# ======================================
+# PROBAR QUE FUNCIONA:
+# ======================================
+# 1. Ve a /register y crea un usuario de prueba
+# 2. Deberías recibir un correo de verificación
+# 3. O ejecuta: php artisan email:diagnose --send-test
+# ======================================
