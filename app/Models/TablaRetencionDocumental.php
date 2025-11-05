@@ -63,7 +63,43 @@ class TablaRetencionDocumental extends Model
         // REQ-CL-002: Generar identificador único cuando se crea
         static::creating(function ($trd) {
             if (empty($trd->identificador_unico)) {
-                $trd->identificador_unico = 'TRD-' . now()->format('Y') . '-' . str_pad(static::count() + 1, 6, '0', STR_PAD_LEFT);
+                // Obtener el último ID usado para este año, incluyendo soft deletes
+                $year = now()->format('Y');
+                $prefix = 'TRD-' . $year . '-';
+                
+                // Buscar el último identificador único con este formato
+                $lastTrd = static::withTrashed()
+                    ->where('identificador_unico', 'like', $prefix . '%')
+                    ->orderBy('id', 'desc')
+                    ->first();
+                
+                if ($lastTrd && preg_match('/' . preg_quote($prefix, '/') . '(\d+)$/', $lastTrd->identificador_unico, $matches)) {
+                    $lastNumber = (int)$matches[1];
+                    $nextNumber = $lastNumber + 1;
+                } else {
+                    $nextNumber = 1;
+                }
+                
+                // Si aún existe, incrementar hasta encontrar uno disponible
+                $attempts = 0;
+                do {
+                    $identificador = $prefix . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+                    $exists = static::withTrashed()->where('identificador_unico', $identificador)->exists();
+                    if ($exists) {
+                        $nextNumber++;
+                        $attempts++;
+                    } else {
+                        break;
+                    }
+                    // Prevenir bucle infinito
+                    if ($attempts > 100) {
+                        // Usar timestamp como fallback
+                        $identificador = $prefix . time();
+                        break;
+                    }
+                } while ($exists);
+                
+                $trd->identificador_unico = $identificador;
             }
         });
     }
@@ -97,7 +133,7 @@ class TablaRetencionDocumental extends Model
      */
     public function series()
     {
-        return $this->hasMany(SerieDocumental::class, 'tabla_retencion_id');
+        return $this->hasMany(SerieDocumental::class, 'trd_id');
     }
 
     /**
@@ -105,7 +141,7 @@ class TablaRetencionDocumental extends Model
      */
     public function subseries()
     {
-        return $this->hasManyThrough(SubserieDocumental::class, SerieDocumental::class, 'tabla_retencion_id', 'serie_documental_id');
+        return $this->hasManyThrough(SubserieDocumental::class, SerieDocumental::class, 'trd_id', 'serie_id');
     }
 
     /**
@@ -113,7 +149,7 @@ class TablaRetencionDocumental extends Model
      */
     public function expedientes()
     {
-        return $this->hasManyThrough(Expediente::class, SerieDocumental::class, 'tabla_retencion_id', 'serie_documental_id');
+        return $this->hasManyThrough(Expediente::class, SerieDocumental::class, 'trd_id', 'serie_id');
     }
 
     /**

@@ -37,7 +37,7 @@ class AdminSeriesController extends Controller
 
         // Filtro por TRD - usando nombre de columna correcto y manejando "all"
         if ($request->filled('tablaRetencion') && $request->get('tablaRetencion') !== 'all') {
-            $query->where('tabla_retencion_id', $request->get('tablaRetencion'));
+            $query->where('trd_id', $request->get('tablaRetencion'));
         }
 
         // Filtro por estado - manejando "all"
@@ -96,7 +96,7 @@ class AdminSeriesController extends Controller
             'codigo' => 'nullable|string|max:50|unique:series_documentales,codigo',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
-            'tabla_retencion_id' => 'required|exists:tablas_retencion_documental,id',
+            'trd_id' => 'required|exists:tablas_retencion_documental,id',
             'cuadro_clasificacion_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
             'tiempo_archivo_gestion' => 'required|integer|min:0',
             'tiempo_archivo_central' => 'required|integer|min:0',
@@ -178,7 +178,7 @@ class AdminSeriesController extends Controller
             'codigo' => ['nullable', 'string', 'max:50', Rule::unique('series_documentales', 'codigo')->ignore($series->id)],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
-            'tabla_retencion_id' => 'required|exists:tablas_retencion_documental,id',
+            'trd_id' => 'required|exists:tablas_retencion_documental,id',
             'cuadro_clasificacion_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
             'tiempo_archivo_gestion' => 'required|integer|min:0',
             'tiempo_archivo_central' => 'required|integer|min:0',
@@ -302,7 +302,7 @@ class AdminSeriesController extends Controller
         }
 
         if ($request->filled('tablaRetencion')) {
-            $query->where('tabla_retencion_id', $request->get('tablaRetencion'));
+            $query->where('trd_id', $request->get('tablaRetencion'));
         }
 
         if ($request->filled('estado')) {
@@ -445,7 +445,7 @@ class AdminSeriesController extends Controller
         $totalExpedientes = Expediente::count();
 
         // Series por TRD
-        $seriesPorTrd = SerieDocumental::join('tablas_retencion_documental as trd', 'series_documentales.tabla_retencion_id', '=', 'trd.id')
+        $seriesPorTrd = SerieDocumental::join('tablas_retencion_documental as trd', 'series_documentales.trd_id', '=', 'trd.id')
             ->selectRaw('trd.nombre as trd, COUNT(*) as cantidad')
             ->groupBy('trd.id', 'trd.nombre')
             ->get()

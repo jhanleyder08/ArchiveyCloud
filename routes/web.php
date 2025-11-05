@@ -106,27 +106,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         // Gestión de Tablas de Retención Documental (TRD) - Protegido con permisos
         Route::prefix('trd')->name('trd.')->middleware('permission:trd.ver')->group(function () {
-            Route::get('/', [App\Http\Controllers\TRDController::class, 'index'])->name('index');
-            Route::get('/{trd}', [App\Http\Controllers\TRDController::class, 'show'])->name('show');
-            Route::get('/{trd}/exportar', [App\Http\Controllers\TRDController::class, 'exportar'])->name('exportar');
+            Route::get('/', [App\Http\Controllers\Admin\AdminTRDController::class, 'index'])->name('index');
+            Route::get('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'show'])->name('show');
             
             Route::middleware('permission:trd.crear')->group(function () {
-                Route::get('/create', [App\Http\Controllers\TRDController::class, 'create'])->name('create');
-                Route::post('/', [App\Http\Controllers\TRDController::class, 'store'])->name('store');
-                Route::post('/importar', [App\Http\Controllers\TRDController::class, 'importar'])->name('importar');
+                Route::post('/', [App\Http\Controllers\Admin\AdminTRDController::class, 'store'])->name('store');
             });
             
             Route::middleware('permission:trd.editar')->group(function () {
-                Route::get('/{trd}/edit', [App\Http\Controllers\TRDController::class, 'edit'])->name('edit');
-                Route::put('/{trd}', [App\Http\Controllers\TRDController::class, 'update'])->name('update');
-                Route::delete('/{trd}', [App\Http\Controllers\TRDController::class, 'destroy'])->name('destroy');
-                Route::post('/{trd}/archivar', [App\Http\Controllers\TRDController::class, 'archivar'])->name('archivar');
-                Route::post('/{trd}/version', [App\Http\Controllers\TRDController::class, 'crearVersion'])->name('version');
-                Route::post('/{trd}/serie', [App\Http\Controllers\TRDController::class, 'agregarSerie'])->name('agregarSerie');
-            });
-            
-            Route::middleware('permission:trd.aprobar')->group(function () {
-                Route::post('/{trd}/aprobar', [App\Http\Controllers\TRDController::class, 'aprobar'])->name('aprobar');
+                Route::get('/{trd}/edit', [App\Http\Controllers\Admin\AdminTRDController::class, 'edit'])->name('edit');
+                Route::put('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'update'])->name('update');
+                Route::patch('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'update']);
+                Route::delete('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'destroy'])->name('destroy');
             });
         });
         

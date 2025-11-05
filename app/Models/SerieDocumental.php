@@ -23,7 +23,7 @@ class SerieDocumental extends Model
         'codigo',
         'nombre',
         'descripcion',
-        'tabla_retencion_id',
+        'trd_id',
         'cuadro_clasificacion_id',
         'tiempo_archivo_gestion',
         'tiempo_archivo_central',
@@ -65,7 +65,7 @@ class SerieDocumental extends Model
             }
             
             // REQ-CL-017: Heredar tiempos de conservación de TRD
-            if ($serie->tabla_retencion_id && !$serie->tiempo_archivo_gestion) {
+            if ($serie->trd_id && !$serie->tiempo_archivo_gestion) {
                 $serie->heredarTiemposTRD();
             }
         });
@@ -91,7 +91,7 @@ class SerieDocumental extends Model
      */
     public function tablaRetencion()
     {
-        return $this->belongsTo(TablaRetencionDocumental::class, 'tabla_retencion_id');
+        return $this->belongsTo(TablaRetencionDocumental::class, 'trd_id');
     }
 
     /**
@@ -115,7 +115,7 @@ class SerieDocumental extends Model
      */
     public function expedientes()
     {
-        return $this->hasMany(Expediente::class, 'serie_documental_id');
+        return $this->hasMany(Expediente::class, 'serie_id');
     }
 
     /**
@@ -155,7 +155,7 @@ class SerieDocumental extends Model
      */
     public function scopePorTrd($query, $trdId)
     {
-        return $query->where('tabla_retencion_id', $trdId);
+        return $query->where('trd_id', $trdId);
     }
 
     /**
@@ -341,7 +341,7 @@ class SerieDocumental extends Model
         $errores = [];
         
         // Validar asociación obligatoria con TRD
-        if (!$this->tabla_retencion_id || !$this->tablaRetencion) {
+        if (!$this->trd_id || !$this->tablaRetencion) {
             $errores[] = 'La serie debe estar asociada a una TRD válida';
         }
         

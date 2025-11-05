@@ -290,7 +290,32 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                             </DialogHeader>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
-                                router.post('/admin/trd', createForm, {
+                                
+                                // Validación básica del frontend
+                                if (!createForm.codigo || !createForm.nombre || !createForm.descripcion || !createForm.entidad || !createForm.fecha_aprobacion || !createForm.fecha_vigencia_inicio) {
+                                    toast.error('Por favor complete todos los campos requeridos');
+                                    return;
+                                }
+                                
+                                // Preparar datos para enviar, asegurando tipos correctos
+                                const formData = {
+                                    codigo: createForm.codigo.trim(),
+                                    nombre: createForm.nombre.trim(),
+                                    descripcion: createForm.descripcion.trim(),
+                                    entidad: createForm.entidad.trim(),
+                                    dependencia: createForm.dependencia?.trim() || '',
+                                    fecha_aprobacion: createForm.fecha_aprobacion,
+                                    fecha_vigencia_inicio: createForm.fecha_vigencia_inicio,
+                                    fecha_vigencia_fin: createForm.fecha_vigencia_fin || null,
+                                    observaciones_generales: createForm.observaciones_generales?.trim() || null,
+                                    // Enviar version como string para evitar problemas de tipo
+                                    version: String(createForm.version || 1),
+                                    estado: createForm.estado,
+                                };
+                                
+                                console.log('Enviando datos:', formData);
+                                
+                                router.post('/admin/trd', formData, {
                                      onSuccess: () => {
                                         setShowCreateModal(false);
                                         setCreateForm({
@@ -306,14 +331,17 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                             version: 1,
                                             estado: 'borrador'
                                         });
-                                        toast.success('TRD creada exitosamente');
+                                        // El servidor redirige automáticamente, no necesitamos hacer nada más
                                     },
                                     onError: (errors) => {
+                                        console.error('Error al crear TRD:', errors);
                                         // Mostrar errores de validación al usuario
-                                        Object.keys(errors).forEach(field => {
-                                            const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
-                                            toast.error(`Error en ${field}: ${message}`);
-                                        });
+                                        if (errors) {
+                                            Object.keys(errors).forEach(field => {
+                                                const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+                                                toast.error(`Error en ${field}: ${message}`);
+                                            });
+                                        }
                                     }
                                 });
                             }} className="space-y-4">

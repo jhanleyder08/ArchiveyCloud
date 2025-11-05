@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Controlador para la gestión de Tablas de Retención Documental (TRD)
@@ -87,20 +88,40 @@ class AdminTRDController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        Log::info('Iniciando creación de TRD', ['data' => $request->all()]);
+        
+        // Preparar datos: convertir version a entero si es string
+        $requestData = $request->all();
+        if (isset($requestData['version'])) {
+            $requestData['version'] = is_numeric($requestData['version']) ? (int)$requestData['version'] : $requestData['version'];
+        }
+        
+        Log::info('Datos procesados para validación', ['data' => $requestData]);
+        
+        // Validar version como string o integer, luego convertir
+        $validated = validator($requestData, [
             'codigo' => 'required|string|max:50|unique:tablas_retencion_documental,codigo,NULL,id,deleted_at,NULL',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
             'entidad' => 'required|string|max:255',
             'dependencia' => 'nullable|string|max:255',
-            'version' => 'required|integer|min:1',
+            'version' => ['required', function ($attribute, $value, $fail) {
+                if (!is_numeric($value)) {
+                    $fail('El campo versión debe ser un número.');
+                } elseif ((int)$value < 1) {
+                    $fail('El campo versión debe ser al menos 1.');
+                }
+            }],
             'fecha_aprobacion' => 'required|date',
             'fecha_vigencia_inicio' => 'required|date',
             'fecha_vigencia_fin' => 'nullable|date|after:fecha_vigencia_inicio',
             'estado' => ['required', Rule::in(['borrador', 'revision', 'aprobada', 'vigente', 'obsoleta'])],
             'observaciones_generales' => 'nullable|string',
             'metadatos_adicionales' => 'nullable'
-        ]);
+        ])->validate();
+        
+        // Convertir version a entero después de validar
+        $validated['version'] = (int)$validated['version'];
 
         $validated['created_by'] = Auth::id();
         
@@ -109,9 +130,34 @@ class AdminTRDController extends Controller
             $validated['aprobado_por'] = Auth::id();
         }
 
-        TablaRetencionDocumental::create($validated);
+        try {
+            // Asegurar que vigente esté definido
+            if (!isset($validated['vigente'])) {
+                $validated['vigente'] = false;
+            }
+            
+            $trd = TablaRetencionDocumental::create($validated);
 
-        return redirect()->route('admin.trd.index')->with('success', 'TRD creada exitosamente.');
+            Log::info('TRD creada exitosamente', ['trd_id' => $trd->id, 'codigo' => $trd->codigo]);
+
+            // Usar Inertia location para forzar recarga completa de la página
+            return Inertia::location(route('admin.trd.index'));
+                
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Errores de validación - dejar que Laravel los maneje
+            Log::warning('Error de validación al crear TRD', ['errors' => $e->errors()]);
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Error al crear TRD', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $validated
+            ]);
+            
+            return back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al crear la TRD: ' . $e->getMessage()]);
+        }
     }
 
     /**
