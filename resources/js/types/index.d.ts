@@ -21,6 +21,7 @@ export interface NavItem {
     icon?: LucideIcon | null;
     isActive?: boolean;
     items?: NavItem[]; // Para sub-elementos dropdown
+    permission?: string; // Permiso requerido para ver este item
 }
 
 export interface SharedData {

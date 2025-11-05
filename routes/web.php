@@ -79,73 +79,155 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Administración
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::resource('users', App\Http\Controllers\Admin\AdminUserController::class);
-        Route::patch('users/{user}/toggle-status', [App\Http\Controllers\Admin\AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
-        
-        // Gestión de Tablas de Retención Documental (TRD)
-        Route::prefix('trd')->name('trd.')->group(function () {
-            Route::get('/', [App\Http\Controllers\TRDController::class, 'index'])->name('index');
-            Route::get('/create', [App\Http\Controllers\TRDController::class, 'create'])->name('create');
-            Route::post('/', [App\Http\Controllers\TRDController::class, 'store'])->name('store');
-            Route::get('/{trd}', [App\Http\Controllers\TRDController::class, 'show'])->name('show');
-            Route::get('/{trd}/edit', [App\Http\Controllers\TRDController::class, 'edit'])->name('edit');
-            Route::put('/{trd}', [App\Http\Controllers\TRDController::class, 'update'])->name('update');
-            Route::delete('/{trd}', [App\Http\Controllers\TRDController::class, 'destroy'])->name('destroy');
-            
-            // Acciones especiales
-            Route::post('/{trd}/aprobar', [App\Http\Controllers\TRDController::class, 'aprobar'])->name('aprobar');
-            Route::post('/{trd}/archivar', [App\Http\Controllers\TRDController::class, 'archivar'])->name('archivar');
-            Route::post('/{trd}/version', [App\Http\Controllers\TRDController::class, 'crearVersion'])->name('version');
-            Route::post('/{trd}/serie', [App\Http\Controllers\TRDController::class, 'agregarSerie'])->name('agregarSerie');
-            
-            // Importación/Exportación
-            Route::post('/importar', [App\Http\Controllers\TRDController::class, 'importar'])->name('importar');
-            Route::get('/{trd}/exportar', [App\Http\Controllers\TRDController::class, 'exportar'])->name('exportar');
+        // Gestión de Usuarios - Protegido con permisos específicos
+        Route::middleware('permission:usuarios.ver')->group(function () {
+            Route::get('users', [App\Http\Controllers\Admin\AdminUserController::class, 'index'])->name('users.index');
+            Route::get('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'show'])->name('users.show');
         });
         
-        // Gestión de Series Documentales
-        Route::resource('series', App\Http\Controllers\Admin\AdminSeriesController::class);
-        Route::get('series-dashboard', [App\Http\Controllers\Admin\AdminSeriesController::class, 'dashboard'])->name('series.dashboard');
-        Route::post('series/{serie}/duplicate', [App\Http\Controllers\Admin\AdminSeriesController::class, 'duplicate'])->name('series.duplicate');
-        Route::patch('series/{serie}/toggle-active', [App\Http\Controllers\Admin\AdminSeriesController::class, 'toggleActive'])->name('series.toggle-active');
-        Route::get('series/export/{format?}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'export'])->name('series.export');
-
-        // Subseries Documentales routes
-        Route::resource('subseries', App\Http\Controllers\Admin\AdminSubseriesController::class);
-        Route::post('subseries/{subserie}/duplicate', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'duplicate'])->name('subseries.duplicate');
-        Route::patch('subseries/{subserie}/toggle-active', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'toggleActive'])->name('subseries.toggle-active');
-        Route::get('subseries/export/{format?}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'export'])->name('subseries.export');
+        Route::middleware('permission:usuarios.crear')->group(function () {
+            Route::get('users/create', [App\Http\Controllers\Admin\AdminUserController::class, 'create'])->name('users.create');
+            Route::post('users', [App\Http\Controllers\Admin\AdminUserController::class, 'store'])->name('users.store');
+        });
         
-        // Cuadros de Clasificación Documental (CCD) routes
-        Route::prefix('ccd')->name('ccd.')->group(function () {
+        Route::middleware('permission:usuarios.editar')->group(function () {
+            Route::get('users/{user}/edit', [App\Http\Controllers\Admin\AdminUserController::class, 'edit'])->name('users.edit');
+            Route::put('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'update'])->name('users.update');
+            Route::patch('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'update']);
+        });
+        
+        Route::middleware('permission:usuarios.activar')->group(function () {
+            Route::patch('users/{user}/toggle-status', [App\Http\Controllers\Admin\AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
+        });
+        
+        Route::middleware('permission:usuarios.eliminar')->group(function () {
+            Route::delete('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'destroy'])->name('users.destroy');
+        });
+        
+        // Gestión de Tablas de Retención Documental (TRD) - Protegido con permisos
+        Route::prefix('trd')->name('trd.')->middleware('permission:trd.ver')->group(function () {
+            Route::get('/', [App\Http\Controllers\TRDController::class, 'index'])->name('index');
+            Route::get('/{trd}', [App\Http\Controllers\TRDController::class, 'show'])->name('show');
+            Route::get('/{trd}/exportar', [App\Http\Controllers\TRDController::class, 'exportar'])->name('exportar');
+            
+            Route::middleware('permission:trd.crear')->group(function () {
+                Route::get('/create', [App\Http\Controllers\TRDController::class, 'create'])->name('create');
+                Route::post('/', [App\Http\Controllers\TRDController::class, 'store'])->name('store');
+                Route::post('/importar', [App\Http\Controllers\TRDController::class, 'importar'])->name('importar');
+            });
+            
+            Route::middleware('permission:trd.editar')->group(function () {
+                Route::get('/{trd}/edit', [App\Http\Controllers\TRDController::class, 'edit'])->name('edit');
+                Route::put('/{trd}', [App\Http\Controllers\TRDController::class, 'update'])->name('update');
+                Route::delete('/{trd}', [App\Http\Controllers\TRDController::class, 'destroy'])->name('destroy');
+                Route::post('/{trd}/archivar', [App\Http\Controllers\TRDController::class, 'archivar'])->name('archivar');
+                Route::post('/{trd}/version', [App\Http\Controllers\TRDController::class, 'crearVersion'])->name('version');
+                Route::post('/{trd}/serie', [App\Http\Controllers\TRDController::class, 'agregarSerie'])->name('agregarSerie');
+            });
+            
+            Route::middleware('permission:trd.aprobar')->group(function () {
+                Route::post('/{trd}/aprobar', [App\Http\Controllers\TRDController::class, 'aprobar'])->name('aprobar');
+            });
+        });
+        
+        // Gestión de Series Documentales - Protegido con permisos
+        Route::middleware('permission:series.ver')->group(function () {
+            Route::get('series', [App\Http\Controllers\Admin\AdminSeriesController::class, 'index'])->name('series.index');
+            Route::get('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'show'])->name('series.show');
+            Route::get('series-dashboard', [App\Http\Controllers\Admin\AdminSeriesController::class, 'dashboard'])->name('series.dashboard');
+            Route::get('series/export/{format?}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'export'])->name('series.export');
+        });
+        
+        Route::middleware('permission:series.crear')->group(function () {
+            Route::get('series/create', [App\Http\Controllers\Admin\AdminSeriesController::class, 'create'])->name('series.create');
+            Route::post('series', [App\Http\Controllers\Admin\AdminSeriesController::class, 'store'])->name('series.store');
+        });
+        
+        Route::middleware('permission:series.editar')->group(function () {
+            Route::get('series/{serie}/edit', [App\Http\Controllers\Admin\AdminSeriesController::class, 'edit'])->name('series.edit');
+            Route::put('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'update'])->name('series.update');
+            Route::patch('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'update']);
+            Route::post('series/{serie}/duplicate', [App\Http\Controllers\Admin\AdminSeriesController::class, 'duplicate'])->name('series.duplicate');
+            Route::patch('series/{serie}/toggle-active', [App\Http\Controllers\Admin\AdminSeriesController::class, 'toggleActive'])->name('series.toggle-active');
+        });
+
+        // Subseries Documentales - Protegido con permisos
+        Route::middleware('permission:subseries.ver')->group(function () {
+            Route::get('subseries', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'index'])->name('subseries.index');
+            Route::get('subseries/{subserie}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'show'])->name('subseries.show');
+            Route::get('subseries/export/{format?}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'export'])->name('subseries.export');
+        });
+        
+        Route::middleware('permission:subseries.crear')->group(function () {
+            Route::get('subseries/create', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'create'])->name('subseries.create');
+            Route::post('subseries', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'store'])->name('subseries.store');
+        });
+        
+        Route::middleware('permission:subseries.editar')->group(function () {
+            Route::get('subseries/{subserie}/edit', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'edit'])->name('subseries.edit');
+            Route::put('subseries/{subserie}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'update'])->name('subseries.update');
+            Route::patch('subseries/{subserie}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'update']);
+            Route::post('subseries/{subserie}/duplicate', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'duplicate'])->name('subseries.duplicate');
+            Route::patch('subseries/{subserie}/toggle-active', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'toggleActive'])->name('subseries.toggle-active');
+        });
+        
+        // Cuadros de Clasificación Documental (CCD) - Protegido con permisos
+        Route::prefix('ccd')->name('ccd.')->middleware('permission:ccd.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\CCDController::class, 'index'])->name('index');
-            Route::get('/create', [App\Http\Controllers\CCDController::class, 'create'])->name('create');
-            Route::post('/', [App\Http\Controllers\CCDController::class, 'store'])->name('store');
             Route::get('/{ccd}', [App\Http\Controllers\CCDController::class, 'show'])->name('show');
-            Route::get('/{ccd}/edit', [App\Http\Controllers\CCDController::class, 'edit'])->name('edit');
-            Route::put('/{ccd}', [App\Http\Controllers\CCDController::class, 'update'])->name('update');
-            Route::delete('/{ccd}', [App\Http\Controllers\CCDController::class, 'destroy'])->name('destroy');
             
-            // Acciones especiales
-            Route::post('/{ccd}/aprobar', [App\Http\Controllers\CCDController::class, 'aprobar'])->name('aprobar');
-            Route::post('/{ccd}/archivar', [App\Http\Controllers\CCDController::class, 'archivar'])->name('archivar');
-            Route::post('/{ccd}/version', [App\Http\Controllers\CCDController::class, 'crearVersion'])->name('version');
+            Route::middleware('permission:ccd.crear')->group(function () {
+                Route::get('/create', [App\Http\Controllers\CCDController::class, 'create'])->name('create');
+                Route::post('/', [App\Http\Controllers\CCDController::class, 'store'])->name('store');
+            });
             
-            // Gestión de niveles
-            Route::post('/{ccd}/nivel', [App\Http\Controllers\CCDController::class, 'agregarNivel'])->name('agregarNivel');
-            Route::put('/nivel/{nivel}', [App\Http\Controllers\CCDController::class, 'actualizarNivel'])->name('actualizarNivel');
-            Route::delete('/nivel/{nivel}', [App\Http\Controllers\CCDController::class, 'eliminarNivel'])->name('eliminarNivel');
-            Route::post('/nivel/{nivel}/mover', [App\Http\Controllers\CCDController::class, 'moverNivel'])->name('moverNivel');
+            Route::middleware('permission:ccd.editar')->group(function () {
+                Route::get('/{ccd}/edit', [App\Http\Controllers\CCDController::class, 'edit'])->name('edit');
+                Route::put('/{ccd}', [App\Http\Controllers\CCDController::class, 'update'])->name('update');
+                Route::delete('/{ccd}', [App\Http\Controllers\CCDController::class, 'destroy'])->name('destroy');
+                
+                // Acciones especiales
+                Route::post('/{ccd}/aprobar', [App\Http\Controllers\CCDController::class, 'aprobar'])->name('aprobar');
+                Route::post('/{ccd}/archivar', [App\Http\Controllers\CCDController::class, 'archivar'])->name('archivar');
+                Route::post('/{ccd}/version', [App\Http\Controllers\CCDController::class, 'crearVersion'])->name('version');
+                
+                // Gestión de niveles
+                Route::post('/{ccd}/nivel', [App\Http\Controllers\CCDController::class, 'agregarNivel'])->name('agregarNivel');
+                Route::put('/nivel/{nivel}', [App\Http\Controllers\CCDController::class, 'actualizarNivel'])->name('actualizarNivel');
+                Route::delete('/nivel/{nivel}', [App\Http\Controllers\CCDController::class, 'eliminarNivel'])->name('eliminarNivel');
+                Route::post('/nivel/{nivel}/mover', [App\Http\Controllers\CCDController::class, 'moverNivel'])->name('moverNivel');
+            });
             
-            // Estructura
+            // Estructura (accesible para todos con permiso ccd.ver)
             Route::get('/{ccd}/estructura', [App\Http\Controllers\CCDController::class, 'getEstructura'])->name('estructura');
         });
         
-        // Gestión de Documentos routes
-        Route::resource('documentos', App\Http\Controllers\Admin\AdminDocumentController::class);
-        Route::get('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'uploadMasivo'])->name('documentos.upload-masivo');
-        Route::post('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'procesarSubidaMasiva'])->name('documentos.procesar-masivo');
-        Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
+        // Gestión de Documentos - Protegido con permisos
+        Route::middleware('permission:documentos.ver')->group(function () {
+            Route::get('documentos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'index'])->name('documentos.index');
+            Route::get('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'show'])->name('documentos.show');
+        });
+        
+        Route::middleware('permission:documentos.crear')->group(function () {
+            Route::get('documentos/create', [App\Http\Controllers\Admin\AdminDocumentController::class, 'create'])->name('documentos.create');
+            Route::post('documentos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'store'])->name('documentos.store');
+            Route::get('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'uploadMasivo'])->name('documentos.upload-masivo');
+            Route::post('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'procesarSubidaMasiva'])->name('documentos.procesar-masivo');
+        });
+        
+        Route::middleware('permission:documentos.editar')->group(function () {
+            Route::get('documentos/{documento}/edit', [App\Http\Controllers\Admin\AdminDocumentController::class, 'edit'])->name('documentos.edit');
+            Route::put('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'update'])->name('documentos.update');
+            Route::patch('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'update']);
+        });
+        
+        Route::middleware('permission:documentos.eliminar')->group(function () {
+            Route::delete('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'destroy'])->name('documentos.destroy');
+        });
+        
+        Route::middleware('permission:documentos.editar')->group(function () {
+            Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
+        });
         
         // REQ-CP-007: Nuevas rutas para validación avanzada de documentos
         Route::post('documentos/validar-archivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'validarArchivoApi'])->name('documentos.validar-archivo');
@@ -173,8 +255,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('verificar/{certificado}', [App\Http\Controllers\Admin\DigitalSignatureController::class, 'verificarCertificado'])->name('verificar');
         });
 
-        // REQ-WF-001: Sistema de Workflow y Flujos de Trabajo
-        Route::prefix('workflow')->name('workflow.')->group(function () {
+        // REQ-WF-001: Sistema de Workflow y Flujos de Trabajo - Protegido con permisos
+        Route::prefix('workflow')->name('workflow.')->middleware('permission:workflow.gestionar')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\WorkflowController::class, 'index'])->name('index');
             Route::get('create', [App\Http\Controllers\Admin\WorkflowController::class, 'create'])->name('create');
             Route::post('/', [App\Http\Controllers\Admin\WorkflowController::class, 'store'])->name('store');
@@ -184,36 +266,60 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('reportes/dashboard', [App\Http\Controllers\Admin\WorkflowController::class, 'reportes'])->name('reportes');
         });
         
-        // Gestión de Expedientes routes
-        Route::prefix('expedientes')->name('expedientes.')->group(function () {
+        // Gestión de Expedientes - Protegido con permisos
+        Route::prefix('expedientes')->name('expedientes.')->middleware('permission:expedientes.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\ExpedienteController::class, 'index'])->name('index');
-            Route::get('/create', [App\Http\Controllers\ExpedienteController::class, 'create'])->name('create');
-            Route::post('/', [App\Http\Controllers\ExpedienteController::class, 'store'])->name('store');
             Route::get('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'show'])->name('show');
-            Route::get('/{expediente}/edit', [App\Http\Controllers\ExpedienteController::class, 'edit'])->name('edit');
-            Route::put('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'update'])->name('update');
-            Route::delete('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'destroy'])->name('destroy');
             
-            // Acciones especiales
-            Route::post('/{expediente}/cambiar-estado', [App\Http\Controllers\ExpedienteController::class, 'cambiarEstado'])->name('cambiarEstado');
-            Route::post('/{expediente}/cerrar', [App\Http\Controllers\ExpedienteController::class, 'cerrar'])->name('cerrar');
-            Route::post('/{expediente}/agregar-documento', [App\Http\Controllers\ExpedienteController::class, 'agregarDocumento'])->name('agregarDocumento');
-            Route::post('/{expediente}/transferencia', [App\Http\Controllers\ExpedienteController::class, 'crearTransferencia'])->name('crearTransferencia');
-            Route::get('/{expediente}/verificar-integridad', [App\Http\Controllers\ExpedienteController::class, 'verificarIntegridad'])->name('verificarIntegridad');
+            Route::middleware('permission:expedientes.crear')->group(function () {
+                Route::get('/create', [App\Http\Controllers\ExpedienteController::class, 'create'])->name('create');
+                Route::post('/', [App\Http\Controllers\ExpedienteController::class, 'store'])->name('store');
+            });
+            
+            Route::middleware('permission:expedientes.editar')->group(function () {
+                Route::get('/{expediente}/edit', [App\Http\Controllers\ExpedienteController::class, 'edit'])->name('edit');
+                Route::put('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'update'])->name('update');
+                Route::delete('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'destroy'])->name('destroy');
+                
+                // Acciones especiales
+                Route::post('/{expediente}/cambiar-estado', [App\Http\Controllers\ExpedienteController::class, 'cambiarEstado'])->name('cambiarEstado');
+                Route::post('/{expediente}/cerrar', [App\Http\Controllers\ExpedienteController::class, 'cerrar'])->name('cerrar');
+                Route::post('/{expediente}/agregar-documento', [App\Http\Controllers\ExpedienteController::class, 'agregarDocumento'])->name('agregarDocumento');
+                Route::post('/{expediente}/transferencia', [App\Http\Controllers\ExpedienteController::class, 'crearTransferencia'])->name('crearTransferencia');
+                Route::get('/{expediente}/verificar-integridad', [App\Http\Controllers\ExpedienteController::class, 'verificarIntegridad'])->name('verificarIntegridad');
+            });
         });
         
-        // Reportes y estadísticas
-        Route::group(['prefix' => 'reportes'], function () {
+        // Reportes y estadísticas - Protegido con permisos
+        Route::group(['prefix' => 'reportes', 'middleware' => 'permission:reportes.ver'], function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminReportController::class, 'index'])->name('reportes.index');
             Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('reportes.dashboard');
             Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('reportes.cumplimiento-normativo');
             Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('reportes.productividad');
             Route::get('/almacenamiento', [App\Http\Controllers\Admin\AdminReportController::class, 'almacenamiento'])->name('reportes.almacenamiento');
-            Route::get('/exportar/{tipo}', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('reportes.exportar');
+            
+            Route::middleware('permission:reportes.exportar')->group(function () {
+                Route::get('/exportar/{tipo}', [App\Http\Controllers\Admin\AdminReportController::class, 'exportar'])->name('reportes.exportar');
+            });
         });
 
-        // Plantillas Documentales routes
-        Route::resource('plantillas', App\Http\Controllers\Admin\PlantillaDocumentalController::class);
+        // Plantillas Documentales - Protegido con permisos
+        Route::middleware('permission:plantillas.ver')->group(function () {
+            Route::get('plantillas', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'index'])->name('plantillas.index');
+            Route::get('plantillas/{plantilla}', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'show'])->name('plantillas.show');
+        });
+        
+        Route::middleware('permission:plantillas.crear')->group(function () {
+            Route::get('plantillas/create', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'create'])->name('plantillas.create');
+            Route::post('plantillas', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'store'])->name('plantillas.store');
+        });
+        
+        Route::middleware('permission:plantillas.editar')->group(function () {
+            Route::get('plantillas/{plantilla}/edit', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'edit'])->name('plantillas.edit');
+            Route::put('plantillas/{plantilla}', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'update'])->name('plantillas.update');
+            Route::patch('plantillas/{plantilla}', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'update']);
+            Route::delete('plantillas/{plantilla}', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'destroy'])->name('plantillas.destroy');
+        });
         Route::group(['prefix' => 'plantillas'], function () {
             // Editor avanzado
             Route::get('/editor/{plantilla?}', [App\Http\Controllers\Admin\PlantillaDocumentalController::class, 'editor'])->name('plantillas.editor');
@@ -260,23 +366,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/{workflow}/cancelar', [App\Http\Controllers\Admin\WorkflowController::class, 'cancelar'])->name('cancelar');
         });
         
-        // Sistema de Préstamos y Consultas routes
-        Route::prefix('prestamos')->name('prestamos.')->group(function () {
+        // Sistema de Préstamos y Consultas - Protegido con permisos
+        Route::prefix('prestamos')->name('prestamos.')->middleware('permission:prestamos.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'index'])->name('index');
-            Route::get('/create', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'create'])->name('create');
-            Route::post('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'store'])->name('store');
             Route::get('/{prestamo}', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'show'])->name('show');
-            Route::put('/{prestamo}/devolver', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'devolver'])->name('devolver');
-            Route::put('/{prestamo}/renovar', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'renovar'])->name('renovar');
-            Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'reportes'])->name('reportes');
             Route::get('/buscar/elementos', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'buscar'])->name('buscar');
+            
+            Route::middleware('permission:prestamos.gestionar')->group(function () {
+                Route::get('/create', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'create'])->name('create');
+                Route::post('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'store'])->name('store');
+                Route::put('/{prestamo}/devolver', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'devolver'])->name('devolver');
+                Route::put('/{prestamo}/renovar', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'renovar'])->name('renovar');
+                Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'reportes'])->name('reportes');
+            });
         });
 
-        // Sistema de Disposición Final routes
-        Route::prefix('disposiciones')->name('disposiciones.')->group(function () {
+        // Sistema de Disposición Final - Protegido con permisos
+        Route::prefix('disposiciones')->name('disposiciones.')->middleware('permission:disposiciones.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'index'])->name('index');
-            Route::get('/create', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'create'])->name('create');
-            Route::post('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'store'])->name('store');
             Route::get('/{disposicion}', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'show'])->name('show');
             
             // Workflow de disposiciones
@@ -289,15 +396,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'reportes'])->name('reportes');
         });
         
-        // Dashboard Ejecutivo Unificado
-        Route::prefix('dashboard-ejecutivo')->name('dashboard-ejecutivo.')->group(function () {
+        // Dashboard Ejecutivo Unificado - Protegido con permisos
+        Route::prefix('dashboard-ejecutivo')->name('dashboard-ejecutivo.')->middleware('permission:administracion.dashboard.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'index'])->name('index');
             Route::get('/datos-grafico', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'datosGrafico'])->name('datos-grafico');
             Route::post('/exportar-pdf', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'exportarPDF'])->name('exportar-pdf');
         });
 
-        // Sistema de Optimización y Monitoreo
-        Route::prefix('optimizacion')->name('optimizacion.')->group(function () {
+        // Sistema de Optimización y Monitoreo - Protegido con permisos
+        Route::prefix('optimizacion')->name('optimizacion.')->middleware('permission:administracion.configuracion.gestionar')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\OptimizacionController::class, 'index'])->name('index');
             Route::get('/cache', [App\Http\Controllers\Admin\OptimizacionController::class, 'cache'])->name('cache');
             Route::post('/cache/warmup', [App\Http\Controllers\Admin\OptimizacionController::class, 'cacheWarmup'])->name('cache.warmup');
@@ -309,9 +416,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/system-status', [App\Http\Controllers\Admin\OptimizacionController::class, 'getSystemStatusApi'])->name('system-status');
         });
 
-        // Sistema de Notificaciones
+        // Sistema de Notificaciones - Protegido con permisos
         Route::prefix('notificaciones')->name('notificaciones.')->group(function () {
-            // Notificaciones del usuario
+            // Notificaciones del usuario (accesibles para todos)
             Route::get('/', [App\Http\Controllers\Admin\NotificacionController::class, 'index'])->name('index');
             Route::get('/no-leidas', [App\Http\Controllers\Admin\NotificacionController::class, 'noLeidas'])->name('no-leidas');
             Route::patch('/{notificacion}/marcar-leida', [App\Http\Controllers\Admin\NotificacionController::class, 'marcarLeida'])->name('marcar-leida');
@@ -319,15 +426,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('/{notificacion}/archivar', [App\Http\Controllers\Admin\NotificacionController::class, 'archivar'])->name('archivar');
             Route::delete('/{notificacion}', [App\Http\Controllers\Admin\NotificacionController::class, 'destroy'])->name('destroy');
             
-            // Panel administrativo (solo administradores)
-            Route::get('/admin', [App\Http\Controllers\Admin\NotificacionController::class, 'admin'])->name('admin');
-            Route::get('/crear', [App\Http\Controllers\Admin\NotificacionController::class, 'crear'])->name('crear');
-            Route::post('/', [App\Http\Controllers\Admin\NotificacionController::class, 'store'])->name('store');
-            Route::post('/limpiar-antiguas', [App\Http\Controllers\Admin\NotificacionController::class, 'limpiarAntiguas'])->name('limpiar-antiguas');
+            // Panel administrativo - Requiere permiso de gestión
+            Route::middleware('permission:notificaciones.gestionar')->group(function () {
+                Route::get('/admin', [App\Http\Controllers\Admin\NotificacionController::class, 'admin'])->name('admin');
+                Route::get('/crear', [App\Http\Controllers\Admin\NotificacionController::class, 'crear'])->name('crear');
+                Route::post('/', [App\Http\Controllers\Admin\NotificacionController::class, 'store'])->name('store');
+                Route::post('/limpiar-antiguas', [App\Http\Controllers\Admin\NotificacionController::class, 'limpiarAntiguas'])->name('limpiar-antiguas');
+            });
         });
         
-        // Sistema de Índices Electrónicos
-        Route::prefix('indices')->name('indices.')->group(function () {
+        // Sistema de Índices Electrónicos - Protegido con permisos
+        Route::prefix('indices')->name('indices.')->middleware('permission:indices.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'index'])->name('index');
             Route::get('/{indice}', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'show'])->name('show');
             Route::delete('/{indice}', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'destroy'])->name('destroy');
@@ -342,31 +451,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/estadisticas/dashboard', [App\Http\Controllers\Admin\IndiceElectronicoController::class, 'estadisticas'])->name('estadisticas');
         });
 
-        // Módulo de Retención y Disposición
-        Route::prefix('retencion-disposicion')->name('retencion.')->group(function () {
-            Route::get('/', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'index'])->name('index');
-            Route::get('/{proceso}', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'show'])->name('show');
-            Route::post('/crear', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'crearProceso'])->name('crear');
-            
-            // Acciones de disposición
-            Route::post('/{proceso}/ejecutar-disposicion', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'ejecutarDisposicion'])->name('ejecutar-disposicion');
-            Route::post('/{proceso}/aplazar', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'aplazarDisposicion'])->name('aplazar');
-            Route::post('/{proceso}/reactivar', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'reactivarProceso'])->name('reactivar');
-            Route::post('/{proceso}/bloquear-eliminacion', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'bloquearEliminacion'])->name('bloquear-eliminacion');
-            Route::post('/{proceso}/desbloquear-eliminacion', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'desbloquearEliminacion'])->name('desbloquear-eliminacion');
-            
-            // Gestión de alertas
-            Route::get('/alertas', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'gestionarAlertas'])->name('alertas');
-            Route::post('/alertas/{alerta}/leer', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'marcarAlertaLeida'])->name('alerta.leer');
-            Route::post('/alertas/{alerta}/atender', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'marcarAlertaAtendida'])->name('alerta.atender');
-            
-            // Reportes y procesos masivos
-            Route::get('/reportes', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'reportes'])->name('reportes');
-            Route::post('/procesar-masivo', [App\Http\Controllers\AdminRetencionDisposicionController::class, 'procesarActualizacionesMasivas'])->name('procesar-masivo');
-        });
         
-        // Servicios externos (Email, SMS)
-        Route::prefix('servicios-externos')->name('servicios-externos.')->group(function () {
+        // Servicios externos (Email, SMS) - Protegido con permisos
+        Route::prefix('servicios-externos')->name('servicios-externos.')->middleware('permission:administracion.configuracion.gestionar')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'index'])->name('index');
             Route::get('/testing', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testing'])->name('testing');
             Route::post('/test-email', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testEmail'])->name('test-email');
@@ -377,8 +464,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/forzar-resumenes', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'forzarResumenes'])->name('forzar-resumenes');
         });
 
-        // Sistema de Firmas Digitales Avanzado
-        Route::prefix('firmas')->name('firmas.')->group(function () {
+        // Sistema de Firmas Digitales Avanzado - Protegido con permisos
+        Route::prefix('firmas')->name('firmas.')->middleware('permission:firmas.gestionar')->group(function () {
             // Dashboard principal
             Route::get('/', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'dashboard'])->name('dashboard');
             Route::get('/dashboard', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'dashboard'])->name('dashboard-alt');
@@ -403,8 +490,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/api/estadisticas', [App\Http\Controllers\Admin\FirmaDigitalAvanzadaController::class, 'apiEstadisticas'])->name('api.estadisticas');
         });
         
-        // Sistema de API Tokens
-        Route::prefix('api-tokens')->name('api-tokens.')->group(function () {
+        // Sistema de API Tokens - Protegido con permisos
+        Route::prefix('api-tokens')->name('api-tokens.')->middleware('permission:api.gestionar')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\ApiTokenController::class, 'index'])->name('index');
             Route::get('/dashboard', [App\Http\Controllers\Admin\ApiTokenController::class, 'dashboard'])->name('dashboard');
             Route::get('/create', [App\Http\Controllers\Admin\ApiTokenController::class, 'create'])->name('create');
@@ -417,8 +504,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/{apiToken}/renovar', [App\Http\Controllers\Admin\ApiTokenController::class, 'renovar'])->name('renovar');
         });
 
-        // Sistema de Certificados Digitales PKI
-        Route::prefix('certificados')->name('certificados.')->group(function () {
+        // Sistema de Certificados Digitales PKI - Protegido con permisos
+        Route::prefix('certificados')->name('certificados.')->middleware('permission:certificados.gestionar')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'index'])->name('index');
             Route::get('/create', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'create'])->name('create');
             Route::post('/', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'store'])->name('store');
@@ -428,18 +515,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/{certificado}/descargar/{formato?}', [App\Http\Controllers\Admin\CertificadoDigitalController::class, 'descargar'])->name('descargar');
         });
 
-        // Sistema de Auditoría y Trazabilidad Avanzada
-        Route::prefix('auditoria')->name('auditoria.')->group(function () {
+        // Sistema de Auditoría y Trazabilidad Avanzada - Protegido con permisos
+        Route::prefix('auditoria')->name('auditoria.')->middleware('permission:auditoria.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'index'])->name('index');
             Route::get('/analytics', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'analytics'])->name('analytics');
             Route::get('/patrones', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'patrones'])->name('patrones');
             Route::get('/{auditoria}', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'show'])->name('show');
-            Route::post('/reporte', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'reporte'])->name('reporte');
             Route::get('/api/metricas', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'metricas'])->name('metricas');
+            
+            Route::middleware('permission:auditoria.exportar')->group(function () {
+                Route::post('/reporte', [App\Http\Controllers\Admin\AuditoriaAvanzadaController::class, 'reporte'])->name('reporte');
+            });
         });
 
-        // Sistema de Configuración Avanzada
-        Route::prefix('configuracion')->name('configuracion.')->group(function () {
+        // Sistema de Configuración Avanzada - Protegido con permisos
+        Route::prefix('configuracion')->name('configuracion.')->middleware('permission:administracion.configuracion.gestionar')->group(function () {
             // Dashboard principal
             Route::get('/', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'index'])->name('index');
             
@@ -468,8 +558,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/importar', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'importar'])->name('importar');
         });
 
-        // Sistema de Migración y Importación de Datos
-        Route::prefix('importaciones')->name('importaciones.')->group(function () {
+        // Sistema de Migración y Importación de Datos - Protegido con permisos
+        Route::prefix('importaciones')->name('importaciones.')->middleware('permission:importacion.gestionar')->group(function () {
             // Dashboard principal
             Route::get('/', [App\Http\Controllers\Admin\ImportacionDatosController::class, 'dashboard'])->name('dashboard');
             

@@ -15,7 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
-            $table->datetime('asignado_en')->nullable();
+            $table->datetime('vigencia_desde')->nullable();
+            $table->datetime('vigencia_hasta')->nullable();
+            $table->boolean('temporal')->default(false);
+            $table->boolean('activo')->default(true);
             $table->foreignId('asignado_por')->nullable()->constrained('users')->onDelete('set null');
             $table->text('observaciones')->nullable();
             $table->timestamps();
@@ -24,7 +27,9 @@ return new class extends Migration
             $table->unique(['user_id', 'role_id']);
             
             // Índices para mejorar el rendimiento
-            $table->index(['user_id', 'role_id']);
+            $table->index(['user_id', 'role_id', 'activo']);
+            $table->index('vigencia_desde');
+            $table->index('vigencia_hasta');
             $table->index('asignado_por');
         });
     }

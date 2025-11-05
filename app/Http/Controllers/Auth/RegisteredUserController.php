@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,11 +37,15 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        // Obtener rol "Sin Acceso" para usuarios nuevos
+        // Este rol solo permite editar perfil hasta que un admin asigne un rol con permisos
+        $rolSinAcceso = Role::where('name', 'Sin Acceso')->first();
+        
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            // 'role_id' => 2, // Comentado por ahora hasta que tengamos roles en testing
+            'role_id' => $rolSinAcceso ? $rolSinAcceso->id : null,
             'active' => true,
             'estado_cuenta' => User::ESTADO_ACTIVO,
         ]);

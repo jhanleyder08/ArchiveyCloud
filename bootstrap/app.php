@@ -5,6 +5,7 @@ use App\Http\Middleware\ApiTokenAuthentication;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PerformanceOptimization;
+use App\Http\Middleware\PermissionMiddleware;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\TrackUserActivity;
 use App\Http\Middleware\TwoFactorAuthentication;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Registrar middleware de roles y API
         $middleware->alias([
             'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
             'user.active' => VerifyUserActive::class,
             'track.activity' => TrackUserActivity::class,
             'performance' => PerformanceOptimization::class,
