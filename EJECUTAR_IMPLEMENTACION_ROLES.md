@@ -55,7 +55,7 @@ Dentro de tinker, ejecuta:
 $user = new App\Models\User();
 $user->name = 'Jhan Duarte';
 $user->email = 'jhanleyder71@gmail.com';
-$user->password = bcrypt('TuPassword123!');
+$user->password = bcrypt('Admi1234');
 $user->role_id = 1; // Super Administrador
 $user->active = true;
 $user->estado_cuenta = 'activo';

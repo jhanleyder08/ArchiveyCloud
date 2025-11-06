@@ -99,7 +99,7 @@ class SubserieDocumental extends Model
      */
     public function expedientes()
     {
-        return $this->hasMany(Expediente::class, 'subserie_documental_id');
+        return $this->hasMany(Expediente::class, 'subserie_id');
     }
 
     /**
@@ -107,7 +107,7 @@ class SubserieDocumental extends Model
      */
     public function documentos()
     {
-        return $this->hasManyThrough(Documento::class, Expediente::class, 'subserie_documental_id', 'expediente_id');
+        return $this->hasManyThrough(Documento::class, Expediente::class, 'subserie_id', 'expediente_id');
     }
 
     /**

@@ -23,7 +23,9 @@ class AdminSeriesController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SerieDocumental::with(['tablaRetencion', 'usuarioResponsable']);
+        $query = SerieDocumental::with(['tablaRetencion' => function($q) {
+            $q->select('id', 'codigo', 'nombre');
+        }])->withCount(['subseries', 'expedientes']);
 
         // Filtros de búsqueda
         if ($request->filled('search')) {
@@ -92,26 +94,30 @@ class AdminSeriesController extends Controller
     {
         \Log::info('STORE SERIE - Datos recibidos:', $request->all());
         
-        $validated = $request->validate([
-            'codigo' => 'nullable|string|max:50|unique:series_documentales,codigo',
+        // Convertir trd_id a entero si viene como string
+        $requestData = $request->all();
+        if (isset($requestData['trd_id'])) {
+            $requestData['trd_id'] = is_numeric($requestData['trd_id']) ? (int)$requestData['trd_id'] : $requestData['trd_id'];
+        }
+        
+        $validated = validator($requestData, [
+            'codigo' => 'nullable|string|max:50|unique:series_documentales,codigo,NULL,id,deleted_at,NULL',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
-            'trd_id' => 'required|exists:tablas_retencion_documental,id',
-            'cuadro_clasificacion_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
-            'tiempo_archivo_gestion' => 'required|integer|min:0',
-            'tiempo_archivo_central' => 'required|integer|min:0',
-            'disposicion_final' => 'required|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
-            'procedimiento' => 'nullable|string',
-            'area_responsable' => 'nullable|string|max:255',
-            'usuario_responsable_id' => 'nullable|exists:users,id',
-            'palabras_clave' => 'nullable|array',
+            'trd_id' => 'required|integer|exists:tablas_retencion_documental,id',
+            'dependencia' => 'nullable|string|max:255',
+            'orden' => 'nullable|integer|min:0',
             'observaciones' => 'nullable|string',
-            'activa' => 'boolean'
-        ]);
+            'activa' => 'nullable|boolean'
+        ], [
+            'trd_id.required' => 'Debe seleccionar una TRD',
+            'trd_id.exists' => 'La TRD seleccionada no existe',
+            'nombre.required' => 'El nombre es obligatorio',
+            'descripcion.required' => 'La descripción es obligatoria',
+            'codigo.unique' => 'Este código ya está en uso',
+        ])->validate();
 
-        // Agregar campos de auditoría
-        $validated['created_by'] = Auth::id();
-        $validated['updated_by'] = Auth::id();
+        // Campos de auditoría no existen en la tabla - eliminados
 
         try {
             \Log::info('STORE SERIE - Datos validados:', $validated);
@@ -123,7 +129,22 @@ class AdminSeriesController extends Controller
             return redirect()->route('admin.series.index')
                            ->with('success', "Serie documental '{$serie->nombre}' creada exitosamente.");
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error('STORE SERIE - Error de base de datos:', [
+                'error' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings()
+            ]);
+            
+            return redirect()->back()
+                           ->with('error', 'Error al crear la serie documental: ' . $e->getMessage())
+                           ->withInput();
         } catch (\Exception $e) {
+            \Log::error('STORE SERIE - Error general:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return redirect()->back()
                            ->with('error', 'Error al crear la serie documental: ' . $e->getMessage())
                            ->withInput();
@@ -175,20 +196,14 @@ class AdminSeriesController extends Controller
         \Log::info('UPDATE SERIE - Serie completa:', $series->toArray());
         
         $validated = $request->validate([
-            'codigo' => ['nullable', 'string', 'max:50', Rule::unique('series_documentales', 'codigo')->ignore($series->id)],
+            'codigo' => ['nullable', 'string', 'max:50', Rule::unique('series_documentales', 'codigo')->ignore($series->id)->whereNull('deleted_at')],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
             'trd_id' => 'required|exists:tablas_retencion_documental,id',
-            'cuadro_clasificacion_id' => 'nullable|exists:cuadros_clasificacion_documental,id',
-            'tiempo_archivo_gestion' => 'required|integer|min:0',
-            'tiempo_archivo_central' => 'required|integer|min:0',
-            'disposicion_final' => 'required|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
-            'procedimiento' => 'nullable|string',
-            'area_responsable' => 'nullable|string|max:255',
-            'usuario_responsable_id' => 'nullable|exists:users,id',
-            'palabras_clave' => 'nullable|array',
+            'dependencia' => 'nullable|string|max:255',
+            'orden' => 'nullable|integer|min:0',
             'observaciones' => 'nullable|string',
-            'activa' => 'boolean'
+            'activa' => 'nullable|boolean'
         ]);
 
         try {
@@ -334,10 +349,7 @@ class AdminSeriesController extends Controller
                 'nombre' => $serie->nombre,
                 'descripcion' => $serie->descripcion,
                 'tablaRetencion' => $serie->tablaRetencion->nombre ?? null,
-                'tiempo_archivo_gestion' => $serie->tiempo_archivo_gestion,
-                'tiempo_archivo_central' => $serie->tiempo_archivo_central,
-                'disposicion_final' => $serie->disposicion_final,
-                'area_responsable' => $serie->area_responsable,
+                // Campos eliminados: tiempo_archivo_gestion, tiempo_archivo_central, disposicion_final, area_responsable no existen en la tabla
                 'activa' => $serie->activa,
                 'fecha_creacion' => $serie->created_at->format('Y-m-d'),
             ];
@@ -374,10 +386,10 @@ class AdminSeriesController extends Controller
                     $serie->nombre,
                     $serie->descripcion,
                     $serie->tablaRetencion->nombre ?? '',
-                    $serie->tiempo_archivo_gestion,
-                    $serie->tiempo_archivo_central,
-                    $serie->disposicion_final,
-                    $serie->area_responsable,
+                    '', // tiempo_archivo_gestion (no existe en BD)
+                    '', // tiempo_archivo_central (no existe en BD)
+                    '', // disposicion_final (no existe en BD)
+                    '', // area_responsable (no existe en BD)
                     $serie->activa ? 'Activa' : 'Inactiva',
                     $serie->created_at->format('Y-m-d'),
                 ]);
@@ -399,10 +411,7 @@ class AdminSeriesController extends Controller
             $serieXml->addChild('nombre', htmlspecialchars($serie->nombre));
             $serieXml->addChild('descripcion', htmlspecialchars($serie->descripcion));
             $serieXml->addChild('tablaRetencion', htmlspecialchars($serie->tablaRetencion->nombre ?? ''));
-            $serieXml->addChild('tiempo_archivo_gestion', $serie->tiempo_archivo_gestion);
-            $serieXml->addChild('tiempo_archivo_central', $serie->tiempo_archivo_central);
-            $serieXml->addChild('disposicion_final', $serie->disposicion_final);
-            $serieXml->addChild('area_responsable', htmlspecialchars($serie->area_responsable));
+            // Campos eliminados: tiempo_archivo_gestion, tiempo_archivo_central, disposicion_final, area_responsable no existen en la tabla
             $serieXml->addChild('activa', $serie->activa ? 'true' : 'false');
             $serieXml->addChild('fecha_creacion', $serie->created_at->format('Y-m-d'));
         }
@@ -458,16 +467,8 @@ class AdminSeriesController extends Controller
             });
 
         // Distribución por disposición final
-        $distribucionDisposicion = SerieDocumental::selectRaw('disposicion_final as tipo, COUNT(*) as cantidad')
-            ->groupBy('disposicion_final')
-            ->get()
-            ->map(function($item, $index) {
-                return [
-                    'tipo' => $item->tipo,
-                    'cantidad' => $item->cantidad,
-                    'color' => $this->getColorByIndex($index)
-                ];
-            });
+        // Distribución de disposición final - Campo no existe en BD, retornar vacío
+        $distribucionDisposicion = collect([]);
 
         // Series más utilizadas
         $seriesMasUsadas = SerieDocumental::withCount(['expedientes', 'subseries'])
@@ -503,10 +504,11 @@ class AdminSeriesController extends Controller
 
         // Análisis de tiempos de retención
         $tiemposRetencion = [
-            ['rango' => '0-5 años', 'cantidad' => SerieDocumental::where('tiempo_archivo_gestion', '<=', 5)->count()],
-            ['rango' => '6-10 años', 'cantidad' => SerieDocumental::whereBetween('tiempo_archivo_gestion', [6, 10])->count()],
-            ['rango' => '11-15 años', 'cantidad' => SerieDocumental::whereBetween('tiempo_archivo_gestion', [11, 15])->count()],
-            ['rango' => '16+ años', 'cantidad' => SerieDocumental::where('tiempo_archivo_gestion', '>', 15)->count()],
+            // Distribución de tiempos de archivo - Campos no existen en BD
+            ['rango' => '0-5 años', 'cantidad' => 0],
+            ['rango' => '6-10 años', 'cantidad' => 0],
+            ['rango' => '11-15 años', 'cantidad' => 0],
+            ['rango' => '16+ años', 'cantidad' => 0],
         ];
 
         return [

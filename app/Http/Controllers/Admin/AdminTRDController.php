@@ -213,7 +213,7 @@ class AdminTRDController extends Controller
     public function update(Request $request, TablaRetencionDocumental $trd)
     {
         $validated = $request->validate([
-            'codigo' => ['required', 'string', 'max:50', Rule::unique('tablas_retencion_documental')->ignore($trd->id)],
+            'codigo' => ['required', 'string', 'max:50', Rule::unique('tablas_retencion_documental')->ignore($trd->id)->whereNull('deleted_at')],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
             'entidad' => 'required|string|max:255',
@@ -225,6 +225,23 @@ class AdminTRDController extends Controller
             'estado' => ['required', Rule::in(['borrador', 'revision', 'aprobada', 'vigente', 'obsoleta'])],
             'observaciones_generales' => 'nullable|string',
             'metadatos_adicionales' => 'nullable'
+        ], [
+            'codigo.required' => 'El código es obligatorio',
+            'codigo.unique' => 'Este código ya está en uso por otra TRD',
+            'nombre.required' => 'El nombre es obligatorio',
+            'descripcion.required' => 'La descripción es obligatoria',
+            'entidad.required' => 'La entidad es obligatoria',
+            'version.required' => 'La versión es obligatoria',
+            'version.integer' => 'La versión debe ser un número entero',
+            'version.min' => 'La versión debe ser al menos 1',
+            'fecha_aprobacion.required' => 'La fecha de aprobación es obligatoria',
+            'fecha_aprobacion.date' => 'La fecha de aprobación debe ser una fecha válida',
+            'fecha_vigencia_inicio.required' => 'La fecha de inicio de vigencia es obligatoria',
+            'fecha_vigencia_inicio.date' => 'La fecha de inicio de vigencia debe ser una fecha válida',
+            'fecha_vigencia_fin.date' => 'La fecha de fin de vigencia debe ser una fecha válida',
+            'fecha_vigencia_fin.after' => 'La fecha de fin de vigencia debe ser posterior a la fecha de inicio',
+            'estado.required' => 'El estado es obligatorio',
+            'estado.in' => 'El estado seleccionado no es válido',
         ]);
 
         $validated['updated_by'] = Auth::id();
@@ -319,7 +336,7 @@ class AdminTRDController extends Controller
     public function toggleVigencia(TablaRetencionDocumental $trd)
     {
         if ($trd->estado !== 'aprobada' && $trd->estado !== 'vigente') {
-            return redirect()->back()->with('error', 'Solo las TRD aprobadas pueden marcarse como vigentes. Estado actual: ' . $trd->estado);
+            return back()->with('error', 'Solo las TRD aprobadas pueden marcarse como vigentes. Estado actual: ' . $trd->estado);
         }
 
         $nuevoEstado = $trd->estado === 'vigente' ? 'aprobada' : 'vigente';
@@ -333,7 +350,7 @@ class AdminTRDController extends Controller
 
         $estadoTexto = $nuevoEstado === 'vigente' ? 'vigente' : 'no vigente';
         
-        return redirect()->back()->with('success', "TRD marcada como {$estadoTexto} exitosamente.");
+        return back()->with('success', "TRD marcada como {$estadoTexto} exitosamente.");
     }
 
     /**

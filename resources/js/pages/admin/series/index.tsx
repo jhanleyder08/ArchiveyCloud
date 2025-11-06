@@ -25,11 +25,11 @@ interface SerieDocumental {
     nombre: string;
     descripcion: string;
     trd_id: number;
-    trd?: TRD;
-    tiempo_archivo_gestion: number;
-    tiempo_archivo_central: number;
-    disposicion_final: string;
-    area_responsable: string;
+    tabla_retencion?: TRD; // Relación del modelo (snake_case desde Inertia)
+    tiempo_archivo_gestion?: number; // Campo no existe en BD
+    tiempo_archivo_central?: number; // Campo no existe en BD
+    disposicion_final?: string; // Campo no existe en BD
+    area_responsable?: string; // Campo no existe en BD
     observaciones?: string;
     activa: boolean;
     subseries_count?: number;
@@ -274,7 +274,19 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                     return;
                                 }
                                 
-                                router.post('/admin/series', createForm, {
+                                // Preparar datos asegurando que trd_id sea un número
+                                const formData = {
+                                    codigo: createForm.codigo.trim() || null,
+                                    nombre: createForm.nombre.trim(),
+                                    descripcion: createForm.descripcion.trim(),
+                                    trd_id: createForm.trd_id ? parseInt(createForm.trd_id) : null,
+                                    dependencia: createForm.dependencia?.trim() || null,
+                                    orden: createForm.orden || null,
+                                    observaciones: createForm.observaciones?.trim() || null,
+                                    activa: createForm.activa !== undefined ? createForm.activa : true
+                                };
+                                
+                                router.post('/admin/series', formData, {
                                      onSuccess: () => {
                                         setShowCreateModal(false);
                                         setCreateForm({
@@ -289,13 +301,19 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                             observaciones: '',
                                             activa: true
                                         });
-                                        toast.success('Serie documental creada exitosamente');
+                                        // No mostrar toast aquí, el backend redirige con mensaje flash
                                     },
                                     onError: (errors) => {
-                                        Object.keys(errors).forEach(field => {
-                                            const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
-                                            toast.error(`Error en ${field}: ${message}`);
-                                        });
+                                        console.error('Error al crear serie:', errors);
+                                        // Mostrar errores de validación
+                                        if (errors) {
+                                            Object.keys(errors).forEach(field => {
+                                                const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+                                                toast.error(`Error en ${field}: ${message}`);
+                                            });
+                                        } else {
+                                            toast.error('Error al crear la serie documental');
+                                        }
                                     }
                                 });
                             }} className="space-y-4">
@@ -594,23 +612,26 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-900">
-                                                    {serie.trd?.codigo}
-                                                </div>
-                                                <div className="text-xs text-gray-500 line-clamp-1">
-                                                    {serie.trd?.nombre}
+                                                {serie.tabla_retencion ? (
+                                                    <>
+                                                        <div className="text-sm text-gray-900">
+                                                            {serie.tabla_retencion.codigo}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 line-clamp-1">
+                                                            {serie.tabla_retencion.nombre}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-sm text-gray-400">Sin TRD asociada</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm text-gray-500">
+                                                    No disponible
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-900">
-                                                    AG: {serie.tiempo_archivo_gestion} años
-                                                </div>
-                                                <div className="text-sm text-gray-600">
-                                                    AC: {serie.tiempo_archivo_central} años
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {getDisposicionBadge(serie.disposicion_final)}
+                                                <span className="text-sm text-gray-400">—</span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 {getEstadoBadge(serie.activa)}

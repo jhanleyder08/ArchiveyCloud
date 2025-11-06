@@ -45,7 +45,7 @@ interface SubserieDocumental {
 }
 
 interface Props {
-    data: {
+    data?: {
         data: SubserieDocumental[];
         current_page: number;
         first_page_url: string;
@@ -56,21 +56,51 @@ interface Props {
         prev_page_url: string | null;
         to: number;
         total: number;
-        stats?: {
-            activas: number;
-            inactivas: number;
-            con_expedientes: number;
-        };
     };
-    series: Serie[];
-    areas: string[];
+    stats?: {
+        total: number;
+        activas: number;
+        inactivas: number;
+        con_expedientes: number;
+    };
+    series?: Serie[];
+    areas?: string[];
     flash?: {
         message?: string;
         error?: string;
     };
+    filters?: {
+        search?: string;
+        serie_id?: string;
+        estado?: string;
+        area?: string;
+    };
 }
 
-export default function AdminSubseriesIndex({ data, series, areas, flash }: Props) {
+export default function AdminSubseriesIndex({ data, stats, series, areas, flash, filters }: Props) {
+    // Valores por defecto para evitar errores
+    const safeData = data || {
+        data: [],
+        current_page: 1,
+        first_page_url: '',
+        from: 0,
+        last_page: 1,
+        last_page_url: '',
+        next_page_url: null,
+        prev_page_url: null,
+        to: 0,
+        total: 0,
+    };
+    
+    const safeStats = stats || {
+        total: 0,
+        activas: 0,
+        inactivas: 0,
+        con_expedientes: 0,
+    };
+    
+    const safeSeries = series || [];
+    const safeAreas = areas || [];
     const [searchQuery, setSearchQuery] = useState('');
     const [serieFilter, setSerieFilter] = useState('all');
     const [estadoFilter, setEstadoFilter] = useState('all');
@@ -300,7 +330,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                                                 <SelectValue placeholder="Seleccionar Serie" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {series.map((serie) => (
+                                                {safeSeries.map((serie) => (
                                                     <SelectItem key={serie.id} value={serie.id.toString()}>
                                                         {serie.codigo} - {serie.nombre}
                                                     </SelectItem>
@@ -371,7 +401,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Total Subseries</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.total}</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{safeData.total}</p>
                             </div>
                             <FileText className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -380,7 +410,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Activas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.stats?.activas || 0}</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{safeStats.activas}</p>
                             </div>
                             <ToggleRight className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -389,7 +419,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Inactivas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.stats?.inactivas || 0}</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{safeStats.inactivas}</p>
                             </div>
                             <ToggleLeft className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -398,7 +428,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Con Expedientes</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.stats?.con_expedientes || 0}</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{safeStats.con_expedientes}</p>
                             </div>
                             <FileText className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -489,7 +519,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {data.data.length === 0 ? (
+                                {safeData.data.length === 0 ? (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                                             <div className="flex flex-col items-center gap-2">
@@ -499,7 +529,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                                         </td>
                                     </tr>
                                 ) : (
-                                    data.data.map((subserie) => (
+                                    safeData.data.map((subserie) => (
                                         <tr key={subserie.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
@@ -659,7 +689,7 @@ export default function AdminSubseriesIndex({ data, series, areas, flash }: Prop
                                                 <SelectValue placeholder="Seleccionar Serie" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {series.map((serie) => (
+                                                {safeSeries.map((serie) => (
                                                     <SelectItem key={serie.id} value={serie.id.toString()}>
                                                         {serie.codigo} - {serie.nombre}
                                                     </SelectItem>

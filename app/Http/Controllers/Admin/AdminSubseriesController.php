@@ -41,7 +41,7 @@ class AdminSubseriesController extends Controller
             }
 
             if ($serieId) {
-                $query->where('serie_documental_id', $serieId);
+                $query->where('serie_id', $serieId);
             }
 
             if ($estado) {
@@ -149,7 +149,7 @@ class AdminSubseriesController extends Controller
                 'codigo' => $validated['codigo'],
                 'nombre' => $validated['nombre'],
                 'descripcion' => $validated['descripcion'],
-                'serie_documental_id' => $validated['serie_id'], // Mapeo correcto
+                'serie_id' => $validated['serie_id'], // Mapeo correcto
                 'tiempo_archivo_gestion' => $validated['tiempo_archivo_gestion'],
                 'tiempo_archivo_central' => $validated['tiempo_archivo_central'],
                 'disposicion_final' => $validated['disposicion_final'],
@@ -162,8 +162,8 @@ class AdminSubseriesController extends Controller
 
             // Generar código automático si no se proporciona
             if (empty($data['codigo'])) {
-                $serie = SerieDocumental::find($data['serie_documental_id']);
-                $lastSubserie = SubserieDocumental::where('serie_documental_id', $data['serie_documental_id'])
+                $serie = SerieDocumental::find($data['serie_id']);
+                $lastSubserie = SubserieDocumental::where('serie_id', $data['serie_id'])
                     ->whereRaw("codigo REGEXP '^{$serie->codigo}-[0-9]+$'")
                     ->orderByRaw('CAST(SUBSTRING(codigo, LENGTH("' . $serie->codigo . '") + 2) AS UNSIGNED) DESC')
                     ->first();
@@ -179,7 +179,7 @@ class AdminSubseriesController extends Controller
             }
 
             // Heredar datos de la serie si no se proporcionan
-            $serie = SerieDocumental::find($data['serie_documental_id']);
+            $serie = SerieDocumental::find($data['serie_id']);
             if (empty($data['tiempo_archivo_gestion'])) {
                 $data['tiempo_archivo_gestion'] = $serie->tiempo_archivo_gestion;
             }
@@ -292,10 +292,8 @@ class AdminSubseriesController extends Controller
             $validated = $validator->validated();
             \Log::info('UPDATE SUBSERIE - Datos validados:', $validated);
             
-            // Mapear serie_id a serie_documental_id
+            // Mapear serie_id
             $data = $validated;
-            $data['serie_documental_id'] = $validated['serie_id'];
-            unset($data['serie_id']);
             
             \Log::info('UPDATE SUBSERIE - Datos finales para actualizar:', $data);
             $result = $subseries->update($data);

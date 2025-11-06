@@ -24,16 +24,9 @@ class SerieDocumental extends Model
         'nombre',
         'descripcion',
         'trd_id',
-        'cuadro_clasificacion_id',
-        'tiempo_archivo_gestion',
-        'tiempo_archivo_central',
-        'disposicion_final',
-        'procedimiento',
-        'metadatos_heredables',
-        'activa',
-        'observaciones',
-        'created_by',
-        'updated_by'
+        'dependencia',
+        'orden',
+        'activa'
     ];
 
     protected $casts = [
@@ -64,9 +57,9 @@ class SerieDocumental extends Model
                 $serie->codigo = $serie->generarCodigo();
             }
             
-            // REQ-CL-017: Heredar tiempos de conservación de TRD
-            if ($serie->trd_id && !$serie->tiempo_archivo_gestion) {
-                $serie->heredarTiemposTRD();
+            // Asignar orden si no se proporciona
+            if (!isset($serie->orden)) {
+                $serie->orden = static::where('trd_id', $serie->trd_id)->max('orden') + 1;
             }
         });
         

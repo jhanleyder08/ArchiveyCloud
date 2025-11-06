@@ -188,6 +188,15 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
 
     const handleDelete = (trd: TRD) => {
         router.delete(`/admin/trd/${trd.id}`, {
+            onSuccess: () => {
+                setShowDeleteModal(null);
+                toast.success('TRD eliminada exitosamente');
+            },
+            onError: (errors) => {
+                const errorMessage = Object.values(errors)[0] as string;
+                toast.error(errorMessage || 'Error al eliminar la TRD');
+                setShowDeleteModal(null);
+            },
             onFinish: () => setShowDeleteModal(null)
         });
     };
@@ -216,7 +225,15 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
     };
 
     const handleDuplicate = (trd: TRD) => {
-        router.post(`/admin/trd/${trd.id}/duplicate`);
+        router.post(`/admin/trd/${trd.id}/duplicate`, {}, {
+            onSuccess: () => {
+                toast.success('TRD duplicada exitosamente');
+            },
+            onError: (errors) => {
+                const errorMessage = Object.values(errors)[0] as string;
+                toast.error(errorMessage || 'Error al duplicar la TRD');
+            }
+        });
     };
 
     const formatDate = (dateString: string) => {

@@ -118,6 +118,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::put('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'update'])->name('update');
                 Route::patch('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'update']);
                 Route::delete('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'destroy'])->name('destroy');
+                Route::patch('/{trd}/vigencia', [App\Http\Controllers\Admin\AdminTRDController::class, 'toggleVigencia'])->name('vigencia');
+            });
+            
+            Route::middleware('permission:trd.crear')->group(function () {
+                Route::post('/{trd}/duplicate', [App\Http\Controllers\Admin\AdminTRDController::class, 'duplicate'])->name('duplicate');
             });
         });
         
