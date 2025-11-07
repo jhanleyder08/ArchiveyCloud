@@ -23,9 +23,14 @@ class AdminSeriesController extends Controller
      */
     public function index(Request $request)
     {
-        $query = SerieDocumental::with(['tablaRetencion' => function($q) {
-            $q->select('id', 'codigo', 'nombre');
-        }])->withCount(['subseries', 'expedientes']);
+        $query = SerieDocumental::with([
+            'tablaRetencion' => function($q) {
+                $q->select('id', 'codigo', 'nombre');
+            },
+            'retencion' => function($q) {
+                $q->select('id', 'serie_id', 'retencion_archivo_gestion', 'retencion_archivo_central', 'disposicion_final');
+            }
+        ])->withCount(['subseries', 'expedientes']);
 
         // Filtros de búsqueda
         if ($request->filled('search')) {
@@ -100,11 +105,12 @@ class AdminSeriesController extends Controller
             $requestData['trd_id'] = is_numeric($requestData['trd_id']) ? (int)$requestData['trd_id'] : $requestData['trd_id'];
         }
         
+        // Validar primero los campos básicos
         $validated = validator($requestData, [
-            'codigo' => 'nullable|string|max:50|unique:series_documentales,codigo,NULL,id,deleted_at,NULL',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
             'trd_id' => 'required|integer|exists:tablas_retencion_documental,id',
+            'codigo' => 'nullable|string|max:50',
             'dependencia' => 'nullable|string|max:255',
             'orden' => 'nullable|integer|min:0',
             'observaciones' => 'nullable|string',
@@ -114,8 +120,35 @@ class AdminSeriesController extends Controller
             'trd_id.exists' => 'La TRD seleccionada no existe',
             'nombre.required' => 'El nombre es obligatorio',
             'descripcion.required' => 'La descripción es obligatoria',
-            'codigo.unique' => 'Este código ya está en uso',
         ])->validate();
+
+        // Validar la combinación única de trd_id y codigo
+        // IMPORTANTE: No usar whereNull('deleted_at') porque la restricción UNIQUE 
+        // de la base de datos NO considera soft deletes
+        if (!empty($validated['codigo'])) {
+            $existente = SerieDocumental::withTrashed()
+                ->where('trd_id', $validated['trd_id'])
+                ->where('codigo', $validated['codigo'])
+                ->exists();
+            
+            if ($existente) {
+                // Verificar si está eliminada
+                $serieExistente = SerieDocumental::withTrashed()
+                    ->where('trd_id', $validated['trd_id'])
+                    ->where('codigo', $validated['codigo'])
+                    ->first();
+                
+                if ($serieExistente->trashed()) {
+                    return redirect()->back()
+                        ->with('error', 'Ya existe una serie eliminada con el código "' . $validated['codigo'] . '" en esta TRD. Debe usar otro código o restaurar la serie eliminada.')
+                        ->withInput();
+                } else {
+                    return redirect()->back()
+                        ->with('error', 'Ya existe una serie activa con el código "' . $validated['codigo'] . '" en esta TRD.')
+                        ->withInput();
+                }
+            }
+        }
 
         // Campos de auditoría no existen en la tabla - eliminados
 
@@ -125,6 +158,16 @@ class AdminSeriesController extends Controller
             $serie = SerieDocumental::create($validated);
             
             \Log::info('STORE SERIE - Serie creada:', $serie->toArray());
+
+            // Crear registro de retención si se proporcionaron datos
+            if ($request->filled('retencion_archivo_gestion') || $request->filled('retencion_archivo_central') || $request->filled('disposicion_final')) {
+                $serie->retencion()->create([
+                    'retencion_archivo_gestion' => $request->input('retencion_archivo_gestion', 0),
+                    'retencion_archivo_central' => $request->input('retencion_archivo_central', 0),
+                    'disposicion_final' => $request->input('disposicion_final', 'conservacion_total'),
+                ]);
+                \Log::info('STORE SERIE - Retención creada para la serie');
+            }
 
             return redirect()->route('admin.series.index')
                            ->with('success', "Serie documental '{$serie->nombre}' creada exitosamente.");
@@ -160,6 +203,7 @@ class AdminSeriesController extends Controller
             // Cargar relaciones necesarias
             $serie->load([
                 'tablaRetencion',
+                'retencion',
                 'subseries' => function($query) {
                     $query->withCount(['expedientes', 'documentos']);
                 },
@@ -302,9 +346,9 @@ class AdminSeriesController extends Controller
      */
     public function export(Request $request)
     {
-        $formato = $request->get('formato', 'json');
+        $formato = $request->get('formato', 'excel');
         
-        $query = SerieDocumental::with(['tablaRetencion', 'usuarioResponsable']);
+        $query = SerieDocumental::with(['tablaRetencion', 'retencion']);
         
         // Aplicar mismo filtros que en index
         if ($request->filled('search')) {
@@ -386,10 +430,10 @@ class AdminSeriesController extends Controller
                     $serie->nombre,
                     $serie->descripcion,
                     $serie->tablaRetencion->nombre ?? '',
-                    '', // tiempo_archivo_gestion (no existe en BD)
-                    '', // tiempo_archivo_central (no existe en BD)
-                    '', // disposicion_final (no existe en BD)
-                    '', // area_responsable (no existe en BD)
+                    $serie->retencion->retencion_archivo_gestion ?? 'N/A',
+                    $serie->retencion->retencion_archivo_central ?? 'N/A',
+                    $serie->retencion->disposicion_final ?? 'N/A',
+                    '', // area_responsable (campo no existe en BD)
                     $serie->activa ? 'Activa' : 'Inactiva',
                     $serie->created_at->format('Y-m-d'),
                 ]);

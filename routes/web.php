@@ -129,9 +129,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Gestión de Series Documentales - Protegido con permisos
         Route::middleware('permission:series.ver')->group(function () {
             Route::get('series', [App\Http\Controllers\Admin\AdminSeriesController::class, 'index'])->name('series.index');
-            Route::get('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'show'])->name('series.show');
             Route::get('series-dashboard', [App\Http\Controllers\Admin\AdminSeriesController::class, 'dashboard'])->name('series.dashboard');
-            Route::get('series/export/{format?}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'export'])->name('series.export');
+            Route::get('series/export', [App\Http\Controllers\Admin\AdminSeriesController::class, 'export'])->name('series.export');
+            Route::get('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'show'])->name('series.show');
         });
         
         Route::middleware('permission:series.crear')->group(function () {
@@ -143,6 +143,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('series/{serie}/edit', [App\Http\Controllers\Admin\AdminSeriesController::class, 'edit'])->name('series.edit');
             Route::put('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'update'])->name('series.update');
             Route::patch('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'update']);
+            Route::delete('series/{serie}', [App\Http\Controllers\Admin\AdminSeriesController::class, 'destroy'])->name('series.destroy');
             Route::post('series/{serie}/duplicate', [App\Http\Controllers\Admin\AdminSeriesController::class, 'duplicate'])->name('series.duplicate');
             Route::patch('series/{serie}/toggle-active', [App\Http\Controllers\Admin\AdminSeriesController::class, 'toggleActive'])->name('series.toggle-active');
         });

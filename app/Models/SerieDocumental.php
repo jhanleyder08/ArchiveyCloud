@@ -128,6 +128,14 @@ class SerieDocumental extends Model
     }
 
     /**
+     * Relación con retenciones (tiempos de archivo y disposición final)
+     */
+    public function retencion()
+    {
+        return $this->hasOne(Retencion::class, 'serie_id');
+    }
+
+    /**
      * Relación con pistas de auditoría
      */
     public function auditoria()

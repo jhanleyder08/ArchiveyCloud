@@ -19,6 +19,14 @@ interface TRD {
     nombre: string;
 }
 
+interface Retencion {
+    id: number;
+    serie_id: number;
+    retencion_archivo_gestion: number;
+    retencion_archivo_central: number;
+    disposicion_final: string;
+}
+
 interface SerieDocumental {
     id: number;
     codigo: string;
@@ -26,9 +34,10 @@ interface SerieDocumental {
     descripcion: string;
     trd_id: number;
     tabla_retencion?: TRD; // Relación del modelo (snake_case desde Inertia)
-    tiempo_archivo_gestion?: number; // Campo no existe en BD
-    tiempo_archivo_central?: number; // Campo no existe en BD
-    disposicion_final?: string; // Campo no existe en BD
+    retencion?: Retencion; // Relación con tabla retenciones
+    tiempo_archivo_gestion?: number; // Campo no existe en BD - deprecated
+    tiempo_archivo_central?: number; // Campo no existe en BD - deprecated
+    disposicion_final?: string; // Campo no existe en BD - deprecated
     area_responsable?: string; // Campo no existe en BD
     observaciones?: string;
     activa: boolean;
@@ -50,11 +59,13 @@ interface Props {
         prev_page_url: string | null;
         to: number;
         total: number;
-        stats?: {
-            activas: number;
-            inactivas: number;
-            total_subseries: number;
-        };
+    };
+    stats: {
+        total: number;
+        activas: number;
+        inactivas: number;
+        con_subseries: number;
+        con_expedientes: number;
     };
     trds: TRD[];
     areas: string[];
@@ -64,7 +75,7 @@ interface Props {
     };
 }
 
-export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
+export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Props) {
     const [searchQuery, setSearchQuery] = useState('');
     const [trdFilter, setTrdFilter] = useState('all');
     const [estadoFilter, setEstadoFilter] = useState('all');
@@ -89,9 +100,11 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
         nombre: '',
         descripcion: '',
         trd_id: '',
+        dependencia: '',
+        orden: 0,
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_permanente',
+        disposicion_final: 'conservacion_total',
         area_responsable: '',
         observaciones: '',
         activa: true
@@ -104,7 +117,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
         trd_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_permanente',
+        disposicion_final: 'conservacion_total',
         area_responsable: '',
         observaciones: '',
         activa: true
@@ -120,7 +133,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                 trd_id: showEditModal.trd_id?.toString() || '',
                 tiempo_archivo_gestion: showEditModal.tiempo_archivo_gestion || 0,
                 tiempo_archivo_central: showEditModal.tiempo_archivo_central || 0,
-                disposicion_final: showEditModal.disposicion_final || 'conservacion_permanente',
+                disposicion_final: showEditModal.disposicion_final || 'conservacion_total',
                 area_responsable: showEditModal.area_responsable || '',
                 observaciones: showEditModal.observaciones || '',
                 activa: showEditModal.activa ?? true
@@ -134,10 +147,11 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
     ];
 
     const disposicionesFinales = {
-        'conservacion_permanente': 'Conservación Permanente',
+        'conservacion_total': 'Conservación Total',
         'eliminacion': 'Eliminación',
         'seleccion': 'Selección',
-        'microfilmacion': 'Microfilmación'
+        'transferencia_historica': 'Transferencia Histórica',
+        'digitalizacion_eliminacion_fisica': 'Digitalización y Eliminación Física'
     };
 
     // Auto-search functionality
@@ -188,6 +202,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
 
     const handleToggleActive = (serie: SerieDocumental) => {
         router.patch(`/admin/series/${serie.id}/toggle-active`, {}, {
+            preserveScroll: true,
             onSuccess: () => {
                 const estado = !serie.activa ? 'activada' : 'desactivada';
                 toast.success(`Serie documental ${estado} exitosamente`);
@@ -217,10 +232,11 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
 
     const getDisposicionBadge = (disposicion: string) => {
         const colors = {
-            'conservacion_permanente': 'bg-blue-100 text-[#2a3d83]',
+            'conservacion_total': 'bg-blue-100 text-[#2a3d83]',
             'eliminacion': 'bg-red-100 text-red-800',
             'seleccion': 'bg-yellow-100 text-yellow-800',
-            'microfilmacion': 'bg-purple-100 text-purple-800'
+            'transferencia_historica': 'bg-green-100 text-green-800',
+            'digitalizacion_eliminacion_fisica': 'bg-orange-100 text-orange-800'
         };
         
         return (
@@ -283,7 +299,11 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                     dependencia: createForm.dependencia?.trim() || null,
                                     orden: createForm.orden || null,
                                     observaciones: createForm.observaciones?.trim() || null,
-                                    activa: createForm.activa !== undefined ? createForm.activa : true
+                                    activa: createForm.activa !== undefined ? createForm.activa : true,
+                                    // Datos de retención
+                                    retencion_archivo_gestion: createForm.tiempo_archivo_gestion,
+                                    retencion_archivo_central: createForm.tiempo_archivo_central,
+                                    disposicion_final: createForm.disposicion_final
                                 };
                                 
                                 router.post('/admin/series', formData, {
@@ -294,9 +314,11 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                             nombre: '',
                                             descripcion: '',
                                             trd_id: '',
+                                            dependencia: '',
+                                            orden: 0,
                                             tiempo_archivo_gestion: 0,
                                             tiempo_archivo_central: 0,
-                                            disposicion_final: 'conservacion_permanente',
+                                            disposicion_final: 'conservacion_total',
                                             area_responsable: '',
                                             observaciones: '',
                                             activa: true
@@ -466,7 +488,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Activas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.stats?.activas || 0}</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{stats.activas}</p>
                             </div>
                             <ToggleRight className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -475,7 +497,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Inactivas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.stats?.inactivas || 0}</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{stats.inactivas}</p>
                             </div>
                             <ToggleLeft className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -484,7 +506,7 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Subseries Totales</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.stats?.total_subseries || 0}</p>
+                                <p className="text-2xl font-bold text-[#2a3d83]">{stats.con_subseries}</p>
                             </div>
                             <FileText className="h-8 w-8 text-[#2a3d83]" />
                         </div>
@@ -543,10 +565,34 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" size="sm" className="flex items-center gap-2">
-                                <Download className="h-4 w-4" />
-                                Exportar
-                            </Button>
+                            <Select 
+                                value="" 
+                                onValueChange={(formato) => {
+                                    if (formato) {
+                                        // Construir URL con filtros actuales
+                                        const params = new URLSearchParams();
+                                        if (searchQuery) params.append('search', searchQuery);
+                                        if (trdFilter && trdFilter !== 'all') params.append('tablaRetencion', trdFilter);
+                                        if (estadoFilter && estadoFilter !== 'all') params.append('estado', estadoFilter);
+                                        params.append('formato', formato);
+                                        
+                                        // Descargar archivo
+                                        window.location.href = `/admin/series/export?${params.toString()}`;
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-full sm:w-32">
+                                    <div className="flex items-center gap-2">
+                                        <Download className="h-4 w-4" />
+                                        <SelectValue placeholder="Exportar" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="excel">Excel (JSON)</SelectItem>
+                                    <SelectItem value="csv">CSV</SelectItem>
+                                    <SelectItem value="xml">XML</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </div>
@@ -626,12 +672,25 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-500">
-                                                    No disponible
-                                                </div>
+                                                {serie.retencion ? (
+                                                    <div className="text-sm">
+                                                        <div className="text-gray-900 font-medium">
+                                                            AG: {serie.retencion.retencion_archivo_gestion} años
+                                                        </div>
+                                                        <div className="text-gray-600 text-xs">
+                                                            AC: {serie.retencion.retencion_archivo_central} años
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-sm text-gray-400">No configurada</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="text-sm text-gray-400">—</span>
+                                                {serie.retencion && serie.retencion.disposicion_final ? (
+                                                    getDisposicionBadge(serie.retencion.disposicion_final)
+                                                ) : (
+                                                    <span className="text-sm text-gray-400">No configurada</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {getEstadoBadge(serie.activa)}
@@ -990,21 +1049,21 @@ export default function AdminSeriesIndex({ data, trds, areas, flash }: Props) {
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-gray-500">TRD Asociada</Label>
-                                    <p className="text-sm text-gray-900">{showViewModal.trd?.codigo} - {showViewModal.trd?.nombre}</p>
+                                    <p className="text-sm text-gray-900">{showViewModal.tabla_retencion?.codigo} - {showViewModal.tabla_retencion?.nombre}</p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <Label className="text-sm font-medium text-gray-500">Tiempo Archivo Gestión</Label>
-                                        <p className="text-sm text-gray-900">{showViewModal.tiempo_archivo_gestion} años</p>
+                                        <p className="text-sm text-gray-900">{showViewModal.retencion?.retencion_archivo_gestion || 'N/A'} años</p>
                                     </div>
                                     <div>
                                         <Label className="text-sm font-medium text-gray-500">Tiempo Archivo Central</Label>
-                                        <p className="text-sm text-gray-900">{showViewModal.tiempo_archivo_central} años</p>
+                                        <p className="text-sm text-gray-900">{showViewModal.retencion?.retencion_archivo_central || 'N/A'} años</p>
                                     </div>
                                 </div>
                                 <div>
                                     <Label className="text-sm font-medium text-gray-500">Disposición Final</Label>
-                                    <div className="mt-1">{getDisposicionBadge(showViewModal.disposicion_final)}</div>
+                                    <div className="mt-1">{showViewModal.retencion?.disposicion_final ? getDisposicionBadge(showViewModal.retencion.disposicion_final) : <span className="text-sm text-gray-500">No configurada</span>}</div>
                                 </div>
                                 {showViewModal.area_responsable && (
                                     <div>

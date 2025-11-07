@@ -31,6 +31,14 @@ interface TRD {
     nombre: string;
 }
 
+interface Retencion {
+    id: number;
+    serie_id: number;
+    retencion_archivo_gestion: number;
+    retencion_archivo_central: number;
+    disposicion_final: string;
+}
+
 interface Subserie {
     id: number;
     codigo: string;
@@ -58,10 +66,11 @@ interface SerieDetalle {
     nombre: string;
     descripcion: string;
     trd: TRD;
-    tiempo_archivo_gestion: number;
-    tiempo_archivo_central: number;
-    disposicion_final: string;
-    area_responsable: string;
+    retencion?: Retencion; // Relación con tabla retenciones
+    tiempo_archivo_gestion?: number; // Campo no existe en BD - deprecated
+    tiempo_archivo_central?: number; // Campo no existe en BD - deprecated
+    disposicion_final?: string; // Campo no existe en BD - deprecated
+    area_responsable?: string; // Campo no existe en BD
     observaciones?: string;
     activa: boolean;
     created_at: string;
@@ -185,7 +194,7 @@ export default function SerieShow({ serie }: Props) {
                                             Archivo de Gestión
                                         </h4>
                                         <p className="text-2xl font-bold text-blue-600">
-                                            {serie.tiempo_archivo_gestion} años
+                                            {serie.retencion?.retencion_archivo_gestion || 'N/A'} años
                                         </p>
                                     </div>
                                     <div>
@@ -194,32 +203,36 @@ export default function SerieShow({ serie }: Props) {
                                             Archivo Central
                                         </h4>
                                         <p className="text-2xl font-bold text-green-600">
-                                            {serie.tiempo_archivo_central} años
+                                            {serie.retencion?.retencion_archivo_central || 'N/A'} años
                                         </p>
                                     </div>
                                 </div>
 
                                 <Separator />
 
-                                <div>
-                                    <h4 className="font-semibold mb-2 flex items-center">
-                                        {getDisposicionIcon(serie.disposicion_final)}
-                                        <span className="ml-2">Disposición Final</span>
-                                    </h4>
-                                    <Badge className={getDisposicionColor(serie.disposicion_final)}>
-                                        {serie.disposicion_final.replace('_', ' ').toUpperCase()}
-                                    </Badge>
-                                </div>
+                                {serie.retencion?.disposicion_final && (
+                                    <div>
+                                        <h4 className="font-semibold mb-2 flex items-center">
+                                            {getDisposicionIcon(serie.retencion.disposicion_final)}
+                                            <span className="ml-2">Disposición Final</span>
+                                        </h4>
+                                        <Badge className={getDisposicionColor(serie.retencion.disposicion_final)}>
+                                            {serie.retencion.disposicion_final.replace(/_/g, ' ').toUpperCase()}
+                                        </Badge>
+                                    </div>
+                                )}
 
                                 <Separator />
 
-                                <div>
-                                    <h4 className="font-semibold mb-2 flex items-center">
-                                        <Users className="h-4 w-4 mr-2" />
-                                        Área Responsable
-                                    </h4>
-                                    <p className="text-gray-700">{serie.area_responsable}</p>
-                                </div>
+                                {serie.area_responsable && (
+                                    <div>
+                                        <h4 className="font-semibold mb-2 flex items-center">
+                                            <Users className="h-4 w-4 mr-2" />
+                                            Área Responsable
+                                        </h4>
+                                        <p className="text-gray-700">{serie.area_responsable}</p>
+                                    </div>
+                                )}
 
                                 {serie.observaciones && (
                                     <>
