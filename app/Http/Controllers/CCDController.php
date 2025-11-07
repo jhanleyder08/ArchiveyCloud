@@ -100,7 +100,7 @@ class CCDController extends Controller
             'aprobador'
         ]);
 
-        return Inertia::render('admin/ccd/Show', [
+        return Inertia::render('admin/ccd/show', [
             'ccd' => $ccd,
             'estructura' => $this->ccdService->obtenerEstructuraJerarquica($ccd),
             'estadisticas' => $ccd->getEstadisticas(),
