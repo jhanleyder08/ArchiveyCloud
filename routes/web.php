@@ -172,12 +172,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Cuadros de Clasificación Documental (CCD) - Protegido con permisos
         Route::prefix('ccd')->name('ccd.')->middleware('permission:ccd.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\CCDController::class, 'index'])->name('index');
-            Route::get('/{ccd}', [App\Http\Controllers\CCDController::class, 'show'])->name('show');
             
             Route::middleware('permission:ccd.crear')->group(function () {
                 Route::get('/create', [App\Http\Controllers\CCDController::class, 'create'])->name('create');
                 Route::post('/', [App\Http\Controllers\CCDController::class, 'store'])->name('store');
             });
+            
+            Route::get('/{ccd}', [App\Http\Controllers\CCDController::class, 'show'])->name('show');
             
             Route::middleware('permission:ccd.editar')->group(function () {
                 Route::get('/{ccd}/edit', [App\Http\Controllers\CCDController::class, 'edit'])->name('edit');

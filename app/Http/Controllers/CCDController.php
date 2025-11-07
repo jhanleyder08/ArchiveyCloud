@@ -42,10 +42,29 @@ class CCDController extends Controller
         $ccds = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
+        // Opciones para el formulario de creación
+        $opciones = [
+            'estados' => [
+                ['value' => 'borrador', 'label' => 'Borrador'],
+                ['value' => 'activo', 'label' => 'Activo'],
+                ['value' => 'inactivo', 'label' => 'Inactivo'],
+                ['value' => 'historico', 'label' => 'Histórico'],
+            ],
+            'niveles' => [
+                ['value' => '1', 'label' => 'Nivel 1 - Fondo'],
+                ['value' => '2', 'label' => 'Nivel 2 - Sección'],
+                ['value' => '3', 'label' => 'Nivel 3 - Subsección'],
+                ['value' => '4', 'label' => 'Nivel 4 - Serie'],
+                ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
+            ],
+            'padres_disponibles' => [], // Se puede poblar con CCDs existentes si es necesario
+        ];
+
         return Inertia::render('admin/ccd/index', [
             'ccds' => $ccds,
             'filters' => $request->only(['estado', 'search']),
             'estadisticas' => $this->getEstadisticasGenerales(),
+            'opciones' => $opciones,
         ]);
     }
 
@@ -54,7 +73,26 @@ class CCDController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('admin/ccd/create');
+        $opciones = [
+            'estados' => [
+                ['value' => 'borrador', 'label' => 'Borrador'],
+                ['value' => 'activo', 'label' => 'Activo'],
+                ['value' => 'inactivo', 'label' => 'Inactivo'],
+                ['value' => 'historico', 'label' => 'Histórico'],
+            ],
+            'niveles' => [
+                ['value' => '1', 'label' => 'Nivel 1 - Fondo'],
+                ['value' => '2', 'label' => 'Nivel 2 - Sección'],
+                ['value' => '3', 'label' => 'Nivel 3 - Subsección'],
+                ['value' => '4', 'label' => 'Nivel 4 - Serie'],
+                ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
+            ],
+            'padres_disponibles' => [],
+        ];
+
+        return Inertia::render('admin/ccd/create', [
+            'opciones' => $opciones,
+        ]);
     }
 
     /**
@@ -77,7 +115,7 @@ class CCDController extends Controller
             $ccd = $this->ccdService->crear($validated, $request->user());
 
             return redirect()
-                ->route('admin.ccd.show', $ccd->id)
+                ->route('admin.ccd.index')
                 ->with('success', 'CCD creado exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al crear CCD', ['error' => $e->getMessage()]);

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
     FileText, 
     Plus, 
@@ -17,7 +20,8 @@ import {
     Users,
     CheckCircle,
     AlertCircle,
-    FolderTree
+    FolderTree,
+    Save
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -34,6 +38,13 @@ interface CCD {
         name: string;
     };
     niveles_count?: number;
+}
+
+interface CCDOption {
+    id: number;
+    codigo: string;
+    nombre: string;
+    nivel: number;
 }
 
 interface CCDIndexProps {
@@ -55,11 +66,46 @@ interface CCDIndexProps {
         search?: string;
         estado?: string;
     };
+    opciones?: {
+        estados: { value: string; label: string; }[];
+        niveles: { value: string; label: string; }[];
+        padres_disponibles: CCDOption[];
+    };
 }
 
-export default function CCDIndex({ ccds, estadisticas, filters }: CCDIndexProps) {
+export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDIndexProps) {
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [filterEstado, setFilterEstado] = useState(filters?.estado || 'all');
+    const [showCreateModal, setShowCreateModal] = useState(false);
+
+    const { data: createForm, setData: setCreateForm, post, processing, errors, reset } = useForm({
+        codigo: '',
+        nombre: '',
+        descripcion: '',
+        version: '',
+        fecha_vigencia_inicio: '',
+        fecha_vigencia_fin: '',
+        estado: 'borrador',
+    });
+
+    const defaultOpciones = {
+        estados: [
+            { value: 'borrador', label: 'Borrador' },
+            { value: 'activo', label: 'Activo' },
+            { value: 'inactivo', label: 'Inactivo' },
+            { value: 'historico', label: 'Histórico' },
+        ],
+        niveles: [
+            { value: '1', label: 'Nivel 1 - Fondo' },
+            { value: '2', label: 'Nivel 2 - Sección' },
+            { value: '3', label: 'Nivel 3 - Subsección' },
+            { value: '4', label: 'Nivel 4 - Serie' },
+            { value: '5', label: 'Nivel 5 - Subserie' },
+        ],
+        padres_disponibles: [],
+    };
+
+    const formOpciones = opciones || defaultOpciones;
 
     const handleSearch = () => {
         router.get('/admin/ccd', {
@@ -93,12 +139,185 @@ export default function CCDIndex({ ccds, estadisticas, filters }: CCDIndexProps)
                             Gestión de cuadros de clasificación documental del sistema
                         </p>
                     </div>
-                    <Link href="/admin/ccd/create">
-                        <Button>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Nuevo CCD
-                        </Button>
-                    </Link>
+                    <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+                        <DialogTrigger asChild>
+                            <Button className="flex items-center gap-2">
+                                <Plus className="h-4 w-4" />
+                                Nuevo CCD
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-semibold text-gray-900">
+                                    Crear Nuevo Cuadro de Clasificación Documental
+                                </DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
+                                    Complete los siguientes datos para crear un nuevo CCD.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                
+                                if (!createForm.codigo || !createForm.nombre) {
+                                    toast.error('Por favor complete los campos requeridos');
+                                    return;
+                                }
+
+                                post('/admin/ccd', {
+                                    onSuccess: () => {
+                                        setShowCreateModal(false);
+                                        reset();
+                                        toast.success('CCD creado exitosamente');
+                                        // La redirección del servidor actualizará la lista automáticamente
+                                    },
+                                    onError: (errors) => {
+                                        console.error('Error al crear CCD:', errors);
+                                        if (errors) {
+                                            Object.keys(errors).forEach(field => {
+                                                const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+                                                toast.error(`Error en ${field}: ${message}`);
+                                            });
+                                        }
+                                    }
+                                });
+                            }} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="create-codigo">Código *</Label>
+                                        <Input
+                                            id="create-codigo"
+                                            type="text"
+                                            value={createForm.codigo}
+                                            onChange={(e) => setCreateForm('codigo', e.target.value)}
+                                            placeholder="Ej: CCD-001"
+                                            required
+                                            className={errors.codigo ? 'border-red-500' : ''}
+                                        />
+                                        {errors.codigo && (
+                                            <p className="text-sm text-red-600">{errors.codigo}</p>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="create-version">Versión</Label>
+                                        <Input
+                                            id="create-version"
+                                            type="text"
+                                            value={createForm.version}
+                                            onChange={(e) => setCreateForm('version', e.target.value)}
+                                            placeholder="Ej: 1.0"
+                                            className={errors.version ? 'border-red-500' : ''}
+                                        />
+                                        {errors.version && (
+                                            <p className="text-sm text-red-600">{errors.version}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-nombre">Nombre *</Label>
+                                    <Input
+                                        id="create-nombre"
+                                        type="text"
+                                        value={createForm.nombre}
+                                        onChange={(e) => setCreateForm('nombre', e.target.value)}
+                                        placeholder="Nombre del CCD"
+                                        required
+                                        className={errors.nombre ? 'border-red-500' : ''}
+                                    />
+                                    {errors.nombre && (
+                                        <p className="text-sm text-red-600">{errors.nombre}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-descripcion">Descripción</Label>
+                                    <Textarea
+                                        id="create-descripcion"
+                                        value={createForm.descripcion}
+                                        onChange={(e) => setCreateForm('descripcion', e.target.value)}
+                                        placeholder="Descripción del CCD"
+                                        rows={3}
+                                        className={errors.descripcion ? 'border-red-500' : ''}
+                                    />
+                                    {errors.descripcion && (
+                                        <p className="text-sm text-red-600">{errors.descripcion}</p>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="create-fecha-vigencia-inicio">Fecha Vigencia Inicio</Label>
+                                        <Input
+                                            id="create-fecha-vigencia-inicio"
+                                            type="date"
+                                            value={createForm.fecha_vigencia_inicio}
+                                            onChange={(e) => setCreateForm('fecha_vigencia_inicio', e.target.value)}
+                                            className={errors.fecha_vigencia_inicio ? 'border-red-500' : ''}
+                                        />
+                                        {errors.fecha_vigencia_inicio && (
+                                            <p className="text-sm text-red-600">{errors.fecha_vigencia_inicio}</p>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="create-fecha-vigencia-fin">Fecha Vigencia Fin</Label>
+                                        <Input
+                                            id="create-fecha-vigencia-fin"
+                                            type="date"
+                                            value={createForm.fecha_vigencia_fin}
+                                            onChange={(e) => setCreateForm('fecha_vigencia_fin', e.target.value)}
+                                            className={errors.fecha_vigencia_fin ? 'border-red-500' : ''}
+                                        />
+                                        {errors.fecha_vigencia_fin && (
+                                            <p className="text-sm text-red-600">{errors.fecha_vigencia_fin}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-estado">Estado *</Label>
+                                    <Select 
+                                        value={createForm.estado} 
+                                        onValueChange={(value) => setCreateForm('estado', value)}
+                                    >
+                                        <SelectTrigger className={errors.estado ? 'border-red-500' : ''}>
+                                            <SelectValue placeholder="Seleccionar estado" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {formOpciones.estados.map((estado) => (
+                                                <SelectItem key={estado.value} value={estado.value}>
+                                                    {estado.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.estado && (
+                                        <p className="text-sm text-red-600">{errors.estado}</p>
+                                    )}
+                                </div>
+
+                                <DialogFooter>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowCreateModal(false);
+                                            reset();
+                                        }}
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="bg-[#2a3d83] hover:bg-[#1e2b5f] flex items-center gap-2"
+                                    >
+                                        <Save className="h-4 w-4" />
+                                        {processing ? 'Guardando...' : 'Crear CCD'}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
 
                 {/* Estadísticas */}
