@@ -115,11 +115,10 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
         codigo: '',
         nombre: '',
         descripcion: '',
-        serie_id: '',
+        serie_documental_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
-        area_responsable: '',  // Agregado para consistencia
+        disposicion_final: 'conservacion_permanente',
         procedimiento: '',
         metadatos_especificos: null,
         tipologias_documentales: null,
@@ -131,11 +130,10 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
         codigo: '',
         nombre: '',
         descripcion: '',
-        serie_id: '',
+        serie_documental_id: '',
         tiempo_archivo_gestion: 0,
         tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
-        area_responsable: '',  // Agregado para evitar error
+        disposicion_final: 'conservacion_permanente',
         procedimiento: '',
         metadatos_especificos: null,
         tipologias_documentales: null,
@@ -160,11 +158,10 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                 codigo: showEditModal.codigo || '',
                 nombre: showEditModal.nombre || '',
                 descripcion: showEditModal.descripcion || '',
-                serie_id: showEditModal.serie_documental_id?.toString() || '',
+                serie_documental_id: showEditModal.serie_documental_id?.toString() || '',
                 tiempo_archivo_gestion: showEditModal.tiempo_archivo_gestion || 0,
                 tiempo_archivo_central: showEditModal.tiempo_archivo_central || 0,
-                disposicion_final: showEditModal.disposicion_final || 'conservacion_total',
-                area_responsable: showEditModal.area_responsable || '',
+                disposicion_final: showEditModal.disposicion_final || 'conservacion_permanente',
                 procedimiento: '',  // Agregado para TypeScript
                 metadatos_especificos: null,  // Agregado para TypeScript
                 tipologias_documentales: null,  // Agregado para TypeScript
@@ -180,11 +177,10 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
     ];
 
     const disposicionesFinales = {
-        'conservacion_total': 'Conservación Total',
+        'conservacion_permanente': 'Conservación Permanente',
         'eliminacion': 'Eliminación',
         'seleccion': 'Selección',
-        'transferencia': 'Transferencia',
-        'migracion': 'Migración'
+        'microfilmacion': 'Microfilmación'
     };
 
     const handleDelete = (subserie: SubserieDocumental) => {
@@ -235,14 +231,20 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
 
     const getDisposicionBadge = (disposicion: string) => {
         const colors: { [key: string]: string } = {
-            'conservacion_total': 'bg-green-100 text-green-800',
+            'conservacion_permanente': 'bg-green-100 text-green-800',
             'eliminacion': 'bg-red-100 text-red-800',
             'seleccion': 'bg-yellow-100 text-yellow-800',
             'microfilmacion': 'bg-blue-100 text-blue-800'
         };
+        const labels: { [key: string]: string } = {
+            'conservacion_permanente': 'CONSERVACIÓN PERMANENTE',
+            'eliminacion': 'ELIMINACIÓN',
+            'seleccion': 'SELECCIÓN',
+            'microfilmacion': 'MICROFILMACIÓN'
+        };
         return (
             <Badge className={colors[disposicion] || 'bg-gray-100 text-gray-800'}>
-                {disposicion.replace('_', ' ').toUpperCase()}
+                {labels[disposicion] || disposicion.replace('_', ' ').toUpperCase()}
             </Badge>
         );
     };
@@ -291,11 +293,10 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                             codigo: '',
                                             nombre: '',
                                             descripcion: '',
-                                            serie_id: '',
+                                            serie_documental_id: '',
                                             tiempo_archivo_gestion: 0,
                                             tiempo_archivo_central: 0,
-                                            disposicion_final: 'conservacion_total',
-                                            area_responsable: '',
+                                            disposicion_final: 'conservacion_permanente',
                                             procedimiento: '',
                                             metadatos_especificos: null,
                                             tipologias_documentales: null,
@@ -325,7 +326,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="create-serie">Serie Documental Asociada *</Label>
-                                        <Select value={createForm.serie_id} onValueChange={(value) => setCreateForm({...createForm, serie_id: value})}>
+                                        <Select value={createForm.serie_documental_id} onValueChange={(value) => setCreateForm({...createForm, serie_documental_id: value})}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar Serie" />
                                             </SelectTrigger>
@@ -457,7 +458,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas las Series</SelectItem>
-                                    {series.map((serie) => (
+                                    {safeSeries.map((serie) => (
                                         <SelectItem key={serie.id} value={serie.id.toString()}>
                                             {serie.codigo} - {serie.nombre}
                                         </SelectItem>
@@ -480,7 +481,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas las áreas</SelectItem>
-                                    {areas.map((area) => (
+                                    {safeAreas.map((area) => (
                                         <SelectItem key={area} value={area}>
                                             {area}
                                         </SelectItem>
@@ -684,7 +685,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="edit-serie">Serie Documental Asociada *</Label>
-                                        <Select value={editForm.serie_id} onValueChange={(value) => setEditForm({...editForm, serie_id: value})}>
+                                        <Select value={editForm.serie_documental_id} onValueChange={(value) => setEditForm({...editForm, serie_documental_id: value})}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar Serie" />
                                             </SelectTrigger>

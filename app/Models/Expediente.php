@@ -593,7 +593,7 @@ class Expediente extends Model
         
         // Verificar consistencia de metadatos
         if ($this->serie_id && $this->subserie_id) {
-            if ($this->subserie->serie_id !== $this->serie_id) {
+            if ($this->subserie->serie_documental_id !== $this->serie_id) {
                 $errores[] = "Inconsistencia: La subserie no pertenece a la serie asignada";
             }
         }

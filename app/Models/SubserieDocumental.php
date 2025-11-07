@@ -23,7 +23,7 @@ class SubserieDocumental extends Model
         'codigo',
         'nombre',
         'descripcion',
-        'serie_id',
+        'serie_documental_id',
         'tiempo_archivo_gestion',
         'tiempo_archivo_central',
         'disposicion_final',
@@ -50,6 +50,11 @@ class SubserieDocumental extends Model
     const DISPOSICION_ELIMINACION = 'eliminacion';
     const DISPOSICION_SELECCION = 'seleccion';
     const DISPOSICION_MICROFILMACION = 'microfilmacion';
+    
+    // Constantes adicionales usadas en código legacy (mantener compatibilidad)
+    const DISPOSICION_CONSERVACION_TOTAL = 'conservacion_permanente'; // Alias
+    const DISPOSICION_TRANSFERENCIA = 'transferencia';
+    const DISPOSICION_MIGRACION = 'migracion';
 
     protected static function boot()
     {
@@ -62,7 +67,7 @@ class SubserieDocumental extends Model
             }
             
             // REQ-CL-016 y REQ-CL-017: Heredar metadatos y tiempos de la serie
-            if ($subserie->serie_id) {
+            if ($subserie->serie_documental_id) {
                 $subserie->heredarDeSerie();
             }
         });
@@ -91,7 +96,7 @@ class SubserieDocumental extends Model
      */
     public function serie()
     {
-        return $this->belongsTo(SerieDocumental::class, 'serie_id');
+        return $this->belongsTo(SerieDocumental::class, 'serie_documental_id');
     }
 
     /**
@@ -139,7 +144,7 @@ class SubserieDocumental extends Model
      */
     public function scopePorSerie($query, $serieId)
     {
-        return $query->where('serie_id', $serieId);
+        return $query->where('serie_documental_id', $serieId);
     }
 
     /**
@@ -163,7 +168,7 @@ class SubserieDocumental extends Model
         }
         
         // Obtener último número de la subserie dentro de la serie
-        $ultimaSubserie = static::where('serie_id', $this->serie_id)
+        $ultimaSubserie = static::where('serie_documental_id', $this->serie_documental_id)
                                ->where('codigo', 'LIKE', $serie->codigo . '.%')
                                ->orderBy('codigo', 'desc')
                                ->first();
@@ -345,7 +350,7 @@ class SubserieDocumental extends Model
         $errores = [];
         
         // Validar asociación obligatoria con serie
-        if (!$this->serie_id || !$this->serie) {
+        if (!$this->serie_documental_id || !$this->serie) {
             $errores[] = 'La subserie debe estar asociada a una serie válida';
         }
         
@@ -380,11 +385,10 @@ class SubserieDocumental extends Model
         
         // Validar disposición final
         $disposicionesValidas = [
-            self::DISPOSICION_CONSERVACION_TOTAL,
+            self::DISPOSICION_CONSERVACION_PERMANENTE,
             self::DISPOSICION_ELIMINACION,
             self::DISPOSICION_SELECCION,
-            self::DISPOSICION_TRANSFERENCIA,
-            self::DISPOSICION_MIGRACION
+            self::DISPOSICION_MICROFILMACION
         ];
         
         if (!in_array($this->disposicion_final, $disposicionesValidas)) {

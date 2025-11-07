@@ -100,7 +100,7 @@ class SerieDocumental extends Model
      */
     public function subseries()
     {
-        return $this->hasMany(SubserieDocumental::class, 'serie_id');
+        return $this->hasMany(SubserieDocumental::class, 'serie_documental_id');
     }
 
     /**

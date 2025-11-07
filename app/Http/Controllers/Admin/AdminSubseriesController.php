@@ -41,7 +41,7 @@ class AdminSubseriesController extends Controller
             }
 
             if ($serieId) {
-                $query->where('serie_id', $serieId);
+                $query->where('serie_documental_id', $serieId);
             }
 
             if ($estado) {
@@ -121,10 +121,10 @@ class AdminSubseriesController extends Controller
             'codigo' => 'nullable|string|max:50|unique:subseries_documentales,codigo,NULL,id,deleted_at,NULL',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
-            'serie_id' => 'required|exists:series_documentales,id',
+            'serie_documental_id' => 'required|exists:series_documentales,id',
             'tiempo_archivo_gestion' => 'nullable|integer|min:0',
             'tiempo_archivo_central' => 'nullable|integer|min:0',
-            'disposicion_final' => 'nullable|string|in:conservacion_total,eliminacion,seleccion,transferencia_historica,digitalizacion_eliminacion_fisica',
+            'disposicion_final' => 'nullable|string|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
             'procedimiento' => 'nullable|string',
             'metadatos_especificos' => 'nullable|array',
             'tipologias_documentales' => 'nullable|array',
@@ -149,7 +149,7 @@ class AdminSubseriesController extends Controller
                 'codigo' => $validated['codigo'],
                 'nombre' => $validated['nombre'],
                 'descripcion' => $validated['descripcion'],
-                'serie_id' => $validated['serie_id'], // Mapeo correcto
+                'serie_documental_id' => $validated['serie_documental_id'],
                 'tiempo_archivo_gestion' => $validated['tiempo_archivo_gestion'],
                 'tiempo_archivo_central' => $validated['tiempo_archivo_central'],
                 'disposicion_final' => $validated['disposicion_final'],
@@ -162,8 +162,8 @@ class AdminSubseriesController extends Controller
 
             // Generar código automático si no se proporciona
             if (empty($data['codigo'])) {
-                $serie = SerieDocumental::find($data['serie_id']);
-                $lastSubserie = SubserieDocumental::where('serie_id', $data['serie_id'])
+                $serie = SerieDocumental::find($data['serie_documental_id']);
+                $lastSubserie = SubserieDocumental::where('serie_documental_id', $data['serie_documental_id'])
                     ->whereRaw("codigo REGEXP '^{$serie->codigo}-[0-9]+$'")
                     ->orderByRaw('CAST(SUBSTRING(codigo, LENGTH("' . $serie->codigo . '") + 2) AS UNSIGNED) DESC')
                     ->first();
@@ -179,7 +179,7 @@ class AdminSubseriesController extends Controller
             }
 
             // Heredar datos de la serie si no se proporcionan
-            $serie = SerieDocumental::find($data['serie_id']);
+            $serie = SerieDocumental::find($data['serie_documental_id']);
             if (empty($data['tiempo_archivo_gestion'])) {
                 $data['tiempo_archivo_gestion'] = $serie->tiempo_archivo_gestion;
             }
@@ -270,11 +270,10 @@ class AdminSubseriesController extends Controller
             'codigo' => ['nullable', 'string', 'max:50', Rule::unique('subseries_documentales', 'codigo')->ignore($subseries->id)],
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
-            'serie_id' => 'required|exists:series_documentales,id',
+            'serie_documental_id' => 'required|exists:series_documentales,id',
             'tiempo_archivo_gestion' => 'nullable|integer|min:0',
             'tiempo_archivo_central' => 'nullable|integer|min:0',
-            'disposicion_final' => 'nullable|string|in:conservacion_total,eliminacion,seleccion,transferencia_historica,digitalizacion_eliminacion_fisica',
-            'area_responsable' => 'nullable|string|max:255',
+            'disposicion_final' => 'nullable|string|in:conservacion_permanente,eliminacion,seleccion,microfilmacion',
             'observaciones' => 'nullable|string',
             'activa' => 'boolean',
         ]);
