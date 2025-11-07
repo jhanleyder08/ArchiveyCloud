@@ -439,9 +439,42 @@ class AdminSubseriesController extends Controller
         try {
             $format = $request->get('format', 'json');
             
-            $subseries = SubserieDocumental::with(['serie.tablaRetencion'])
-                ->orderBy('codigo')
-                ->get();
+            // Aplicar los mismos filtros que en index
+            $search = $request->get('search');
+            $serieId = $request->get('serie_id');
+            $estado = $request->get('estado');
+            $area = $request->get('area');
+
+            // Query base con relaciones
+            $query = SubserieDocumental::with(['serie.tablaRetencion']);
+
+            // Aplicar filtros
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('codigo', 'like', "%{$search}%")
+                      ->orWhere('nombre', 'like', "%{$search}%")
+                      ->orWhere('descripcion', 'like', "%{$search}%");
+                });
+            }
+
+            if ($serieId) {
+                $query->where('serie_documental_id', $serieId);
+            }
+
+            if ($estado) {
+                if ($estado === 'activa') {
+                    $query->where('activa', true);
+                } elseif ($estado === 'inactiva') {
+                    $query->where('activa', false);
+                }
+            }
+
+            if ($area) {
+                $query->where('area_responsable', 'like', "%{$area}%");
+            }
+
+            // Ordenamiento
+            $subseries = $query->orderBy('codigo')->get();
 
             switch ($format) {
                 case 'csv':

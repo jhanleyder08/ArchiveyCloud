@@ -488,10 +488,38 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" size="sm" className="flex items-center gap-2">
-                                <Download className="h-4 w-4" />
-                                Exportar
-                            </Button>
+                            <Select 
+                                value="" 
+                                onValueChange={(formato) => {
+                                    if (formato) {
+                                        // Construir URL con filtros actuales
+                                        const params = new URLSearchParams();
+                                        if (searchQuery) params.append('search', searchQuery);
+                                        if (serieFilter && serieFilter !== 'all') params.append('serie_id', serieFilter);
+                                        if (estadoFilter && estadoFilter !== 'all') params.append('estado', estadoFilter);
+                                        if (areaFilter && areaFilter !== 'all') params.append('area', areaFilter);
+                                        params.append('format', formato);
+                                        
+                                        // Descargar archivo
+                                        window.location.href = `/admin/subseries/export?${params.toString()}`;
+                                        
+                                        // Notificar al usuario
+                                        toast.success(`Exportando subseries en formato ${formato.toUpperCase()}...`);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-full sm:w-32">
+                                    <div className="flex items-center gap-2">
+                                        <Download className="h-4 w-4" />
+                                        <SelectValue placeholder="Exportar" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="json">Excel (JSON)</SelectItem>
+                                    <SelectItem value="csv">CSV</SelectItem>
+                                    <SelectItem value="xml">XML</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 </div>

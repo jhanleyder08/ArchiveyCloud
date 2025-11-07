@@ -151,8 +151,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Subseries Documentales - Protegido con permisos
         Route::middleware('permission:subseries.ver')->group(function () {
             Route::get('subseries', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'index'])->name('subseries.index');
+            Route::get('subseries/export', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'export'])->name('subseries.export');
             Route::get('subseries/{subserie}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'show'])->name('subseries.show');
-            Route::get('subseries/export/{format?}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'export'])->name('subseries.export');
         });
         
         Route::middleware('permission:subseries.crear')->group(function () {
@@ -164,6 +164,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('subseries/{subserie}/edit', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'edit'])->name('subseries.edit');
             Route::put('subseries/{subserie}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'update'])->name('subseries.update');
             Route::patch('subseries/{subserie}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'update']);
+            Route::delete('subseries/{subserie}', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'destroy'])->name('subseries.destroy');
             Route::post('subseries/{subserie}/duplicate', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'duplicate'])->name('subseries.duplicate');
             Route::patch('subseries/{subserie}/toggle-active', [App\Http\Controllers\Admin\AdminSubseriesController::class, 'toggleActive'])->name('subseries.toggle-active');
         });
