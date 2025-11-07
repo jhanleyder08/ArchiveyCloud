@@ -42,7 +42,7 @@ class CCDController extends Controller
         $ccds = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return Inertia::render('admin/CCD/Index', [
+        return Inertia::render('admin/ccd/index', [
             'ccds' => $ccds,
             'filters' => $request->only(['estado', 'search']),
             'estadisticas' => $this->getEstadisticasGenerales(),
@@ -54,7 +54,7 @@ class CCDController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('admin/CCD/Create');
+        return Inertia::render('admin/ccd/create');
     }
 
     /**
@@ -100,7 +100,7 @@ class CCDController extends Controller
             'aprobador'
         ]);
 
-        return Inertia::render('admin/CCD/Show', [
+        return Inertia::render('admin/ccd/Show', [
             'ccd' => $ccd,
             'estructura' => $this->ccdService->obtenerEstructuraJerarquica($ccd),
             'estadisticas' => $ccd->getEstadisticas(),
@@ -113,7 +113,7 @@ class CCDController extends Controller
      */
     public function edit(CCD $ccd): Response
     {
-        return Inertia::render('admin/CCD/Edit', [
+        return Inertia::render('admin/ccd/edit', [
             'ccd' => $ccd,
         ]);
     }
