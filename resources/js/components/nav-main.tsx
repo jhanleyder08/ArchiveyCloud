@@ -67,22 +67,22 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
                                         <SidebarMenuSub>
-                                            {item.items.map((subItem) => (
-                                                <SidebarMenuSubItem key={subItem.title}>
-                                                    <SidebarMenuSubButton
-                                                        asChild
-                                                        isActive={isActive(subItem.href)}
-                                                    >
-                                                        <div onClick={() => {
-                                            const hrefString = typeof subItem.href === 'string' ? subItem.href : (subItem.href as any)?.url || subItem.href;
-                                            router.visit(hrefString);
-                                        }}>
-                                            {subItem.icon && <subItem.icon />}
-                                            <span>{subItem.title}</span>
-                                        </div>
-                                                    </SidebarMenuSubButton>
-                                                </SidebarMenuSubItem>
-                                            ))}
+                                            {item.items.map((subItem) => {
+                                                const hrefString = typeof subItem.href === 'string' ? subItem.href : (subItem.href as any)?.url || subItem.href;
+                                                return (
+                                                    <SidebarMenuSubItem key={subItem.title}>
+                                                        <SidebarMenuSubButton
+                                                            asChild
+                                                            isActive={isActive(subItem.href)}
+                                                        >
+                                                            <Link href={hrefString}>
+                                                                {subItem.icon && <subItem.icon />}
+                                                                <span>{subItem.title}</span>
+                                                            </Link>
+                                                        </SidebarMenuSubButton>
+                                                    </SidebarMenuSubItem>
+                                                );
+                                            })}
                                         </SidebarMenuSub>
                                     </CollapsibleContent>
                                 </SidebarMenuItem>

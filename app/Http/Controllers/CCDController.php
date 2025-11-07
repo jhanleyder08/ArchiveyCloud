@@ -42,7 +42,7 @@ class CCDController extends Controller
         $ccds = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return Inertia::render('admin/CCD/Index', [
+        return Inertia::render('admin/ccd/index', [
             'ccds' => $ccds,
             'filters' => $request->only(['estado', 'search']),
             'estadisticas' => $this->getEstadisticasGenerales(),
@@ -54,7 +54,7 @@ class CCDController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('admin/CCD/Create');
+        return Inertia::render('admin/ccd/create');
     }
 
     /**
@@ -100,7 +100,7 @@ class CCDController extends Controller
             'aprobador'
         ]);
 
-        return Inertia::render('admin/CCD/Show', [
+        return Inertia::render('admin/ccd/Show', [
             'ccd' => $ccd,
             'estructura' => $this->ccdService->obtenerEstructuraJerarquica($ccd),
             'estadisticas' => $ccd->getEstadisticas(),
@@ -113,7 +113,7 @@ class CCDController extends Controller
      */
     public function edit(CCD $ccd): Response
     {
-        return Inertia::render('admin/CCD/Edit', [
+        return Inertia::render('admin/ccd/edit', [
             'ccd' => $ccd,
         ]);
     }
@@ -399,14 +399,16 @@ class CCDController extends Controller
     private function getEstadisticasGenerales(): array
     {
         return [
-            'total_ccds' => CCD::count(),
-            'ccds_activos' => CCD::where('estado', 'activo')->count(),
-            'ccds_borradores' => CCD::where('estado', 'borrador')->count(),
-            'total_niveles' => CCDNivel::count(),
-            'niveles_por_tipo' => CCDNivel::selectRaw('tipo_nivel, COUNT(*) as total')
-                ->groupBy('tipo_nivel')
-                ->pluck('total', 'tipo_nivel')
-                ->toArray(),
+            'total' => CCD::count(),
+            'activos' => CCD::where('estado', 'activo')->count(),
+            'borradores' => CCD::where('estado', 'borrador')->count(),
+            'vigentes' => CCD::where('estado', 'activo')
+                ->whereDate('fecha_vigencia_inicio', '<=', now())
+                ->where(function($q) {
+                    $q->whereNull('fecha_vigencia_fin')
+                      ->orWhereDate('fecha_vigencia_fin', '>=', now());
+                })
+                ->count(),
         ];
     }
 }
