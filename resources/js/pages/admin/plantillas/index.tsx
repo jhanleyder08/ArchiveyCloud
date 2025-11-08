@@ -259,7 +259,18 @@ export default function PlantillasIndex({
                   return;
                 }
 
-                post(route('admin.plantillas.store'), {
+                console.log('Datos del formulario:', createForm);
+                const routeUrl = route('admin.plantillas.store');
+                console.log('Ruta:', routeUrl);
+                
+                // Usar la ruta directamente sin concatenar (Ziggy ya devuelve la URL completa)
+                post(routeUrl, {
+                  onStart: () => {
+                    console.log('Iniciando envío de formulario...');
+                  },
+                  onProgress: () => {
+                    console.log('Enviando datos...');
+                  },
                   onSuccess: () => {
                     setShowCreateModal(false);
                     reset();
@@ -268,13 +279,28 @@ export default function PlantillasIndex({
                   },
                   onError: (errors) => {
                     console.error('Error al crear plantilla:', errors);
+                    console.error('Tipo de error:', typeof errors);
+                    console.error('Errores completos:', JSON.stringify(errors, null, 2));
+                    
                     if (errors) {
-                      Object.keys(errors).forEach(field => {
-                        const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
-                        toast.error(`Error en ${field}: ${message}`);
-                      });
+                      if (typeof errors === 'object') {
+                        Object.keys(errors).forEach(field => {
+                          const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+                          toast.error(`Error en ${field}: ${message}`);
+                        });
+                      } else {
+                        toast.error(`Error: ${errors}`);
+                      }
+                    } else {
+                      toast.error('Error al crear la plantilla. Por favor, verifique su conexión e intente nuevamente.');
                     }
-                  }
+                  },
+                  onFinish: () => {
+                    console.log('Finalizado envío de formulario');
+                  },
+                  preserveState: false,
+                  preserveScroll: false,
+                  only: [], // Enviar todos los datos
                 });
               }} className="space-y-4">
                 <div className="space-y-2">
@@ -348,7 +374,10 @@ export default function PlantillasIndex({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Serie Documental</Label>
-                    <Select onValueChange={handleSerieChange} value={createForm.serie_documental_id || undefined}>
+                    <Select 
+                      onValueChange={handleSerieChange} 
+                      value={createForm.serie_documental_id || ''}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar serie" />
                       </SelectTrigger>
@@ -366,7 +395,7 @@ export default function PlantillasIndex({
                     <div className="space-y-2">
                       <Label>Subserie Documental</Label>
                       <Select 
-                        value={createForm.subserie_documental_id || undefined} 
+                        value={createForm.subserie_documental_id || ''} 
                         onValueChange={(value) => setCreateForm('subserie_documental_id', value)}
                       >
                         <SelectTrigger>
@@ -384,21 +413,23 @@ export default function PlantillasIndex({
                   )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setCreateForm('serie_documental_id', '');
-                      setCreateForm('subserie_documental_id', '');
-                      setSelectedSerie(null);
-                    }}
-                    className="text-xs"
-                  >
-                    Limpiar selección
-                  </Button>
-                </div>
+                {(createForm.serie_documental_id || createForm.subserie_documental_id) && (
+                  <div className="flex items-center justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCreateForm('serie_documental_id', null);
+                        setCreateForm('subserie_documental_id', null);
+                        setSelectedSerie(null);
+                      }}
+                      className="text-xs"
+                    >
+                      Limpiar selección
+                    </Button>
+                  </div>
+                )}
 
                 <DialogFooter>
                   <Button

@@ -310,12 +310,20 @@ class PlantillaDocumental extends Model
         parent::boot();
 
         static::creating(function ($plantilla) {
-            if (empty($plantilla->codigo)) {
-                $plantilla->codigo = $plantilla->generarCodigo();
-            }
             // Solo asignar usuario si no está ya establecido
             if (empty($plantilla->usuario_creador_id)) {
                 $plantilla->usuario_creador_id = auth()->id();
+            }
+            
+            // El código ya debe estar asignado desde el controlador
+            // Si no está, generar uno temporal que se actualizará después
+            if (empty($plantilla->codigo)) {
+                $prefijo = 'PLT';
+                $categoria = strtoupper(substr($plantilla->categoria ?? 'otro', 0, 3));
+                $ultimoId = static::withTrashed()->max('id') ?? 0;
+                $numero = str_pad($ultimoId + 1, 4, '0', STR_PAD_LEFT);
+                $version = str_replace('.', '', (string)($plantilla->version ?? 1.0));
+                $plantilla->codigo = "{$prefijo}-{$categoria}-{$numero}-V{$version}";
             }
         });
     }

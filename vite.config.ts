@@ -27,12 +27,13 @@ export default defineConfig({
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
     },
     server: {
-        host: 'localhost', // Cambiado a localhost para compatibilidad
+        host: '0.0.0.0', // Escuchar en todas las interfaces
         port: 5173,
         strictPort: false,
         hmr: {
-            host: 'localhost',
+            host: 'localhost', // Usar localhost para HMR
             port: 5173,
+            protocol: 'ws',
         },
         cors: {
             origin: '*', // Permite cualquier origen

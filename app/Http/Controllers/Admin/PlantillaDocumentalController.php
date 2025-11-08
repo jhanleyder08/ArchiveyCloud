@@ -138,67 +138,124 @@ class PlantillaDocumentalController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:200',
-            'descripcion' => 'nullable|string|max:1000',
-            'categoria' => 'required|in:memorando,oficio,resolucion,acta,informe,circular,comunicacion,otro',
-            'tipo_documento' => 'nullable|string|max:100',
-            'serie_documental_id' => 'nullable|string',
-            'subserie_documental_id' => 'nullable|string',
-            'contenido_html' => 'nullable|string',
-            'campos_variables' => 'nullable|array',
-            'campos_variables.*.nombre' => 'required|string|max:50',
-            'campos_variables.*.tipo' => 'required|in:texto,numero,fecha,email,url,textarea,select,checkbox',
-            'campos_variables.*.etiqueta' => 'required|string|max:100',
-            'campos_variables.*.requerido' => 'boolean',
-            'campos_variables.*.valor_defecto' => 'nullable|string',
-            'metadatos_predefinidos' => 'nullable|array',
-            'configuracion_formato' => 'nullable|array',
-            'es_publica' => 'boolean',
-            'tags' => 'nullable|array',
-            'observaciones' => 'nullable|string|max:500'
-        ]);
-
-        // Limpiar valores vacíos
-        if (empty($validated['serie_documental_id'])) {
-            $validated['serie_documental_id'] = null;
-        } else {
-            $validated['serie_documental_id'] = (int)$validated['serie_documental_id'];
-        }
-
-        if (empty($validated['subserie_documental_id'])) {
-            $validated['subserie_documental_id'] = null;
-        } else {
-            $validated['subserie_documental_id'] = (int)$validated['subserie_documental_id'];
-        }
-
-        // Validar existencia si se proporcionaron
-        if ($validated['serie_documental_id'] !== null) {
-            $request->validate([
-                'serie_documental_id' => 'exists:series_documentales,id',
-            ]);
-        }
-
-        if ($validated['subserie_documental_id'] !== null) {
-            $request->validate([
-                'subserie_documental_id' => 'exists:subseries_documentales,id',
-            ]);
-        }
-
-        DB::beginTransaction();
         try {
-            $plantilla = PlantillaDocumental::create($validated);
+            \Log::info('Store method called', ['request_data' => $request->all()]);
+            
+            $validated = $request->validate([
+                'nombre' => 'required|string|max:200',
+                'descripcion' => 'nullable|string|max:1000',
+                'categoria' => 'required|in:memorando,oficio,resolucion,acta,informe,circular,comunicacion,otro',
+                'tipo_documento' => 'nullable|string|max:100',
+                'serie_documental_id' => 'nullable|string',
+                'subserie_documental_id' => 'nullable|string',
+                'contenido_html' => 'nullable|string',
+                'campos_variables' => 'nullable|array',
+                'campos_variables.*.nombre' => 'required|string|max:50',
+                'campos_variables.*.tipo' => 'required|in:texto,numero,fecha,email,url,textarea,select,checkbox',
+                'campos_variables.*.etiqueta' => 'required|string|max:100',
+                'campos_variables.*.requerido' => 'boolean',
+                'campos_variables.*.valor_defecto' => 'nullable|string',
+                'metadatos_predefinidos' => 'nullable|array',
+                'configuracion_formato' => 'nullable|array',
+                'es_publica' => 'boolean',
+                'tags' => 'nullable|array',
+                'observaciones' => 'nullable|string|max:500'
+            ]);
 
-            DB::commit();
+            \Log::info('Validation passed', ['validated' => $validated]);
 
-            return redirect()->route('admin.plantillas.index')
-                ->with('success', 'Plantilla documental creada exitosamente.');
+            // Limpiar valores vacíos y convertir a null si están vacíos
+            if (empty($validated['serie_documental_id']) || $validated['serie_documental_id'] === '' || $validated['serie_documental_id'] === 'null') {
+                $validated['serie_documental_id'] = null;
+            } else {
+                // Convertir a entero y validar existencia
+                $serieId = (int)$validated['serie_documental_id'];
+                if ($serieId > 0) {
+                    // Validar que existe antes de asignar
+                    if (!\App\Models\SerieDocumental::where('id', $serieId)->exists()) {
+                        return back()
+                            ->withInput()
+                            ->withErrors(['serie_documental_id' => 'La serie documental seleccionada no existe.']);
+                    }
+                    $validated['serie_documental_id'] = $serieId;
+                } else {
+                    $validated['serie_documental_id'] = null;
+                }
+            }
 
+            if (empty($validated['subserie_documental_id']) || $validated['subserie_documental_id'] === '' || $validated['subserie_documental_id'] === 'null') {
+                $validated['subserie_documental_id'] = null;
+            } else {
+                // Convertir a entero y validar existencia
+                $subserieId = (int)$validated['subserie_documental_id'];
+                if ($subserieId > 0) {
+                    // Validar que existe antes de asignar
+                    if (!\App\Models\SubserieDocumental::where('id', $subserieId)->exists()) {
+                        return back()
+                            ->withInput()
+                            ->withErrors(['subserie_documental_id' => 'La subserie documental seleccionada no existe.']);
+                    }
+                    $validated['subserie_documental_id'] = $subserieId;
+                } else {
+                    $validated['subserie_documental_id'] = null;
+                }
+            }
+
+            DB::beginTransaction();
+            try {
+                // Asignar valores por defecto antes de crear
+                $validated['usuario_creador_id'] = Auth::id();
+                $validated['estado'] = PlantillaDocumental::ESTADO_BORRADOR;
+                $validated['version'] = 1.0;
+                
+                // Generar código único antes de crear (sin usar ID)
+                $prefijo = 'PLT';
+                $categoria = strtoupper(substr($validated['categoria'], 0, 3));
+                $ultimoId = PlantillaDocumental::withTrashed()->max('id') ?? 0;
+                
+                // Asegurar que el código sea único
+                do {
+                    $numero = str_pad($ultimoId + 1, 4, '0', STR_PAD_LEFT);
+                    $codigo = "{$prefijo}-{$categoria}-{$numero}-V1";
+                    $ultimoId++;
+                } while (PlantillaDocumental::withTrashed()->where('codigo', $codigo)->exists());
+                
+                $validated['codigo'] = $codigo;
+
+                \Log::info('Creando plantilla con datos:', $validated);
+                
+                $plantilla = PlantillaDocumental::create($validated);
+
+                DB::commit();
+
+                \Log::info('Plantilla creada exitosamente:', ['id' => $plantilla->id, 'codigo' => $plantilla->codigo]);
+
+                return redirect()->route('admin.plantillas.index')
+                    ->with('success', 'Plantilla documental creada exitosamente.');
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Error al crear plantilla:', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'data' => $validated ?? []
+                ]);
+                
+                return back()
+                    ->withInput()
+                    ->with('error', 'Error al crear la plantilla: ' . $e->getMessage());
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation error:', ['errors' => $e->errors()]);
+            throw $e;
         } catch (\Exception $e) {
-            DB::rollBack();
+            \Log::error('Unexpected error in store method:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()
                 ->withInput()
-                ->with('error', 'Error al crear la plantilla: ' . $e->getMessage());
+                ->with('error', 'Error inesperado: ' . $e->getMessage());
         }
     }
 
