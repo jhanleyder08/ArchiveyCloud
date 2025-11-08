@@ -190,7 +190,7 @@ export default function PlantillasIndex({
     
     setFiltrosLocales(nuevosFiltros);
     
-    router.get(route('admin.plantillas.index'), nuevosFiltros, {
+    router.get('/admin/plantillas', nuevosFiltros, {
       preserveState: true,
       preserveScroll: true
     });
@@ -199,11 +199,11 @@ export default function PlantillasIndex({
   const limpiarFiltros = () => {
     setFiltrosLocales({});
     setBusqueda('');
-    router.get(route('admin.plantillas.index'));
+    router.get('/admin/plantillas');
   };
 
   const duplicarPlantilla = (plantillaId: number) => {
-    router.post(route('admin.plantillas.duplicar', plantillaId), {}, {
+    router.post(`/admin/plantillas/${plantillaId}/duplicar`, {}, {
       onSuccess: () => {
         // Notificación de éxito manejada por el backend
       }
@@ -666,12 +666,12 @@ export default function PlantillasIndex({
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex justify-end gap-2">
-                            <Link href={route('admin.plantillas.show', plantilla.id)}>
+                            <Link href={`/admin/plantillas/${plantilla.id}`}>
                               <Button variant="outline" size="sm">
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Link href={route('admin.plantillas.edit', plantilla.id)}>
+                            <Link href={`/admin/plantillas/${plantilla.id}/edit`}>
                               <Button variant="outline" size="sm">
                                 <Edit className="h-4 w-4" />
                               </Button>

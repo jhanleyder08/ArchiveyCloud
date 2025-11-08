@@ -162,7 +162,7 @@ export default function PlantillasShow({
   });
 
   const duplicarPlantilla = () => {
-    router.post(route('admin.plantillas.duplicar', plantilla.id), {}, {
+    router.post(`/admin/plantillas/${plantilla.id}/duplicar`, {}, {
       onSuccess: () => {
         toast.success('Plantilla duplicada exitosamente');
       },
@@ -173,7 +173,7 @@ export default function PlantillasShow({
   };
 
   const crearNuevaVersion = () => {
-    router.post(route('admin.plantillas.crear-version', plantilla.id), {}, {
+    router.post(`/admin/plantillas/${plantilla.id}/version`, {}, {
       onSuccess: () => {
         toast.success('Nueva versión creada exitosamente');
       },
@@ -184,7 +184,7 @@ export default function PlantillasShow({
   };
 
   const exportarPlantilla = (formato: string = 'json') => {
-    window.location.href = route('admin.plantillas.exportar', [plantilla.id, formato]);
+    window.location.href = `/admin/plantillas/${plantilla.id}/exportar/${formato}`;
   };
 
   const generarDocumento = () => {
@@ -205,12 +205,10 @@ export default function PlantillasShow({
       });
     }
 
-    documentoForm.post(route('admin.plantillas.generar-documento', plantilla.id), {
-      data: {
-        nombre_documento: documentoForm.data.nombre_documento,
-        expediente_id: documentoForm.data.expediente_id || null,
-        variables: variables
-      },
+    // Actualizar el formulario con las variables antes de enviar
+    documentoForm.setData('variables', variables);
+    
+    documentoForm.post(`/admin/plantillas/${plantilla.id}/generar`, {
       onSuccess: () => {
         setShowGenerarDocumento(false);
         documentoForm.reset();
@@ -232,7 +230,7 @@ export default function PlantillasShow({
 
   const handleCambiarEstado = (e: React.FormEvent) => {
     e.preventDefault();
-    estadoForm.patch(route('admin.plantillas.cambiar-estado', plantilla.id), {
+    estadoForm.patch(`/admin/plantillas/${plantilla.id}/estado`, {
       onSuccess: () => {
         setShowCambiarEstado(false);
         toast.success('Estado actualizado exitosamente');
@@ -244,12 +242,14 @@ export default function PlantillasShow({
   };
 
   return (
-    <AppLayout
-      header={
-        <div className="flex items-center justify-between">
+    <AppLayout>
+      <Head title={`Plantilla: ${plantilla.nombre}`} />
+
+      <div className="py-6">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
             <Link
-              href={route('admin.plantillas.index')}
+              href="/admin/plantillas"
               className="text-gray-500 hover:text-gray-700"
             >
               <ArrowLeft className="w-6 h-6" />
@@ -366,7 +366,7 @@ export default function PlantillasShow({
             </Dialog>
             {puede_editar && (
               <Button asChild>
-                <Link href={route('admin.plantillas.edit', plantilla.id)}>
+                <Link href={`/admin/plantillas/${plantilla.id}/edit`}>
                   <Edit className="w-4 h-4 mr-2" />
                   Editar
                 </Link>
@@ -374,11 +374,6 @@ export default function PlantillasShow({
             )}
           </div>
         </div>
-      }
-    >
-      <Head title={`Plantilla: ${plantilla.nombre}`} />
-
-      <div className="py-6">
         <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Columna principal */}
