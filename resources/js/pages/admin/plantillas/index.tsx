@@ -259,17 +259,14 @@ export default function PlantillasIndex({
                   return;
                 }
 
-                console.log('Datos del formulario:', createForm);
-                const routeUrl = route('admin.plantillas.store');
-                console.log('Ruta:', routeUrl);
-                
-                // Usar la ruta directamente sin concatenar (Ziggy ya devuelve la URL completa)
-                post(routeUrl, {
+                // Usar ruta relativa para evitar problemas de concatenación de URLs
+                // Inertia maneja la URL base automáticamente
+                post('/admin/plantillas', {
                   onStart: () => {
-                    console.log('Iniciando envío de formulario...');
+                    // Iniciando envío de formulario
                   },
                   onProgress: () => {
-                    console.log('Enviando datos...');
+                    // Enviando datos...
                   },
                   onSuccess: () => {
                     setShowCreateModal(false);
@@ -278,10 +275,6 @@ export default function PlantillasIndex({
                     toast.success('Plantilla creada exitosamente');
                   },
                   onError: (errors) => {
-                    console.error('Error al crear plantilla:', errors);
-                    console.error('Tipo de error:', typeof errors);
-                    console.error('Errores completos:', JSON.stringify(errors, null, 2));
-                    
                     if (errors) {
                       if (typeof errors === 'object') {
                         Object.keys(errors).forEach(field => {
@@ -296,7 +289,7 @@ export default function PlantillasIndex({
                     }
                   },
                   onFinish: () => {
-                    console.log('Finalizado envío de formulario');
+                    // Finalizado envío de formulario
                   },
                   preserveState: false,
                   preserveScroll: false,
