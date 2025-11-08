@@ -172,7 +172,8 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
     }, [showEditModal]);
 
     const breadcrumbItems = [
-        { title: "Dashboard", href: "/admin" },
+        { title: "Dashboard", href: "/dashboard" },
+        { title: "Administración", href: "#" },
         { title: "Subseries Documentales", href: "/admin/subseries" }
     ];
 
@@ -397,64 +398,72 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                 </div>
 
                 {/* Statistics */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Total Subseries</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{safeData.total}</p>
+                                <p className="text-sm text-gray-600">Total Subseries</p>
+                                <p className="text-2xl font-semibold text-gray-900">{safeStats.total}</p>
                             </div>
-                            <FileText className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <FileText className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Activas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{safeStats.activas}</p>
+                                <p className="text-sm text-gray-600">Activas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{safeStats.activas}</p>
                             </div>
-                            <ToggleRight className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <ToggleRight className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Inactivas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{safeStats.inactivas}</p>
+                                <p className="text-sm text-gray-600">Inactivas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{safeStats.inactivas}</p>
                             </div>
-                            <ToggleLeft className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <ToggleLeft className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Con Expedientes</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{safeStats.con_expedientes}</p>
+                                <p className="text-sm text-gray-600">Con Expedientes</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{safeStats.con_expedientes}</p>
                             </div>
-                            <FileText className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <FileText className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Filters */}
                 <div className="bg-white rounded-lg border p-6">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="flex-1">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-80">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
                                     type="text"
-                                    placeholder="Buscar por código, nombre o descripción..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Buscar subseries..."
                                     className="pl-10"
                                 />
                             </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <Select value={serieFilter} onValueChange={setSerieFilter}>
-                                <SelectTrigger className="w-full sm:w-48">
-                                    <SelectValue placeholder="Filtrar por Serie" />
+                        <div className="flex items-center gap-2">
+                            <Select value={serieFilter || "all"} onValueChange={(value) => setSerieFilter(value === "all" ? "" : value)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todas las Series" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas las Series</SelectItem>
@@ -465,9 +474,9 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                                <SelectTrigger className="w-full sm:w-40">
-                                    <SelectValue placeholder="Estado" />
+                            <Select value={estadoFilter || "all"} onValueChange={(value) => setEstadoFilter(value === "all" ? "" : value)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todos los estados" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos los estados</SelectItem>
@@ -586,86 +595,88 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                                     {subserie.expedientes_count || 0} expedientes
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <TooltipProvider>
+                                            <td className="px-6 py-4">
+                                                <TooltipProvider>
+                                                    <div className="flex items-center gap-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
+                                                                <button
                                                                     onClick={() => setShowViewModal(subserie)}
+                                                                    className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
                                                                 >
                                                                     <Eye className="h-4 w-4" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Ver detalles</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => setShowEditModal(subserie)}
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Editar</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => handleDuplicate(subserie)}
-                                                                >
-                                                                    <Copy className="h-4 w-4" />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Duplicar</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => handleToggleActive(subserie)}
-                                                                >
-                                                                    {subserie.activa ? (
-                                                                        <ToggleLeft className="h-4 w-4 text-gray-500" />
-                                                                    ) : (
-                                                                        <ToggleRight className="h-4 w-4 text-green-500" />
-                                                                    )}
-                                                                </Button>
+                                                                </button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
-                                                                {subserie.activa ? 'Desactivar' : 'Activar'}
+                                                                <p>Ver detalles</p>
                                                             </TooltipContent>
                                                         </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
+                                                        
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
+                                                                <button
+                                                                    onClick={() => setShowEditModal(subserie)}
+                                                                    className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                                >
+                                                                    <Edit className="h-4 w-4" />
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Editar subserie</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    onClick={() => handleDuplicate(subserie)}
+                                                                    className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                                >
+                                                                    <Copy className="h-4 w-4" />
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Duplicar subserie</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    onClick={() => handleToggleActive(subserie)}
+                                                                    className={`p-2 rounded-md transition-colors ${
+                                                                        subserie.activa 
+                                                                            ? 'text-orange-600 hover:text-orange-800 hover:bg-orange-50' 
+                                                                            : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                                                                    }`}
+                                                                >
+                                                                    {subserie.activa ? (
+                                                                        <ToggleLeft className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <ToggleRight className="h-4 w-4" />
+                                                                    )}
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>{subserie.activa ? 'Desactivar subserie' : 'Activar subserie'}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
                                                                     onClick={() => setShowDeleteModal(subserie)}
-                                                                    className="text-red-600 hover:text-red-700"
+                                                                    className="p-2 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors"
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
-                                                                </Button>
+                                                                </button>
                                                             </TooltipTrigger>
-                                                            <TooltipContent>Eliminar</TooltipContent>
+                                                            <TooltipContent>
+                                                                <p>Eliminar subserie</p>
+                                                            </TooltipContent>
                                                         </Tooltip>
-                                                    </TooltipProvider>
-                                                </div>
+                                                    </div>
+                                                </TooltipProvider>
                                             </td>
                                         </tr>
                                     ))
@@ -680,9 +691,9 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                     <Dialog open={!!showEditModal} onOpenChange={() => setShowEditModal(null)}>
                         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <DialogHeader>
-                                <DialogTitle>Editar Subserie Documental</DialogTitle>
-                                <DialogDescription>
-                                    Modifique los datos de la subserie documental.
+                                <DialogTitle className="text-xl font-semibold text-gray-900">Editar Subserie Documental</DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
+                                    Modifique los datos de la subserie documental según sea necesario.
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={(e) => {
@@ -765,8 +776,8 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                     <Dialog open={!!showViewModal} onOpenChange={() => setShowViewModal(null)}>
                         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <DialogHeader>
-                                <DialogTitle>Detalles de la Subserie Documental</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-xl font-semibold text-gray-900">Detalles de la Subserie Documental</DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
                                     Información completa de la subserie documental.
                                 </DialogDescription>
                             </DialogHeader>
@@ -847,13 +858,21 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                 {/* Delete Confirmation Modal */}
                 {showDeleteModal && (
                     <Dialog open={!!showDeleteModal} onOpenChange={() => setShowDeleteModal(null)}>
-                        <DialogContent className="sm:max-w-[400px]">
+                        <DialogContent className="sm:max-w-[425px]">
                             <DialogHeader>
-                                <DialogTitle className="text-red-600">Confirmar Eliminación</DialogTitle>
-                                <DialogDescription>
-                                    ¿Está seguro de que desea eliminar la subserie documental "{showDeleteModal.nombre}"? Esta acción no se puede deshacer.
+                                <DialogTitle className="text-xl font-semibold text-gray-900">Eliminar Subserie Documental</DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
+                                    Esta acción no se puede deshacer. La subserie será eliminada permanentemente del sistema.
                                 </DialogDescription>
                             </DialogHeader>
+                            <div className="py-4">
+                                <p className="text-gray-700">
+                                    ¿Estás seguro de que deseas eliminar la subserie <strong>{showDeleteModal.nombre}</strong>?
+                                </p>
+                                <p className="text-gray-600 mt-2">
+                                    Código: <strong>{showDeleteModal.codigo}</strong>
+                                </p>
+                            </div>
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => setShowDeleteModal(null)}>
                                     Cancelar
@@ -862,7 +881,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                                     variant="destructive" 
                                     onClick={() => handleDelete(showDeleteModal)}
                                 >
-                                    Eliminar
+                                    Eliminar Subserie
                                 </Button>
                             </DialogFooter>
                         </DialogContent>

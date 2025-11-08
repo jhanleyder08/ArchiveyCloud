@@ -154,7 +154,8 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
     }, [showEditModal]);
 
     const breadcrumbItems = [
-        { title: "Dashboard", href: "/admin" },
+        { title: "Dashboard", href: "/dashboard" },
+        { title: "Administración", href: "#" },
         { title: "Tablas de Retención Documental", href: "/admin/trd" }
     ];
 
@@ -759,43 +760,94 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                         </table>
                     </div>
 
-                    {/* Pagination */}
-                    {safeTrds.total > safeTrds.per_page && (
-                        <div className="px-6 py-4 border-t bg-gray-50">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-600">
-                                    Mostrando {safeTrds.from} a {safeTrds.to} de {safeTrds.total} TRDs
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {safeTrds.links.map((link, index) => (
-                                        <Button
-                                            key={index}
-                                            variant={link.active ? "default" : "outline"}
-                                            size="sm"
-                                            onClick={() => link.url && router.visit(link.url)}
-                                            disabled={!link.url}
-                                            dangerouslySetInnerHTML={{ __html: link.label }}
-                                            className={link.active ? "bg-[#2a3d83] hover:bg-[#1e2b5f]" : ""}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
+                {/* Pagination */}
+                {safeTrds.data.length > 0 && (
+                    <div className="flex items-center justify-between bg-white border rounded-lg px-6 py-3">
+                        <div className="text-sm text-gray-600">
+                            Mostrando <span className="font-medium">{safeTrds.from || 0}</span> a{' '}
+                            <span className="font-medium">{safeTrds.to || 0}</span> de{' '}
+                            <span className="font-medium">{safeTrds.total || 0}</span> TRDs
                         </div>
-                    )}
+                        <div className="flex items-center gap-2">
+                            {safeTrds.links.map((link, index) => {
+                                if (link.label.includes('Previous')) {
+                                    return (
+                                        <Link
+                                            key={index}
+                                            href={link.url || '#'}
+                                            preserveState
+                                            className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                                                link.url 
+                                                    ? 'text-gray-700 hover:bg-gray-50' 
+                                                    : 'text-gray-300 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            Anterior
+                                        </Link>
+                                    );
+                                }
+                                
+                                if (link.label.includes('Next')) {
+                                    return (
+                                        <Link
+                                            key={index}
+                                            href={link.url || '#'}
+                                            preserveState
+                                            className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                                                link.url 
+                                                    ? 'text-gray-700 hover:bg-gray-50' 
+                                                    : 'text-gray-300 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            Siguiente
+                                        </Link>
+                                    );
+                                }
+
+                                // Number pages
+                                if (!isNaN(Number(link.label))) {
+                                    return (
+                                        <Link
+                                            key={index}
+                                            href={link.url || '#'}
+                                            preserveState
+                                            className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                                link.active
+                                                    ? 'bg-[#2a3d83] text-white'
+                                                    : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    );
+                                }
+
+                                return null;
+                            })}
+                        </div>
+                    </div>
+                )}
                 </div>
 
                 {/* Delete Confirmation Modal */}
                 <Dialog open={!!showDeleteModal} onOpenChange={(open) => {
                     if (!open) setShowDeleteModal(null);
                 }}>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle>Confirmar Eliminación</DialogTitle>
-                            <DialogDescription>
-                                ¿Estás seguro de que deseas eliminar la TRD "{showDeleteModal?.nombre}"?
-                                Esta acción no se puede deshacer.
+                            <DialogTitle className="text-xl font-semibold text-gray-900">Eliminar TRD</DialogTitle>
+                            <DialogDescription className="text-sm text-gray-600">
+                                Esta acción no se puede deshacer. La TRD será eliminada permanentemente del sistema.
                             </DialogDescription>
                         </DialogHeader>
+                        <div className="py-4">
+                            <p className="text-gray-700">
+                                ¿Estás seguro de que deseas eliminar la TRD <strong>{showDeleteModal?.nombre}</strong>?
+                            </p>
+                            <p className="text-gray-600 mt-2">
+                                Código: <strong>{showDeleteModal?.codigo}</strong>
+                            </p>
+                        </div>
                         <DialogFooter>
                             <Button
                                 type="button"
@@ -809,7 +861,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                 variant="destructive"
                                 onClick={() => showDeleteModal && handleDelete(showDeleteModal)}
                             >
-                                Eliminar
+                                Eliminar TRD
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -821,9 +873,9 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                 }}>
                     <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         <DialogHeader>
-                            <DialogTitle className="text-[#2a3d83]">Editar TRD</DialogTitle>
-                            <DialogDescription>
-                                Modifica los datos de la Tabla de Retención Documental
+                            <DialogTitle className="text-xl font-semibold text-gray-900">Editar TRD</DialogTitle>
+                            <DialogDescription className="text-sm text-gray-600">
+                                Modifique los datos de la Tabla de Retención Documental según sea necesario.
                             </DialogDescription>
                         </DialogHeader>
                         
@@ -988,9 +1040,9 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                 <Dialog open={!!showViewModal} onOpenChange={() => setShowViewModal(null)}>
                     <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         <DialogHeader>
-                            <DialogTitle className="text-[#2a3d83]">Detalles de TRD</DialogTitle>
-                            <DialogDescription>
-                                Información completa de la Tabla de Retención Documental
+                            <DialogTitle className="text-xl font-semibold text-gray-900">Detalles de TRD</DialogTitle>
+                            <DialogDescription className="text-sm text-gray-600">
+                                Información completa de la Tabla de Retención Documental.
                             </DialogDescription>
                         </DialogHeader>
                         

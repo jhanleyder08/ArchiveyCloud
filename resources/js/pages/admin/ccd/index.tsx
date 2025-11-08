@@ -156,20 +156,25 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={[
+            { title: "Dashboard", href: "/dashboard" },
+            { title: "Administración", href: "#" },
+            { title: "Cuadros de Clasificación Documental", href: "/admin/ccd" }
+        ]}>
             <Head title="Cuadros de Clasificación Documental" />
             
             <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Cuadros de Clasificación Documental</h1>
-                        <p className="text-muted-foreground">
-                            Gestión de cuadros de clasificación documental del sistema
-                        </p>
+                {/* Header */}
+                <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center gap-2">
+                        <FolderTree className="h-6 w-6 text-[#2a3d83]" />
+                        <h1 className="text-2xl font-semibold text-gray-900">
+                            Gestión de Cuadros de Clasificación Documental
+                        </h1>
                     </div>
                     <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
                         <DialogTrigger asChild>
-                            <Button className="flex items-center gap-2">
+                            <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
                                 <Plus className="h-4 w-4" />
                                 Nuevo CCD
                             </Button>
@@ -349,55 +354,62 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                 </div>
 
                 {/* Estadísticas */}
-                <div className="grid gap-4 md:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total CCDs</CardTitle>
-                            <FolderTree className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{estadisticas?.total || 0}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Activos</CardTitle>
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{estadisticas?.activos || 0}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Borradores</CardTitle>
-                            <AlertCircle className="h-4 w-4 text-yellow-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{estadisticas?.borradores || 0}</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Vigentes</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-blue-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{estadisticas?.vigentes || 0}</div>
-                        </CardContent>
-                    </Card>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total CCDs</p>
+                                <p className="text-2xl font-semibold text-gray-900">{estadisticas?.total || 0}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <FolderTree className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Activos</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas?.activos || 0}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Borradores</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas?.borradores || 0}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <AlertCircle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Vigentes</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas?.vigentes || 0}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <TrendingUp className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Filtros */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Filtros</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex gap-4">
-                            <div className="flex-1">
+                <div className="bg-white rounded-lg border p-6">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-80">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
-                                    placeholder="Buscar por código o nombre..."
+                                    type="text"
+                                    placeholder="Buscar CCDs..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     onKeyPress={(e) => {
@@ -406,14 +418,17 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                             handleSearch();
                                         }
                                     }}
+                                    className="pl-10"
                                 />
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <Select
                                 value={filterEstado}
                                 onValueChange={handleEstadoChange}
                             >
-                                <SelectTrigger className="w-48">
-                                    <SelectValue placeholder="Estado" />
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todos los estados" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos los estados</SelectItem>
@@ -423,116 +438,104 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                     <SelectItem value="historico">Histórico</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Button onClick={handleSearch} type="button">
+                            <Button onClick={handleSearch} type="button" className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
                                 <Search className="mr-2 h-4 w-4" />
                                 Buscar
                             </Button>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
                 {/* Lista de CCDs */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Lista de CCDs</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {ccds.data.length === 0 ? (
-                            <div className="text-center py-8">
-                                <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-                                <h3 className="mt-2 text-sm font-semibold text-gray-900">No hay CCDs</h3>
-                                <p className="mt-1 text-sm text-gray-500">
-                                    No se encontraron cuadros de clasificación documental.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b">
-                                            <th className="text-left py-3 px-4">Código</th>
-                                            <th className="text-left py-3 px-4">Nombre</th>
-                                            <th className="text-left py-3 px-4">Estado</th>
-                                            <th className="text-left py-3 px-4">Niveles</th>
-                                            <th className="text-left py-3 px-4">Creado</th>
-                                            <th className="text-right py-3 px-4">Acciones</th>
+                <div className="bg-white rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b">
+                                <tr>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Código</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Nombre</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Estado</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Niveles</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Creado</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {ccds.data.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-8 px-6 text-center text-gray-500">
+                                            No se encontraron CCDs.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    ccds.data.map((ccd) => (
+                                        <tr key={ccd.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="py-4 px-6 font-medium text-gray-900">{ccd.codigo}</td>
+                                            <td className="py-4 px-6">
+                                                <div>
+                                                    <div className="font-medium text-gray-900">{ccd.nombre}</div>
+                                                    {ccd.descripcion && (
+                                                        <div className="text-sm text-gray-500">{ccd.descripcion}</div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                {getEstadoBadge(ccd.estado)}
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-[#2a3d83]">
+                                                    {ccd.niveles_count || 0} niveles
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-6 text-gray-600">{new Date(ccd.created_at).toLocaleDateString('es-ES')}</td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex items-center gap-2">
+                                                    <Link href={`/admin/ccd/${ccd.id}`}>
+                                                        <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
+                                                            <Eye className="h-4 w-4" />
+                                                        </button>
+                                                    </Link>
+                                                    <Link href={`/admin/ccd/${ccd.id}/edit`}>
+                                                        <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
+                                                            <Edit className="h-4 w-4" />
+                                                        </button>
+                                                    </Link>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {ccds.data.map((ccd) => (
-                                            <tr key={ccd.id} className="border-b hover:bg-gray-50">
-                                                <td className="py-3 px-4 font-medium">{ccd.codigo}</td>
-                                                <td className="py-3 px-4">
-                                                    <div>
-                                                        <div className="font-medium">{ccd.nombre}</div>
-                                                        {ccd.descripcion && (
-                                                            <div className="text-sm text-gray-500">{ccd.descripcion}</div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    {getEstadoBadge(ccd.estado)}
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <Badge variant="outline">
-                                                        {ccd.niveles_count || 0} niveles
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-gray-500">
-                                                    {new Date(ccd.created_at).toLocaleDateString()}
-                                                </td>
-                                                <td className="py-3 px-4 text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <Link href={`/admin/ccd/${ccd.id}`}>
-                                                            <Button variant="outline" size="sm">
-                                                                <Eye className="h-4 w-4" />
-                                                            </Button>
-                                                        </Link>
-                                                        <Link href={`/admin/ccd/${ccd.id}/edit`}>
-                                                            <Button variant="outline" size="sm">
-                                                                <Edit className="h-4 w-4" />
-                                                            </Button>
-                                                        </Link>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 {/* Paginación */}
-                {ccds.last_page > 1 && (
-                    <div className="flex justify-between items-center">
-                        <div className="text-sm text-gray-700">
-                            Mostrando {((ccds.current_page - 1) * ccds.per_page) + 1} a{' '}
-                            {Math.min(ccds.current_page * ccds.per_page, ccds.total)} de {ccds.total} resultados
+                {ccds.data.length > 0 && ccds.last_page > 1 && (
+                    <div className="flex items-center justify-between bg-white border rounded-lg px-6 py-3">
+                        <div className="text-sm text-gray-600">
+                            Mostrando <span className="font-medium">{((ccds.current_page - 1) * ccds.per_page) + 1}</span> a{' '}
+                            <span className="font-medium">{Math.min(ccds.current_page * ccds.per_page, ccds.total)}</span> de{' '}
+                            <span className="font-medium">{ccds.total}</span> resultados
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
                             {ccds.current_page > 1 && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => router.get(`/admin/ccd?page=${ccds.current_page - 1}`, {
-                                        search: searchTerm,
-                                        estado: filterEstado !== 'all' ? filterEstado : undefined,
-                                    })}
+                                <Link
+                                    href={`/admin/ccd?page=${ccds.current_page - 1}${searchTerm ? `&search=${searchTerm}` : ''}${filterEstado !== 'all' ? `&estado=${filterEstado}` : ''}`}
+                                    preserveState
+                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                                 >
                                     Anterior
-                                </Button>
+                                </Link>
                             )}
                             {ccds.current_page < ccds.last_page && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => router.get(`/admin/ccd?page=${ccds.current_page + 1}`, {
-                                        search: searchTerm,
-                                        estado: filterEstado !== 'all' ? filterEstado : undefined,
-                                    })}
+                                <Link
+                                    href={`/admin/ccd?page=${ccds.current_page + 1}${searchTerm ? `&search=${searchTerm}` : ''}${filterEstado !== 'all' ? `&estado=${filterEstado}` : ''}`}
+                                    preserveState
+                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                                 >
                                     Siguiente
-                                </Button>
+                                </Link>
                             )}
                         </div>
                     </div>

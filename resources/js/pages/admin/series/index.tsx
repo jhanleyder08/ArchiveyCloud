@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { FileText, Plus, Search, Eye, Edit, Copy, Trash2, ToggleRight, ToggleLeft, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import AppLayout from '@/layouts/app-layout';
@@ -142,7 +142,8 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
     }, [showEditModal]);
 
     const breadcrumbItems = [
-        { title: "Dashboard", href: "/admin" },
+        { title: "Dashboard", href: "/dashboard" },
+        { title: "Administración", href: "#" },
         { title: "Series Documentales", href: "/admin/series" }
     ];
 
@@ -474,64 +475,72 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                 </div>
 
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Total Series</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{data.total}</p>
+                                <p className="text-sm text-gray-600">Total Series</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
                             </div>
-                            <FileText className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <FileText className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Activas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{stats.activas}</p>
+                                <p className="text-sm text-gray-600">Activas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.activas}</p>
                             </div>
-                            <ToggleRight className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <ToggleRight className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Inactivas</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{stats.inactivas}</p>
+                                <p className="text-sm text-gray-600">Inactivas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.inactivas}</p>
                             </div>
-                            <ToggleLeft className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <ToggleLeft className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-gray-600">Subseries Totales</p>
-                                <p className="text-2xl font-bold text-[#2a3d83]">{stats.con_subseries}</p>
+                                <p className="text-sm text-gray-600">Con Subseries</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.con_subseries}</p>
                             </div>
-                            <FileText className="h-8 w-8 text-[#2a3d83]" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <FileText className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Filters */}
+                {/* Search and Filters */}
                 <div className="bg-white rounded-lg border p-6">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="flex-1">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-80">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
                                     type="text"
-                                    placeholder="Buscar por código, nombre o descripción..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Buscar series..."
                                     className="pl-10"
                                 />
                             </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <Select value={trdFilter} onValueChange={setTrdFilter}>
-                                <SelectTrigger className="w-full sm:w-48">
-                                    <SelectValue placeholder="Filtrar por TRD" />
+                        <div className="flex items-center gap-2">
+                            <Select value={trdFilter || "all"} onValueChange={(value) => setTrdFilter(value === "all" ? "" : value)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todas las TRDs" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas las TRDs</SelectItem>
@@ -542,9 +551,9 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-                                <SelectTrigger className="w-full sm:w-40">
-                                    <SelectValue placeholder="Estado" />
+                            <Select value={estadoFilter || "all"} onValueChange={(value) => setEstadoFilter(value === "all" ? "" : value)}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todos los estados" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos los estados</SelectItem>
@@ -802,69 +811,32 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                     </div>
 
                     {/* Pagination */}
-                    {data.last_page > 1 && (
-                        <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex justify-between flex-1 sm:hidden">
-                                    <Button
-                                        variant="outline"
-                                        disabled={!data.prev_page_url}
-                                        onClick={() => data.prev_page_url && router.visit(data.prev_page_url)}
+                    {data.data.length > 0 && (
+                        <div className="flex items-center justify-between bg-white border rounded-lg px-6 py-3">
+                            <div className="text-sm text-gray-600">
+                                Mostrando <span className="font-medium">{data.from || 0}</span> a{' '}
+                                <span className="font-medium">{data.to || 0}</span> de{' '}
+                                <span className="font-medium">{data.total || 0}</span> series
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {data.prev_page_url && (
+                                    <Link
+                                        href={data.prev_page_url}
+                                        preserveState
+                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                                     >
                                         Anterior
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        disabled={!data.next_page_url}
-                                        onClick={() => data.next_page_url && router.visit(data.next_page_url)}
+                                    </Link>
+                                )}
+                                {data.next_page_url && (
+                                    <Link
+                                        href={data.next_page_url}
+                                        preserveState
+                                        className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                                     >
                                         Siguiente
-                                    </Button>
-                                </div>
-                                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-700">
-                                            Mostrando{' '}
-                                            <span className="font-medium">{data.from}</span> a{' '}
-                                            <span className="font-medium">{data.to}</span> de{' '}
-                                            <span className="font-medium">{data.total}</span> resultados
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={data.current_page === 1}
-                                            onClick={() => router.visit(data.first_page_url)}
-                                        >
-                                            Primera
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={!data.prev_page_url}
-                                            onClick={() => data.prev_page_url && router.visit(data.prev_page_url)}
-                                        >
-                                            Anterior
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={!data.next_page_url}
-                                            onClick={() => data.next_page_url && router.visit(data.next_page_url)}
-                                        >
-                                            Siguiente
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={data.current_page === data.last_page}
-                                            onClick={() => router.visit(data.last_page_url)}
-                                        >
-                                            Última
-                                        </Button>
-                                    </div>
-                                </div>
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     )}
@@ -875,9 +847,9 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                     <Dialog open={!!showEditModal} onOpenChange={() => setShowEditModal(null)}>
                         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <DialogHeader>
-                                <DialogTitle>Editar Serie Documental</DialogTitle>
-                                <DialogDescription>
-                                    Modifique los datos de la serie documental.
+                                <DialogTitle className="text-xl font-semibold text-gray-900">Editar Serie Documental</DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
+                                    Modifique los datos de la serie documental según sea necesario.
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={(e) => {
@@ -1023,8 +995,8 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                     <Dialog open={!!showViewModal} onOpenChange={() => setShowViewModal(null)}>
                         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <DialogHeader>
-                                <DialogTitle>Detalles de la Serie Documental</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-xl font-semibold text-gray-900">Detalles de la Serie Documental</DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
                                     Información completa de la serie documental.
                                 </DialogDescription>
                             </DialogHeader>
@@ -1092,13 +1064,21 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                 {/* Delete Confirmation Modal */}
                 {showDeleteModal && (
                     <Dialog open={!!showDeleteModal} onOpenChange={() => setShowDeleteModal(null)}>
-                        <DialogContent className="sm:max-w-[400px]">
+                        <DialogContent className="sm:max-w-[425px]">
                             <DialogHeader>
-                                <DialogTitle className="text-red-600">Confirmar Eliminación</DialogTitle>
-                                <DialogDescription>
-                                    ¿Está seguro de que desea eliminar la serie documental "{showDeleteModal.nombre}"? Esta acción no se puede deshacer.
+                                <DialogTitle className="text-xl font-semibold text-gray-900">Eliminar Serie Documental</DialogTitle>
+                                <DialogDescription className="text-sm text-gray-600">
+                                    Esta acción no se puede deshacer. La serie será eliminada permanentemente del sistema.
                                 </DialogDescription>
                             </DialogHeader>
+                            <div className="py-4">
+                                <p className="text-gray-700">
+                                    ¿Estás seguro de que deseas eliminar la serie <strong>{showDeleteModal.nombre}</strong>?
+                                </p>
+                                <p className="text-gray-600 mt-2">
+                                    Código: <strong>{showDeleteModal.codigo}</strong>
+                                </p>
+                            </div>
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => setShowDeleteModal(null)}>
                                     Cancelar
@@ -1107,7 +1087,7 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                     variant="destructive" 
                                     onClick={() => handleDelete(showDeleteModal)}
                                 >
-                                    Eliminar
+                                    Eliminar Serie
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
