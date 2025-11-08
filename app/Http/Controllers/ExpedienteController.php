@@ -35,24 +35,96 @@ class ExpedienteController extends Controller
             $query->where('serie_id', $request->serie_id);
         }
 
-        if ($request->has('tipo')) {
-            $query->where('tipo_expediente', $request->tipo);
+        if ($request->has('tipo_expediente')) {
+            $query->where('tipo_expediente', $request->tipo_expediente);
+        }
+
+        if ($request->has('proximidad_vencimiento')) {
+            // Lógica para filtrar por proximidad de eliminación (usando fecha_eliminacion)
+            $hoy = now();
+            switch ($request->proximidad_vencimiento) {
+                case 'vencidos':
+                    $query->whereNotNull('fecha_eliminacion')
+                          ->whereDate('fecha_eliminacion', '<', $hoy);
+                    break;
+                case 'proximos_30':
+                    $query->whereNotNull('fecha_eliminacion')
+                          ->whereDate('fecha_eliminacion', '>=', $hoy)
+                          ->whereDate('fecha_eliminacion', '<=', $hoy->copy()->addDays(30));
+                    break;
+                case 'proximos_60':
+                    $query->whereNotNull('fecha_eliminacion')
+                          ->whereDate('fecha_eliminacion', '>=', $hoy)
+                          ->whereDate('fecha_eliminacion', '<=', $hoy->copy()->addDays(60));
+                    break;
+            }
         }
 
         if ($request->has('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('codigo', 'like', '%' . $request->search . '%')
-                  ->orWhere('titulo', 'like', '%' . $request->search . '%');
+                  ->orWhere('titulo', 'like', '%' . $request->search . '%')
+                  ->orWhere('descripcion', 'like', '%' . $request->search . '%');
             });
         }
 
         $expedientes = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
+        // Estadísticas
+        $estadisticas = [
+            'total' => Expediente::count(),
+            'abiertos' => Expediente::where('estado', '!=', 'cerrado')->where('cerrado', false)->count(),
+            'cerrados' => Expediente::where('cerrado', true)->orWhere('estado', 'cerrado')->count(),
+            'electronicos' => Expediente::where('tipo_expediente', 'electronico')->count(),
+            'fisicos' => Expediente::where('tipo_expediente', 'fisico')->count(),
+            'hibridos' => Expediente::where('tipo_expediente', 'hibrido')->count(),
+            'proximos_vencer' => Expediente::whereNotNull('fecha_eliminacion')
+                ->whereDate('fecha_eliminacion', '>=', now())
+                ->whereDate('fecha_eliminacion', '<=', now()->addDays(30))
+                ->count(),
+            'vencidos' => Expediente::whereNotNull('fecha_eliminacion')
+                ->whereDate('fecha_eliminacion', '<', now())
+                ->count(),
+        ];
+
+        // Opciones para los filtros
+        $opciones = [
+            'estados' => [
+                ['value' => 'abierto', 'label' => 'Abierto'],
+                ['value' => 'cerrado', 'label' => 'Cerrado'],
+                ['value' => 'transferido', 'label' => 'Transferido'],
+                ['value' => 'archivado', 'label' => 'Archivado'],
+                ['value' => 'en_disposicion', 'label' => 'En Disposición'],
+            ],
+            'tipos' => [
+                ['value' => 'electronico', 'label' => 'Electrónico'],
+                ['value' => 'fisico', 'label' => 'Físico'],
+                ['value' => 'hibrido', 'label' => 'Híbrido'],
+            ],
+            'proximidad_vencimiento' => [
+                ['value' => 'vencidos', 'label' => 'Vencidos'],
+                ['value' => 'proximos_30', 'label' => 'Próximos 30 días'],
+                ['value' => 'proximos_60', 'label' => 'Próximos 60 días'],
+            ],
+            'series_disponibles' => \App\Models\SerieDocumental::where('activa', true)
+                ->get(['id', 'codigo', 'nombre'])
+                ->map(function ($serie) {
+                    return [
+                        'id' => $serie->id,
+                        'codigo' => $serie->codigo,
+                        'nombre' => $serie->nombre,
+                    ];
+                })
+                ->toArray(),
+            'areas_disponibles' => [], // Campo area_responsable no existe en la tabla
+        ];
+
         return Inertia::render('admin/expedientes/index', [
             'expedientes' => $expedientes,
-            'filters' => $request->only(['estado', 'serie_id', 'tipo', 'search']),
-            'estadisticas' => $this->getEstadisticasGenerales(),
+            'filtros' => $request->only(['search', 'estado', 'tipo_expediente', 'serie_id', 'proximidad_vencimiento']),
+            'estadisticas' => $estadisticas,
+            'opciones' => $opciones,
         ]);
     }
 
@@ -62,7 +134,7 @@ class ExpedienteController extends Controller
     public function create(): Response
     {
         return Inertia::render('admin/expedientes/create', [
-            'series' => \App\Models\SerieDocumental::where('activo', true)->get(),
+            'series' => \App\Models\SerieDocumental::where('activa', true)->get(),
             'dependencias' => \App\Models\Dependencia::all(),
         ]);
     }
@@ -141,7 +213,7 @@ class ExpedienteController extends Controller
 
         return Inertia::render('admin/expedientes/edit', [
             'expediente' => $expediente,
-            'series' => \App\Models\SerieDocumental::where('activo', true)->get(),
+            'series' => \App\Models\SerieDocumental::where('activa', true)->get(),
             'dependencias' => \App\Models\Dependencia::all(),
         ]);
     }

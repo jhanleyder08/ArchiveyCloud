@@ -102,7 +102,7 @@ interface Props {
     expedientes: PaginatedExpedientes;
     estadisticas: Estadisticas;
     opciones: Opciones;
-    filtros: {
+    filtros?: {
         search?: string;
         estado?: string;
         tipo_expediente?: string;
@@ -118,16 +118,16 @@ interface Props {
 
 export default function Index({ expedientes, estadisticas, opciones, filtros }: Props) {
     const { flash: pageFlash } = usePage<{flash: {success?: string, error?: string}}>().props;
-    const [searchQuery, setSearchQuery] = useState(filtros.search || '');
+    const [searchQuery, setSearchQuery] = useState(filtros?.search || '');
     const [showFilters, setShowFilters] = useState(false);
     
     const [currentFilters, setCurrentFilters] = useState({
-        search: filtros.search || '',
-        estado: filtros.estado || 'all',
-        tipo_expediente: filtros.tipo_expediente || 'all',
-        serie_id: filtros.serie_id || 'all',
-        area_responsable: filtros.area_responsable || 'all',
-        proximidad_vencimiento: filtros.proximidad_vencimiento || 'all',
+        search: filtros?.search || '',
+        estado: filtros?.estado || 'all',
+        tipo_expediente: filtros?.tipo_expediente || 'all',
+        serie_id: filtros?.serie_id || 'all',
+        area_responsable: filtros?.area_responsable || 'all',
+        proximidad_vencimiento: filtros?.proximidad_vencimiento || 'all',
     });
 
     // Aplicar filtros
