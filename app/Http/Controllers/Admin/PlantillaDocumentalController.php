@@ -275,7 +275,7 @@ class PlantillaDocumentalController extends Controller
         ]);
 
         $documentosGenerados = $plantilla->documentosGenerados()
-            ->with(['expediente:id,numero_expediente,titulo', 'usuarioCreador:id,name'])
+            ->with(['expediente:id,numero_expediente,titulo'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
@@ -286,8 +286,8 @@ class PlantillaDocumentalController extends Controller
                 ->where('created_at', '>=', Carbon::now()->subMonth())
                 ->count(),
             'usuarios_utilizan' => $plantilla->documentosGenerados()
-                ->distinct('usuario_creador_id')
-                ->count(),
+                ->distinct('created_by')
+                ->count('created_by'),
             'version_actual' => $plantilla->version,
             'es_version_reciente' => $plantilla->esVersionMasReciente()
         ];
@@ -418,33 +418,61 @@ class PlantillaDocumentalController extends Controller
             $nombreArchivo = $validated['nombre_documento'] . '.html';
             $rutaArchivo = 'documentos/generados/' . date('Y/m/') . $nombreArchivo;
             
-            Storage::put($rutaArchivo, $contenidoProcesado);
+            Storage::disk('public')->put($rutaArchivo, $contenidoProcesado);
+
+            // Obtener tipología por defecto si no existe
+            $tipologiaId = $plantilla->tipologia_documental_id ?? 
+                          \App\Models\TipologiaDocumental::first()?->id ?? 
+                          1;
 
             // Crear registro de documento
+            // Mapear campos según la estructura real de la tabla
             $documento = Documento::create([
-                'nombre' => $validated['nombre_documento'],
+                'codigo_documento' => 'DOC-' . now()->format('YmdHis') . '-' . $plantilla->id,
+                'titulo' => $validated['nombre_documento'],
                 'descripcion' => "Documento generado desde plantilla: {$plantilla->nombre}",
-                'expediente_id' => $validated['expediente_id'],
-                'plantilla_id' => $plantilla->id,
-                'tipo_documental' => $plantilla->tipo_documento,
+                'expediente_id' => $validated['expediente_id'] ?? \App\Models\Expediente::first()?->id ?? 1,
+                'tipologia_documental_id' => $tipologiaId,
+                'productor_id' => auth()->id(),
+                'nombre_archivo' => $nombreArchivo,
                 'formato' => 'html',
-                'ruta_archivo' => $rutaArchivo,
-                'tamaño' => Storage::size($rutaArchivo),
-                'hash_integridad' => hash_file('sha256', Storage::path($rutaArchivo)),
-                'usuario_creador_id' => auth()->id()
+                'tamano_bytes' => Storage::disk('public')->size($rutaArchivo),
+                'fecha_documento' => now(),
+                'fecha_captura' => now(),
+                'activo' => true,
+                'created_by' => auth()->id(),
+                'plantilla_id' => $plantilla->id,
             ]);
 
             DB::commit();
 
+            // Si es una petición Inertia, redirigir con mensaje
+            if ($request->header('X-Inertia')) {
+                return redirect()->route('admin.plantillas.show', $plantilla)
+                    ->with('success', 'Documento generado exitosamente. ID: ' . $documento->id);
+            }
+
+            // Si es una petición AJAX normal, retornar JSON
             return response()->json([
                 'success' => true,
                 'message' => 'Documento generado exitosamente.',
                 'documento_id' => $documento->id,
-                'url_descarga' => route('admin.documentos.download', $documento)
+                'url_descarga' => route('admin.documentos.show', $documento)
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error al generar documento desde plantilla:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'plantilla_id' => $plantilla->id,
+                'request_data' => $request->all()
+            ]);
+            
+            if ($request->header('X-Inertia')) {
+                return back()->withErrors(['error' => 'Error al generar documento: ' . $e->getMessage()]);
+            }
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error al generar documento: ' . $e->getMessage()

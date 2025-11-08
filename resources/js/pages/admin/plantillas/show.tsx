@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, 
   Edit, 
@@ -20,6 +24,7 @@ import {
   Settings
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface PlantillaDocumental {
   id: number;
@@ -131,20 +136,110 @@ export default function PlantillasShow({
   estadisticas_uso, 
   puede_editar 
 }: PageProps) {
+  const { flash } = usePage<{flash?: {success?: string, error?: string}}>().props;
   const [showPreview, setShowPreview] = useState(false);
+  const [showCambiarEstado, setShowCambiarEstado] = useState(false);
+  const [showGenerarDocumento, setShowGenerarDocumento] = useState(false);
+
+  useEffect(() => {
+    if (flash?.success) {
+      toast.success(flash.success);
+    }
+    if (flash?.error) {
+      toast.error(flash.error);
+    }
+  }, [flash]);
+
+  const estadoForm = useForm({
+    estado: plantilla.estado,
+    observaciones: plantilla.observaciones || ''
+  });
+
+  const documentoForm = useForm({
+    nombre_documento: '',
+    expediente_id: '',
+    variables: {} as Record<string, any>
+  });
 
   const duplicarPlantilla = () => {
-    router.post(route('admin.plantillas.duplicar', plantilla.id));
+    router.post(route('admin.plantillas.duplicar', plantilla.id), {}, {
+      onSuccess: () => {
+        toast.success('Plantilla duplicada exitosamente');
+      },
+      onError: (errors) => {
+        toast.error('Error al duplicar plantilla');
+      }
+    });
+  };
+
+  const crearNuevaVersion = () => {
+    router.post(route('admin.plantillas.crear-version', plantilla.id), {}, {
+      onSuccess: () => {
+        toast.success('Nueva versión creada exitosamente');
+      },
+      onError: (errors) => {
+        toast.error('Error al crear nueva versión');
+      }
+    });
+  };
+
+  const exportarPlantilla = (formato: string = 'json') => {
+    window.location.href = route('admin.plantillas.exportar', [plantilla.id, formato]);
   };
 
   const generarDocumento = () => {
-    // Implementar lógica para generar documento
-    console.log('Generar documento desde plantilla');
+    setShowGenerarDocumento(true);
   };
 
-  const cambiarEstado = (nuevoEstado: string) => {
-    router.patch(route('admin.plantillas.cambiar-estado', plantilla.id), {
-      estado: nuevoEstado
+  const handleGenerarDocumento = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Preparar variables desde los campos
+    const variables: Record<string, any> = {};
+    if (plantilla.campos_variables) {
+      plantilla.campos_variables.forEach(campo => {
+        const input = document.getElementById(`variable-${campo.nombre}`) as HTMLInputElement | HTMLTextAreaElement;
+        if (input) {
+          variables[campo.nombre] = input.value || campo.valor_defecto || '';
+        }
+      });
+    }
+
+    documentoForm.post(route('admin.plantillas.generar-documento', plantilla.id), {
+      data: {
+        nombre_documento: documentoForm.data.nombre_documento,
+        expediente_id: documentoForm.data.expediente_id || null,
+        variables: variables
+      },
+      onSuccess: () => {
+        setShowGenerarDocumento(false);
+        documentoForm.reset();
+        toast.success('Documento generado exitosamente');
+      },
+      onError: (errors) => {
+        console.error('Errores al generar documento:', errors);
+        if (errors) {
+          Object.keys(errors).forEach(field => {
+            const message = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+            toast.error(`Error en ${field}: ${message}`);
+          });
+        } else {
+          toast.error('Error al generar documento');
+        }
+      }
+    });
+  };
+
+  const handleCambiarEstado = (e: React.FormEvent) => {
+    e.preventDefault();
+    estadoForm.patch(route('admin.plantillas.cambiar-estado', plantilla.id), {
+      onSuccess: () => {
+        setShowCambiarEstado(false);
+        toast.success('Estado actualizado exitosamente');
+      },
+      onError: (errors) => {
+        toast.error('Error al cambiar estado');
+      }
     });
   };
 
@@ -193,6 +288,82 @@ export default function PlantillasShow({
               <Play className="w-4 h-4 mr-2" />
               Generar Documento
             </Button>
+            <Dialog open={showGenerarDocumento} onOpenChange={setShowGenerarDocumento}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Generar Documento desde Plantilla</DialogTitle>
+                  <DialogDescription>
+                    Completa los datos para generar un nuevo documento
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleGenerarDocumento} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nombre_documento">Nombre del Documento *</Label>
+                    <Input
+                      id="nombre_documento"
+                      value={documentoForm.data.nombre_documento}
+                      onChange={(e) => documentoForm.setData('nombre_documento', e.target.value)}
+                      placeholder="Ej: Memorando Interno 001"
+                      required
+                    />
+                    {documentoForm.errors.nombre_documento && (
+                      <p className="text-sm text-red-600">{documentoForm.errors.nombre_documento}</p>
+                    )}
+                  </div>
+
+                  {plantilla.campos_variables && plantilla.campos_variables.length > 0 && (
+                    <div className="space-y-4">
+                      <Label>Variables de la Plantilla</Label>
+                      {plantilla.campos_variables.map((campo, index) => (
+                        <div key={index} className="space-y-2">
+                          <Label htmlFor={`variable-${campo.nombre}`}>
+                            {campo.etiqueta}
+                            {campo.requerido && <span className="text-red-500"> *</span>}
+                          </Label>
+                          {campo.tipo === 'texto' || campo.tipo === 'text' ? (
+                            <Input
+                              id={`variable-${campo.nombre}`}
+                              defaultValue={campo.valor_defecto || ''}
+                              placeholder={campo.etiqueta}
+                              required={campo.requerido}
+                            />
+                          ) : campo.tipo === 'textarea' || campo.tipo === 'texto_largo' ? (
+                            <Textarea
+                              id={`variable-${campo.nombre}`}
+                              defaultValue={campo.valor_defecto || ''}
+                              placeholder={campo.etiqueta}
+                              rows={4}
+                              required={campo.requerido}
+                            />
+                          ) : (
+                            <Input
+                              id={`variable-${campo.nombre}`}
+                              type={campo.tipo === 'numero' ? 'number' : 'text'}
+                              defaultValue={campo.valor_defecto || ''}
+                              placeholder={campo.etiqueta}
+                              required={campo.requerido}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowGenerarDocumento(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={documentoForm.processing}>
+                      {documentoForm.processing ? 'Generando...' : 'Generar Documento'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
             {puede_editar && (
               <Button asChild>
                 <Link href={route('admin.plantillas.edit', plantilla.id)}>
@@ -471,18 +642,117 @@ export default function PlantillasShow({
                     <CardTitle className="text-sm">Acciones Rápidas</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <Button variant="outline" size="sm" className="w-full justify-start">
-                      <Settings className="w-4 h-4 mr-2" />
-                      Cambiar Estado
-                    </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Dialog open={showCambiarEstado} onOpenChange={setShowCambiarEstado}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-start">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Cambiar Estado
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Cambiar Estado de la Plantilla</DialogTitle>
+                          <DialogDescription>
+                            Selecciona el nuevo estado para esta plantilla
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCambiarEstado} className="space-y-4 mt-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="estado">Estado</Label>
+                            <Select
+                              value={estadoForm.data.estado}
+                              onValueChange={(value) => estadoForm.setData('estado', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar estado" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="borrador">Borrador</SelectItem>
+                                <SelectItem value="revision">En Revisión</SelectItem>
+                                <SelectItem value="activa">Activa</SelectItem>
+                                <SelectItem value="archivada">Archivada</SelectItem>
+                                <SelectItem value="obsoleta">Obsoleta</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="observaciones">Observaciones (opcional)</Label>
+                            <Textarea
+                              id="observaciones"
+                              value={estadoForm.data.observaciones}
+                              onChange={(e) => estadoForm.setData('observaciones', e.target.value)}
+                              placeholder="Agregar observaciones sobre el cambio de estado..."
+                              rows={3}
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setShowCambiarEstado(false)}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button type="submit" disabled={estadoForm.processing}>
+                              {estadoForm.processing ? 'Guardando...' : 'Guardar Cambios'}
+                            </Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={crearNuevaVersion}
+                    >
                       <Copy className="w-4 h-4 mr-2" />
                       Nueva Versión
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start">
-                      <Download className="w-4 h-4 mr-2" />
-                      Exportar
-                    </Button>
+
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-start">
+                          <Download className="w-4 h-4 mr-2" />
+                          Exportar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Exportar Plantilla</DialogTitle>
+                          <DialogDescription>
+                            Selecciona el formato de exportación
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-2 mt-4">
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => exportarPlantilla('json')}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Exportar como JSON
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => exportarPlantilla('html')}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Exportar como HTML
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => exportarPlantilla('xml')}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Exportar como XML
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </CardContent>
                 </Card>
               )}

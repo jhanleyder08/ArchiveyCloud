@@ -1,0 +1,32 @@
+{
+    "plantilla": {
+        "id": 1,
+        "codigo": "PLT-RES-0001-V1",
+        "nombre": "asdasda",
+        "descripcion": "asdfasdf",
+        "categoria": "resolucion",
+        "tipo_documento": "asdfasdf",
+        "serie_documental_id": 9,
+        "subserie_documental_id": 1,
+        "contenido_html": null,
+        "contenido_json": null,
+        "campos_variables": null,
+        "metadatos_predefinidos": null,
+        "configuracion_formato": null,
+        "usuario_creador_id": 10,
+        "estado": "borrador",
+        "es_publica": false,
+        "version": "1.00",
+        "plantilla_padre_id": null,
+        "tags": null,
+        "observaciones": null,
+        "created_at": "2025-11-08T01:23:48.000000Z",
+        "updated_at": "2025-11-08T01:23:48.000000Z",
+        "deleted_at": null
+    },
+    "metadatos": {
+        "exportado_en": "2025-11-08T01:49:42.259173Z",
+        "exportado_por": "Jhan Duarte",
+        "version_exportacion": "1.0"
+    }
+}
