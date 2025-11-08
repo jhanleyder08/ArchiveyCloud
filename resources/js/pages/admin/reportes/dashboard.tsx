@@ -140,101 +140,108 @@ export default function ReportesDashboard({
         tamaño_mb: Math.round(item.tamaño_total / (1024 * 1024)),
     }));
 
-    const porcentajeCumplimiento = Math.round((cumplimientoTrd.series_documentadas / cumplimientoTrd.total_series) * 100);
+    const porcentajeCumplimiento = cumplimientoTrd.total_series > 0 
+        ? Math.round((cumplimientoTrd.series_documentadas / cumplimientoTrd.total_series) * 100) 
+        : 0;
 
     return (
         <AppLayout>
             <Head title="Dashboard Ejecutivo - Reportes" />
 
-            <div className="space-y-6">
+            <div className="p-6 space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold">Dashboard Ejecutivo</h1>
-                        <p className="text-muted-foreground">Métricas y estadísticas del sistema documental</p>
+                <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center gap-2">
+                        <BarChart3 className="h-6 w-6 text-[#2a3d83]" />
+                        <div>
+                            <h1 className="text-2xl font-semibold text-gray-900">
+                                Dashboard Ejecutivo
+                            </h1>
+                            <p className="text-sm text-gray-600 mt-1">
+                                Métricas y estadísticas del sistema documental
+                            </p>
+                        </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="flex items-center space-x-1">
-                            <Activity className="h-3 w-3" />
-                            <span>Tiempo real</span>
-                        </Badge>
-                    </div>
+                    <Badge variant="outline" className="flex items-center space-x-1">
+                        <Activity className="h-3 w-3" />
+                        <span>Tiempo real</span>
+                    </Badge>
                 </div>
 
                 {/* Métricas principales */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Expedientes</CardTitle>
-                            <Archive className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium text-gray-600">Total Expedientes</CardTitle>
+                            <Archive className="h-4 w-4 text-[#2a3d83]" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{metricas.total_expedientes.toLocaleString()}</div>
-                            <p className="text-xs text-muted-foreground">
+                            <div className="text-2xl font-bold text-gray-900">{metricas.total_expedientes.toLocaleString()}</div>
+                            <p className="text-xs text-gray-500 mt-1">
                                 {metricas.expedientes_abiertos} abiertos
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Documentos</CardTitle>
-                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium text-gray-600">Total Documentos</CardTitle>
+                            <FileText className="h-4 w-4 text-[#2a3d83]" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{metricas.total_documentos.toLocaleString()}</div>
-                            <p className="text-xs text-muted-foreground">
+                            <div className="text-2xl font-bold text-gray-900">{metricas.total_documentos.toLocaleString()}</div>
+                            <p className="text-xs text-gray-500 mt-1">
                                 +{metricas.documentos_mes_actual} este mes
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Expedientes Abiertos</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-600">Expedientes Abiertos</CardTitle>
                             <CheckCircle className="h-4 w-4 text-green-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{metricas.expedientes_abiertos}</div>
-                            <p className="text-xs text-muted-foreground">
-                                {Math.round((metricas.expedientes_abiertos / metricas.total_expedientes) * 100)}% del total
+                            <div className="text-2xl font-bold text-gray-900">{metricas.expedientes_abiertos}</div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                {metricas.total_expedientes > 0 ? Math.round((metricas.expedientes_abiertos / metricas.total_expedientes) * 100) : 0}% del total
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Expedientes Cerrados</CardTitle>
+                            <CardTitle className="text-sm font-medium text-gray-600">Expedientes Cerrados</CardTitle>
                             <Archive className="h-4 w-4 text-gray-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{metricas.expedientes_cerrados}</div>
-                            <p className="text-xs text-muted-foreground">
-                                {Math.round((metricas.expedientes_cerrados / metricas.total_expedientes) * 100)}% del total
+                            <div className="text-2xl font-bold text-gray-900">{metricas.expedientes_cerrados}</div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                {metricas.total_expedientes > 0 ? Math.round((metricas.expedientes_cerrados / metricas.total_expedientes) * 100) : 0}% del total
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Almacenamiento</CardTitle>
-                            <HardDrive className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium text-gray-600">Almacenamiento</CardTitle>
+                            <HardDrive className="h-4 w-4 text-[#2a3d83]" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{metricas.tamaño_total_gb} GB</div>
-                            <p className="text-xs text-muted-foreground">
-                                {Math.round(metricas.tamaño_total_gb / metricas.total_documentos * 1024)} MB promedio
+                            <div className="text-2xl font-bold text-gray-900">{metricas.tamaño_total_gb} GB</div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                {metricas.total_documentos > 0 ? Math.round(metricas.tamaño_total_gb / metricas.total_documentos * 1024) : 0} MB promedio
                             </p>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Cumplimiento TRD</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-sm font-medium text-gray-600">Cumplimiento TRD</CardTitle>
+                            <BarChart3 className="h-4 w-4 text-[#2a3d83]" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{porcentajeCumplimiento}%</div>
+                            <div className="text-2xl font-bold text-gray-900">{porcentajeCumplimiento}%</div>
                             <Progress value={porcentajeCumplimiento} className="mt-1" />
                         </CardContent>
                     </Card>
@@ -243,10 +250,10 @@ export default function ReportesDashboard({
                 {/* Gráficos principales */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Expedientes por Estado */}
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader>
-                            <CardTitle>Expedientes por Estado (Últimos 12 meses)</CardTitle>
-                            <CardDescription>Evolución temporal de los expedientes</CardDescription>
+                            <CardTitle className="text-lg font-semibold text-gray-900">Expedientes por Estado (Últimos 12 meses)</CardTitle>
+                            <CardDescription className="text-gray-600">Evolución temporal de los expedientes</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer width="100%" height={300}>
@@ -273,10 +280,10 @@ export default function ReportesDashboard({
                     </Card>
 
                     {/* Documentos por Tipo */}
-                    <Card>
+                    <Card className="border border-gray-200 shadow-sm">
                         <CardHeader>
-                            <CardTitle>Documentos por Tipo</CardTitle>
-                            <CardDescription>Distribución de tipos documentales</CardDescription>
+                            <CardTitle className="text-lg font-semibold text-gray-900">Documentos por Tipo</CardTitle>
+                            <CardDescription className="text-gray-600">Distribución de tipos documentales</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer width="100%" height={300}>
@@ -312,25 +319,25 @@ export default function ReportesDashboard({
                     </TabsList>
 
                     <TabsContent value="series" className="space-y-4">
-                        <Card>
+                        <Card className="border border-gray-200 shadow-sm">
                             <CardHeader>
-                                <CardTitle>Series Documentales más Utilizadas</CardTitle>
-                                <CardDescription>Series con mayor número de expedientes</CardDescription>
+                                <CardTitle className="text-lg font-semibold text-gray-900">Series Documentales más Utilizadas</CardTitle>
+                                <CardDescription className="text-gray-600">Series con mayor número de expedientes</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3">
                                     {seriesMasUsadas.slice(0, 10).map((serie, index) => (
-                                        <div key={serie.id} className="flex items-center justify-between p-3 border rounded">
+                                        <div key={serie.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                             <div className="flex items-center space-x-3">
-                                                <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full text-sm">
+                                                <div className="flex items-center justify-center w-8 h-8 bg-[#2a3d83] text-white rounded-full text-sm font-semibold">
                                                     {index + 1}
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-medium">{serie.codigo}</h4>
-                                                    <p className="text-sm text-muted-foreground">{serie.nombre}</p>
+                                                    <h4 className="font-medium text-gray-900">{serie.codigo}</h4>
+                                                    <p className="text-sm text-gray-600">{serie.nombre}</p>
                                                 </div>
                                             </div>
-                                            <Badge variant="secondary">
+                                            <Badge variant="secondary" className="bg-gray-100 text-gray-800">
                                                 {serie.expedientes_count} expedientes
                                             </Badge>
                                         </div>
@@ -341,30 +348,30 @@ export default function ReportesDashboard({
                     </TabsContent>
 
                     <TabsContent value="actividad" className="space-y-4">
-                        <Card>
+                        <Card className="border border-gray-200 shadow-sm">
                             <CardHeader>
-                                <CardTitle>Actividad Reciente</CardTitle>
-                                <CardDescription>Últimas 20 acciones en el sistema</CardDescription>
+                                <CardTitle className="text-lg font-semibold text-gray-900">Actividad Reciente</CardTitle>
+                                <CardDescription className="text-gray-600">Últimas 20 acciones en el sistema</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-3 max-h-96 overflow-y-auto">
                                     {actividadReciente.slice(0, 20).map((actividad) => (
-                                        <div key={actividad.id} className="flex items-start space-x-3 pb-3 border-b last:border-b-0">
+                                        <div key={actividad.id} className="flex items-start space-x-3 pb-3 border-b border-gray-200 last:border-b-0">
                                             <div className="flex-shrink-0">
-                                                <Activity className="h-4 w-4 text-muted-foreground mt-1" />
+                                                <Activity className="h-4 w-4 text-gray-400 mt-1" />
                                             </div>
                                             <div className="flex-grow">
                                                 <div className="flex items-center justify-between">
-                                                    <h4 className="text-sm font-medium">{actividad.accion}</h4>
-                                                    <span className="text-xs text-muted-foreground">
+                                                    <h4 className="text-sm font-medium text-gray-900">{actividad.accion}</h4>
+                                                    <span className="text-xs text-gray-500">
                                                         {actividad.fecha_relativa}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground">
+                                                <p className="text-sm text-gray-600">
                                                     Por: {actividad.usuario} en {actividad.tabla_afectada}
                                                 </p>
                                                 {actividad.descripcion && (
-                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                    <p className="text-xs text-gray-500 mt-1">
                                                         {actividad.descripcion}
                                                     </p>
                                                 )}
@@ -378,41 +385,41 @@ export default function ReportesDashboard({
 
                     <TabsContent value="cumplimiento" className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Card>
+                            <Card className="border border-gray-200 shadow-sm">
                                 <CardHeader>
-                                    <CardTitle>Cumplimiento de Series</CardTitle>
-                                    <CardDescription>Series documentadas vs. total</CardDescription>
+                                    <CardTitle className="text-lg font-semibold text-gray-900">Cumplimiento de Series</CardTitle>
+                                    <CardDescription className="text-gray-600">Series documentadas vs. total</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-3xl font-bold mb-2">
+                                    <div className="text-3xl font-bold text-gray-900 mb-2">
                                         {cumplimientoTrd.series_documentadas} / {cumplimientoTrd.total_series}
                                     </div>
                                     <Progress 
-                                        value={(cumplimientoTrd.series_documentadas / cumplimientoTrd.total_series) * 100} 
+                                        value={cumplimientoTrd.total_series > 0 ? (cumplimientoTrd.series_documentadas / cumplimientoTrd.total_series) * 100 : 0} 
                                         className="mb-2"
                                     />
-                                    <p className="text-sm text-muted-foreground">
-                                        {Math.round((cumplimientoTrd.series_documentadas / cumplimientoTrd.total_series) * 100)}% 
+                                    <p className="text-sm text-gray-600">
+                                        {cumplimientoTrd.total_series > 0 ? Math.round((cumplimientoTrd.series_documentadas / cumplimientoTrd.total_series) * 100) : 0}% 
                                         de series tienen expedientes
                                     </p>
                                 </CardContent>
                             </Card>
 
-                            <Card>
+                            <Card className="border border-gray-200 shadow-sm">
                                 <CardHeader>
-                                    <CardTitle>Cumplimiento de Subseries</CardTitle>
-                                    <CardDescription>Subseries documentadas vs. total</CardDescription>
+                                    <CardTitle className="text-lg font-semibold text-gray-900">Cumplimiento de Subseries</CardTitle>
+                                    <CardDescription className="text-gray-600">Subseries documentadas vs. total</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-3xl font-bold mb-2">
+                                    <div className="text-3xl font-bold text-gray-900 mb-2">
                                         {cumplimientoTrd.subseries_documentadas} / {cumplimientoTrd.total_subseries}
                                     </div>
                                     <Progress 
-                                        value={(cumplimientoTrd.subseries_documentadas / cumplimientoTrd.total_subseries) * 100} 
+                                        value={cumplimientoTrd.total_subseries > 0 ? (cumplimientoTrd.subseries_documentadas / cumplimientoTrd.total_subseries) * 100 : 0} 
                                         className="mb-2"
                                     />
-                                    <p className="text-sm text-muted-foreground">
-                                        {Math.round((cumplimientoTrd.subseries_documentadas / cumplimientoTrd.total_subseries) * 100)}% 
+                                    <p className="text-sm text-gray-600">
+                                        {cumplimientoTrd.total_subseries > 0 ? Math.round((cumplimientoTrd.subseries_documentadas / cumplimientoTrd.total_subseries) * 100) : 0}% 
                                         de subseries tienen expedientes
                                     </p>
                                 </CardContent>
@@ -421,10 +428,10 @@ export default function ReportesDashboard({
                     </TabsContent>
 
                     <TabsContent value="almacenamiento" className="space-y-4">
-                        <Card>
+                        <Card className="border border-gray-200 shadow-sm">
                             <CardHeader>
-                                <CardTitle>Crecimiento de Almacenamiento</CardTitle>
-                                <CardDescription>Evolución del almacenamiento por mes</CardDescription>
+                                <CardTitle className="text-lg font-semibold text-gray-900">Crecimiento de Almacenamiento</CardTitle>
+                                <CardDescription className="text-gray-600">Evolución del almacenamiento por mes</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <ResponsiveContainer width="100%" height={300}>

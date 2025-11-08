@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Workflow;
-use App\Models\WorkflowInstance;
-use App\Models\WorkflowTask;
+use App\Models\WorkflowInstancia;
+use App\Models\WorkflowTarea;
 use App\Models\Documento;
 use App\Models\Expediente;
 use App\Models\User;
@@ -48,25 +48,26 @@ class WorkflowController extends Controller
         ]);
         
         // Obtener instancias iniciadas por el usuario
-        $instanciasUsuario = WorkflowInstance::where('usuario_iniciador_id', $user->id)
-            ->with(['workflow', 'tareaActual.asignaciones.usuario'])
+        $instanciasUsuario = WorkflowInstancia::where('usuario_iniciador_id', $user->id)
+            ->with(['workflow', 'tareas.asignado'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
             ->map(function ($instancia) {
+                $tareaActual = $instancia->tareas()->where('estado', 'pendiente')->first();
                 return [
                     'id' => $instancia->id,
-                    'codigo_seguimiento' => $instancia->codigo_seguimiento,
+                    'codigo_seguimiento' => $instancia->id, // Usar ID como código si no existe
                     'workflow_nombre' => $instancia->workflow->nombre,
-                    'entidad_tipo' => $instancia->entidad_tipo,
+                    'entidad_tipo' => $instancia->entidad_type,
                     'entidad_id' => $instancia->entidad_id,
                     'estado' => $instancia->estado,
                     'progreso' => $this->calcularProgreso($instancia),
                     'fecha_inicio' => $instancia->fecha_inicio,
-                    'fecha_limite' => $instancia->fecha_limite,
-                    'tarea_actual' => $instancia->tareaActual ? [
-                        'nombre' => $instancia->tareaActual->nombre,
-                        'asignado_a' => $instancia->tareaActual->asignaciones->first()?->usuario?->name
+                    'fecha_limite' => null, // No existe en el modelo
+                    'tarea_actual' => $tareaActual ? [
+                        'nombre' => $tareaActual->nombre,
+                        'asignado_a' => $tareaActual->asignado?->name ?? 'Sin asignar'
                     ] : null
                 ];
             });
@@ -74,11 +75,11 @@ class WorkflowController extends Controller
         // Estadísticas del usuario
         $estadisticas = [
             'tareas_pendientes' => count($tareasPendientes),
-            'instancias_activas' => WorkflowInstance::where('usuario_iniciador_id', $user->id)
-                ->where('estado', 'en_progreso')->count(),
-            'completadas_mes' => WorkflowInstance::where('usuario_iniciador_id', $user->id)
+            'instancias_activas' => WorkflowInstancia::where('usuario_iniciador_id', $user->id)
+                ->where('estado', 'en_proceso')->count(),
+            'completadas_mes' => WorkflowInstancia::where('usuario_iniciador_id', $user->id)
                 ->where('estado', 'completado')
-                ->whereMonth('fecha_completado', now()->month)->count(),
+                ->whereMonth('fecha_finalizacion', now()->month)->count(),
             'promedio_duracion' => $this->calcularPromedioTiempo($user->id)
         ];
         
@@ -106,8 +107,8 @@ class WorkflowController extends Controller
         
         // Obtener workflows disponibles
         $workflowsDisponibles = Workflow::where('activo', true)
-            ->where('entidad_tipo', $tipoEntidad)
-            ->get(['id', 'nombre', 'descripcion', 'tipo']);
+            ->where('tipo_entidad', $tipoEntidad)
+            ->get(['id', 'nombre', 'descripcion', 'tipo_entidad']);
         
         // Obtener usuarios para asignación
         $usuariosDisponibles = User::where('activo', true)
@@ -191,7 +192,7 @@ class WorkflowController extends Controller
     /**
      * Mostrar detalles del workflow
      */
-    public function show(WorkflowInstance $instancia)
+    public function show(WorkflowInstancia $instancia)
     {
         // Obtener estado completo del workflow
         $estadoWorkflow = $this->workflowEngine->obtenerEstadoWorkflow($instancia);
@@ -199,8 +200,8 @@ class WorkflowController extends Controller
         // Verificar permisos del usuario
         $user = auth()->user();
         $puedeVer = $instancia->usuario_iniciador_id === $user->id || 
-                   $instancia->tareas()->whereHas('asignaciones', function ($q) use ($user) {
-                       $q->where('usuario_id', $user->id);
+                   $instancia->tareas()->whereHas('asignado', function ($q) use ($user) {
+                       $q->where('id', $user->id);
                    })->exists();
         
         if (!$puedeVer) {
@@ -217,7 +218,7 @@ class WorkflowController extends Controller
     /**
      * Completar tarea de workflow
      */
-    public function completarTarea(Request $request, WorkflowTask $tarea)
+    public function completarTarea(Request $request, WorkflowTarea $tarea)
     {
         $request->validate([
             'decision' => 'nullable|string',
@@ -232,7 +233,7 @@ class WorkflowController extends Controller
             $user = auth()->user();
             
             // Validar que el usuario puede completar la tarea
-            if (!$tarea->asignaciones()->where('usuario_id', $user->id)->where('activo', true)->exists()) {
+            if ($tarea->asignado_type !== 'App\\Models\\User' || $tarea->asignado_id !== $user->id) {
                 throw new \Exception('No tiene permisos para completar esta tarea');
             }
             
@@ -244,11 +245,11 @@ class WorkflowController extends Controller
             ];
             
             // Procesar según tipo de tarea
-            if ($tarea->tipo === 'aprobacion') {
+            if ($tarea->tipo_asignacion === 'aprobacion') {
                 $siguienteTarea = $this->approvalService->procesarDecisionAprobacion(
                     $tarea,
                     $user,
-                    $request->decision,
+                    $request->decision ?? 'aprobar',
                     $datosComplecion
                 );
             } else {
@@ -284,7 +285,7 @@ class WorkflowController extends Controller
     /**
      * Cancelar workflow
      */
-    public function cancelar(Request $request, WorkflowInstance $instancia)
+    public function cancelar(Request $request, WorkflowInstancia $instancia)
     {
         $request->validate([
             'motivo' => 'required|string|max:500'
@@ -339,7 +340,7 @@ class WorkflowController extends Controller
     }
     
     // Métodos auxiliares
-    private function calcularProgreso(WorkflowInstance $instancia): float
+    private function calcularProgreso(WorkflowInstancia $instancia): float
     {
         $totalTareas = $instancia->tareas()->count();
         $tareasCompletadas = $instancia->tareas()->whereIn('estado', ['completada', 'cancelada'])->count();
@@ -349,9 +350,9 @@ class WorkflowController extends Controller
     
     private function calcularPromedioTiempo(int $usuarioId): float
     {
-        $instanciasCompletadas = WorkflowInstance::where('usuario_iniciador_id', $usuarioId)
+        $instanciasCompletadas = WorkflowInstancia::where('usuario_iniciador_id', $usuarioId)
             ->where('estado', 'completado')
-            ->whereNotNull('fecha_completado')
+            ->whereNotNull('fecha_finalizacion')
             ->get();
         
         if ($instanciasCompletadas->isEmpty()) {
@@ -359,7 +360,7 @@ class WorkflowController extends Controller
         }
         
         $tiempoTotal = $instanciasCompletadas->sum(function ($instancia) {
-            return $instancia->fecha_inicio->diffInHours($instancia->fecha_completado);
+            return $instancia->fecha_inicio->diffInHours($instancia->fecha_finalizacion);
         });
         
         return round($tiempoTotal / $instanciasCompletadas->count(), 2);
@@ -369,7 +370,7 @@ class WorkflowController extends Controller
     {
         return Workflow::where('activo', true)
             ->orderBy('nombre')
-            ->get(['id', 'nombre', 'descripcion', 'tipo', 'entidad_tipo'])
+            ->get(['id', 'nombre', 'descripcion', 'tipo_entidad'])
             ->toArray();
     }
     
@@ -394,15 +395,14 @@ class WorkflowController extends Controller
         }
     }
     
-    private function usuarioPuedeCompletarTareaActual(WorkflowInstance $instancia, User $user): bool
+    private function usuarioPuedeCompletarTareaActual(WorkflowInstancia $instancia, User $user): bool
     {
-        if (!$instancia->tareaActual) {
+        $tareaActual = $instancia->tareas()->where('estado', 'pendiente')->first();
+        if (!$tareaActual) {
             return false;
         }
         
-        return $instancia->tareaActual->asignaciones()
-            ->where('usuario_id', $user->id)
-            ->where('activo', true)
-            ->exists();
+        return $tareaActual->asignado_type === 'App\\Models\\User' && 
+               $tareaActual->asignado_id === $user->id;
     }
 }

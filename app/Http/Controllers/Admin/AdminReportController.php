@@ -38,20 +38,20 @@ class AdminReportController extends Controller
         $metricas = [
             'total_expedientes' => Expediente::count(),
             'total_documentos' => 0, // Documento::count(), // Simplificado por ahora
-            'expedientes_abiertos' => Expediente::where('estado_ciclo_vida', 'tramite')->count(),
-            'expedientes_cerrados' => Expediente::where('estado_ciclo_vida', 'central')->count(),
+            'expedientes_abiertos' => Expediente::where('estado', 'en_tramite')->count(),
+            'expedientes_cerrados' => Expediente::where('estado', 'inactivo')->orWhere('estado', 'historico')->count(),
             'documentos_mes_actual' => 0, // Simplificado por ahora
-            'tamaño_total_gb' => round((Expediente::sum('tamaño_mb') ?? 0) / 1024, 2),
+            'tamaño_total_gb' => round((Expediente::sum('tamano_total_bytes') ?? 0) / (1024 * 1024 * 1024), 2),
         ];
 
         // Expedientes por estado (últimos 12 meses)
         $expedientesPorEstado = Expediente::selectRaw('
-                estado_ciclo_vida as estado,
+                estado as estado,
                 DATE_FORMAT(created_at, "%Y-%m") as mes,
                 COUNT(*) as total
             ')
             ->where('created_at', '>=', Carbon::now()->subMonths(12))
-            ->groupBy('estado_ciclo_vida', 'mes')
+            ->groupBy('estado', 'mes')
             ->orderBy('mes')
             ->get()
             ->groupBy('estado');

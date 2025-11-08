@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\WorkflowInstance;
-use App\Models\WorkflowTask;
+use App\Models\WorkflowInstancia;
+use App\Models\WorkflowTarea;
 use App\Models\User;
 use App\Models\Documento;
 use App\Models\Expediente;
@@ -113,7 +113,7 @@ class ApprovalWorkflowService
      * Procesar decisión de aprobación
      */
     public function procesarDecisionAprobacion(
-        WorkflowTask $tarea,
+        WorkflowTarea $tarea,
         User $aprobador,
         string $decision,
         array $datos = []
@@ -187,21 +187,19 @@ class ApprovalWorkflowService
      */
     public function obtenerAprobacionesPendientes(User $usuario, array $filtros = []): array
     {
-        $query = WorkflowTask::where('estado', 'pendiente')
-            ->whereIn('tipo', ['aprobacion', 'revision'])
-            ->whereHas('asignaciones', function ($q) use ($usuario) {
-                $q->where('usuario_id', $usuario->id)->where('activo', true);
-            })
-            ->with(['instancia.entidad', 'actividad']);
+        $query = WorkflowTarea::pendientes()
+            ->asignadasA($usuario->id)
+            ->whereIn('tipo_asignacion', ['aprobacion', 'revision'])
+            ->with(['instancia.entidad']);
         
         // Aplicar filtros
         if (!empty($filtros['prioridad'])) {
-            $query->where('prioridad', $filtros['prioridad']);
+            // La prioridad no existe en el modelo, se puede agregar después
         }
         
         if (!empty($filtros['tipo_entidad'])) {
             $query->whereHas('instancia', function ($q) use ($filtros) {
-                $q->where('entidad_tipo', $filtros['tipo_entidad']);
+                $q->where('entidad_type', $filtros['tipo_entidad']);
             });
         }
         
@@ -209,8 +207,7 @@ class ApprovalWorkflowService
             $query->where('created_at', '>=', $filtros['fecha_desde']);
         }
         
-        $tareas = $query->orderBy('prioridad', 'desc')
-            ->orderBy('fecha_limite', 'asc')
+        $tareas = $query->orderBy('fecha_vencimiento', 'asc')
             ->get();
         
         return $tareas->map(function ($tarea) {
@@ -223,10 +220,9 @@ class ApprovalWorkflowService
      */
     public function escalarAprobacionesVencidas(): array
     {
-        $tareasVencidas = WorkflowTask::where('estado', 'pendiente')
-            ->whereIn('tipo', ['aprobacion', 'revision'])
-            ->where('fecha_limite', '<', now())
-            ->with(['instancia', 'asignaciones.usuario'])
+        $tareasVencidas = WorkflowTarea::vencidas()
+            ->whereIn('tipo_asignacion', ['aprobacion', 'revision'])
+            ->with(['instancia', 'asignado'])
             ->get();
         
         $resultados = [];
@@ -285,9 +281,9 @@ class ApprovalWorkflowService
         $fechaInicio = $parametros['fecha_inicio'] ?? now()->subMonth();
         $fechaFin = $parametros['fecha_fin'] ?? now();
         
-        $instancias = WorkflowInstance::whereBetween('created_at', [$fechaInicio, $fechaFin])
+        $instancias = WorkflowInstancia::whereBetween('created_at', [$fechaInicio, $fechaFin])
             ->whereHas('workflow', function ($q) {
-                $q->where('tipo', 'aprobacion');
+                // Filtrar workflows de aprobación si existe un campo tipo
             })
             ->with(['tareas', 'workflow'])
             ->get();
@@ -376,7 +372,20 @@ class ApprovalWorkflowService
     private function procesarRechazo($tarea, $aprobador, $resultado): array { return ['resultado' => 'rechazado']; }
     private function procesarSolicitudCambios($tarea, $aprobador, $resultado): array { return ['resultado' => 'cambios_solicitados']; }
     private function procesarDelegacion($tarea, $aprobador, $datos, $resultado): array { return ['resultado' => 'delegado']; }
-    private function formatearTareaAprobacion($tarea): array { return []; }
+    private function formatearTareaAprobacion($tarea): array { 
+        return [
+            'id' => $tarea->id,
+            'nombre' => $tarea->nombre,
+            'descripcion' => $tarea->descripcion,
+            'estado' => $tarea->estado,
+            'fecha_vencimiento' => $tarea->fecha_vencimiento?->toDateString(),
+            'instancia_id' => $tarea->workflow_instancia_id,
+            'entidad' => $tarea->instancia?->entidad ? [
+                'tipo' => $tarea->instancia->entidad_type,
+                'id' => $tarea->instancia->entidad_id,
+            ] : null,
+        ];
+    }
     private function obtenerSupervisor($tarea): ?User { return null; }
     private function reasignarTarea($tarea, $supervisor, $motivo): void { }
     private function marcarTareaVencida($tarea): void { }

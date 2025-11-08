@@ -383,6 +383,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Sistema de Disposición Final - Protegido con permisos
         Route::prefix('disposiciones')->name('disposiciones.')->middleware('permission:disposiciones.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'index'])->name('index');
+            Route::get('/create', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'store'])->name('store');
             Route::get('/{disposicion}', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'show'])->name('show');
             
             // Workflow de disposiciones

@@ -162,9 +162,11 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
     };
 
     return (
-        <AppLayout
-            title="Disposiciones Finales"
-            renderHeader={() => (
+        <AppLayout>
+            <Head title="Disposiciones Finales" />
+
+            <div className="space-y-6">
+                {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
@@ -190,11 +192,7 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                         </Button>
                     </div>
                 </div>
-            )}
-        >
-            <Head title="Disposiciones Finales" />
 
-            <div className="space-y-6">
                 {/* Estadísticas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                     <Card>
