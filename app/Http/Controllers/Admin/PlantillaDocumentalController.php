@@ -80,7 +80,7 @@ class PlantillaDocumentalController extends Controller
             $estadisticas = array_merge($estadisticasDefault, $estadisticas);
         }
         
-        $series = SerieDocumental::select('id', 'codigo', 'nombre')
+        $series = SerieDocumental::with('subseries')
             ->orderBy('codigo')
             ->get();
 
@@ -143,8 +143,8 @@ class PlantillaDocumentalController extends Controller
             'descripcion' => 'nullable|string|max:1000',
             'categoria' => 'required|in:memorando,oficio,resolucion,acta,informe,circular,comunicacion,otro',
             'tipo_documento' => 'nullable|string|max:100',
-            'serie_documental_id' => 'nullable|exists:series_documentales,id',
-            'subserie_documental_id' => 'nullable|exists:subseries_documentales,id',
+            'serie_documental_id' => 'nullable|string',
+            'subserie_documental_id' => 'nullable|string',
             'contenido_html' => 'nullable|string',
             'campos_variables' => 'nullable|array',
             'campos_variables.*.nombre' => 'required|string|max:50',
@@ -159,13 +159,39 @@ class PlantillaDocumentalController extends Controller
             'observaciones' => 'nullable|string|max:500'
         ]);
 
+        // Limpiar valores vacíos
+        if (empty($validated['serie_documental_id'])) {
+            $validated['serie_documental_id'] = null;
+        } else {
+            $validated['serie_documental_id'] = (int)$validated['serie_documental_id'];
+        }
+
+        if (empty($validated['subserie_documental_id'])) {
+            $validated['subserie_documental_id'] = null;
+        } else {
+            $validated['subserie_documental_id'] = (int)$validated['subserie_documental_id'];
+        }
+
+        // Validar existencia si se proporcionaron
+        if ($validated['serie_documental_id'] !== null) {
+            $request->validate([
+                'serie_documental_id' => 'exists:series_documentales,id',
+            ]);
+        }
+
+        if ($validated['subserie_documental_id'] !== null) {
+            $request->validate([
+                'subserie_documental_id' => 'exists:subseries_documentales,id',
+            ]);
+        }
+
         DB::beginTransaction();
         try {
             $plantilla = PlantillaDocumental::create($validated);
 
             DB::commit();
 
-            return redirect()->route('admin.plantillas.show', $plantilla)
+            return redirect()->route('admin.plantillas.index')
                 ->with('success', 'Plantilla documental creada exitosamente.');
 
         } catch (\Exception $e) {
