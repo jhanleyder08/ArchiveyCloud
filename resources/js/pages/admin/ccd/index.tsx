@@ -108,11 +108,39 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
     const formOpciones = opciones || defaultOpciones;
 
     const handleSearch = () => {
-        router.get('/admin/ccd', {
-            search: searchTerm,
-            estado: filterEstado !== 'all' ? filterEstado : undefined,
-        }, {
-            preserveState: true,
+        const params: any = {};
+        
+        if (searchTerm.trim()) {
+            params.search = searchTerm.trim();
+        }
+        
+        if (filterEstado && filterEstado !== 'all') {
+            params.estado = filterEstado;
+        }
+        
+        router.get('/admin/ccd', params, {
+            preserveState: false,
+            preserveScroll: false,
+            replace: true,
+        });
+    };
+
+    const handleEstadoChange = (value: string) => {
+        setFilterEstado(value);
+        // Ejecutar búsqueda automáticamente cuando cambia el estado
+        const params: any = {};
+        
+        if (searchTerm.trim()) {
+            params.search = searchTerm.trim();
+        }
+        
+        if (value && value !== 'all') {
+            params.estado = value;
+        }
+        
+        router.get('/admin/ccd', params, {
+            preserveState: false,
+            preserveScroll: false,
             replace: true,
         });
     };
@@ -372,12 +400,17 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                     placeholder="Buscar por código o nombre..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleSearch();
+                                        }
+                                    }}
                                 />
                             </div>
                             <Select
                                 value={filterEstado}
-                                onValueChange={setFilterEstado}
+                                onValueChange={handleEstadoChange}
                             >
                                 <SelectTrigger className="w-48">
                                     <SelectValue placeholder="Estado" />
@@ -390,7 +423,7 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                     <SelectItem value="historico">Histórico</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Button onClick={handleSearch}>
+                            <Button onClick={handleSearch} type="button">
                                 <Search className="mr-2 h-4 w-4" />
                                 Buscar
                             </Button>
