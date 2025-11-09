@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import React from 'react';
+import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,8 +13,6 @@ import {
     Clock,
     TrendingUp,
     FileText,
-    Calendar,
-    Award,
     Plus,
     AlertCircle,
     Key,
@@ -114,7 +112,7 @@ export default function DashboardFirmas({
     certificados, 
     certificados_proximos_vencer 
 }: Props) {
-    const [estadisticasUsuario, setEstadisticasUsuario] = useState(estadisticas?.usuario);
+    const estadisticasUsuario = estadisticas?.usuario;
 
     // Valores por defecto para arrays que pueden ser undefined
     const solicitudesPendientes = solicitudes_pendientes || [];
@@ -281,44 +279,44 @@ export default function DashboardFirmas({
                     </div>
                 </div>
 
-                    {/* Contenido principal */}
-                    <Tabs defaultValue="pendientes" className="space-y-6">
-                        <TabsList>
-                            <TabsTrigger value="pendientes">
-                                Pendientes de Firma ({solicitudesPendientes.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="mis-solicitudes">
-                                Mis Solicitudes ({misSolicitudes.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="certificados">
-                                Mis Certificados ({misCertificados.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="stats">
-                                Estadísticas
-                            </TabsTrigger>
-                        </TabsList>
+                {/* Contenido principal */}
+                <Tabs defaultValue="pendientes" className="space-y-6">
+                    <TabsList>
+                        <TabsTrigger value="pendientes">
+                            Pendientes de Firma ({solicitudesPendientes.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="mis-solicitudes">
+                            Mis Solicitudes ({misSolicitudes.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="certificados">
+                            Mis Certificados ({misCertificados.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="stats">
+                            Estadísticas
+                        </TabsTrigger>
+                    </TabsList>
 
-                        <TabsContent value="pendientes" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center">
-                                        <Users className="w-5 h-5 mr-2" />
-                                        Solicitudes Pendientes de Tu Firma
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Documentos que requieren tu firma digital
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {solicitudesPendientes.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <PenTool className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
-                                            <p>No tienes solicitudes pendientes de firma</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {solicitudesPendientes.map((solicitud) => (
-                                                <div key={solicitud.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                    <TabsContent value="pendientes" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <Users className="w-5 h-5 mr-2" />
+                                    Solicitudes Pendientes de Tu Firma
+                                </CardTitle>
+                                <CardDescription>
+                                    Documentos que requieren tu firma digital
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {solicitudesPendientes.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <PenTool className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
+                                        <p>No tienes solicitudes pendientes de firma</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {solicitudesPendientes.map((solicitud) => (
+                                            <div key={solicitud.id} className="border rounded-lg p-4 hover:bg-gray-50">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex-1">
                                                             <h4 className="font-medium">{solicitud.titulo}</h4>
@@ -350,34 +348,34 @@ export default function DashboardFirmas({
                                             ))}
                                         </div>
                                     )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
-                        <TabsContent value="mis-solicitudes" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center">
-                                        <FileText className="w-5 h-5 mr-2" />
-                                        Mis Solicitudes de Firma
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Solicitudes que has creado
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {misSolicitudes.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <FileText className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
-                                            <p>No has creado solicitudes de firma</p>
-                                            <Link href="/admin/firmas/solicitudes/crear" className="mt-4">
-                                                <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f]">Crear Primera Solicitud</Button>
-                                            </Link>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {misSolicitudes.map((solicitud) => (
-                                                <div key={solicitud.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                    <TabsContent value="mis-solicitudes" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <FileText className="w-5 h-5 mr-2" />
+                                    Mis Solicitudes de Firma
+                                </CardTitle>
+                                <CardDescription>
+                                    Solicitudes que has creado
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {misSolicitudes.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <FileText className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
+                                        <p>No has creado solicitudes de firma</p>
+                                        <Link href="/admin/firmas/solicitudes/crear" className="mt-4">
+                                            <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f]">Crear Primera Solicitud</Button>
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {misSolicitudes.map((solicitud) => (
+                                            <div key={solicitud.id} className="border rounded-lg p-4 hover:bg-gray-50">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex-1">
                                                             <h4 className="font-medium">{solicitud.titulo}</h4>
@@ -413,34 +411,34 @@ export default function DashboardFirmas({
                                                         </Link>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
-                        <TabsContent value="certificados" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center">
-                                        <Key className="w-5 h-5 mr-2" />
-                                        Mis Certificados Digitales
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {misCertificados.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <Key className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
-                                            <p>No tienes certificados digitales</p>
-                                            <Link href="/admin/firmas/certificados" className="mt-4">
-                                                <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f]">Ver Certificados</Button>
-                                            </Link>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {misCertificados.map((certificado) => (
-                                                <div key={certificado.id} className="border rounded-lg p-4">
+                    <TabsContent value="certificados" className="space-y-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center">
+                                    <Key className="w-5 h-5 mr-2" />
+                                    Mis Certificados Digitales
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {misCertificados.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <Key className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
+                                        <p>No tienes certificados digitales</p>
+                                        <Link href="/admin/firmas/certificados" className="mt-4">
+                                            <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f]">Ver Certificados</Button>
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {misCertificados.map((certificado) => (
+                                            <div key={certificado.id} className="border rounded-lg p-4">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex-1">
                                                             <h4 className="font-medium">{certificado.nombre_certificado}</h4>
@@ -458,58 +456,57 @@ export default function DashboardFirmas({
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="stats" className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Estadísticas Generales</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex justify-between">
+                                        <span>Total de firmas:</span>
+                                        <span className="font-medium">{stats.firmas.total}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Con certificado PKI:</span>
+                                        <span className="font-medium">{stats.firmas.con_certificado}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Porcentaje de validez:</span>
+                                        <span className="font-medium">{stats.firmas.porcentaje_validez.toFixed(1)}%</span>
+                                    </div>
                                 </CardContent>
                             </Card>
-                        </TabsContent>
 
-                        <TabsContent value="stats" className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Estadísticas Generales</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="flex justify-between">
-                                            <span>Total de firmas:</span>
-                                            <span className="font-medium">{stats.firmas.total}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Con certificado PKI:</span>
-                                            <span className="font-medium">{stats.firmas.con_certificado}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Porcentaje de validez:</span>
-                                            <span className="font-medium">{stats.firmas.porcentaje_validez.toFixed(1)}%</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Solicitudes</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="flex justify-between">
-                                            <span>Pendientes:</span>
-                                            <span className="font-medium">{stats.solicitudes.pendientes}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Completadas:</span>
-                                            <span className="font-medium">{stats.solicitudes.completadas}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Vencidas:</span>
-                                            <span className="font-medium text-red-600">{stats.solicitudes.vencidas}</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                </div>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Solicitudes</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex justify-between">
+                                        <span>Pendientes:</span>
+                                        <span className="font-medium">{stats.solicitudes.pendientes}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Completadas:</span>
+                                        <span className="font-medium">{stats.solicitudes.completadas}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Vencidas:</span>
+                                        <span className="font-medium text-red-600">{stats.solicitudes.vencidas}</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+                </Tabs>
             </div>
         </AppLayout>
     );

@@ -31,7 +31,7 @@ export default defineConfig({
         port: 5173,
         strictPort: false,
         hmr: {
-            host: 'localhost', // Usar localhost para HMR
+            host: '192.168.1.14', // Usar la IP de red para HMR
             port: 5173,
             protocol: 'ws',
         },
