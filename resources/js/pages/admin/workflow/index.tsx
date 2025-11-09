@@ -2,21 +2,23 @@ import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
     GitBranch, 
     Clock, 
     CheckCircle, 
-    XCircle,
-    AlertTriangle,
     FileText,
     TrendingUp,
     Users,
     Calendar,
     Plus
 } from 'lucide-react';
+
+const breadcrumbItems = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Administración', href: '#' },
+    { title: 'Workflow de Aprobaciones', href: '/admin/workflow' },
+];
 
 interface TareaPendiente {
     id: number;
@@ -69,13 +71,13 @@ interface Props {
 export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuario = [], estadisticas, workflows_disponibles = [] }: Props) {
     const getEstadoBadge = (estado: string) => {
         const badges: Record<string, JSX.Element> = {
-            'en_proceso': <Badge className="bg-blue-100 text-blue-800">En Proceso</Badge>,
-            'pendiente': <Badge variant="outline" className="text-yellow-600">Pendiente</Badge>,
-            'completado': <Badge className="bg-green-100 text-green-800">Completado</Badge>,
-            'cancelado': <Badge variant="destructive">Cancelado</Badge>,
-            'pausado': <Badge variant="outline" className="text-gray-600">Pausado</Badge>,
+            'en_proceso': <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">En Proceso</span>,
+            'pendiente': <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pendiente</span>,
+            'completado': <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completado</span>,
+            'cancelado': <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Cancelado</span>,
+            'pausado': <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Pausado</span>,
         };
-        return badges[estado] || <Badge variant="outline">{estado}</Badge>;
+        return badges[estado] || <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{estado}</span>;
     };
 
     const formatearFecha = (fecha: string) => {
@@ -100,95 +102,94 @@ export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuar
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Workflow de Aprobaciones" />
             
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-2">
                         <GitBranch className="h-6 w-6 text-[#2a3d83]" />
-                        <div>
-                            <h1 className="text-2xl font-semibold text-gray-900">
-                                Workflow de Aprobaciones
-                            </h1>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Gestiona los procesos de aprobación de documentos
-                            </p>
-                        </div>
+                        <h1 className="text-2xl font-semibold text-gray-900">
+                            Workflow de Aprobaciones
+                        </h1>
                     </div>
                     <Link href="/admin/workflow/create">
-                        <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f] flex items-center gap-2">
+                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
                             <Plus className="h-4 w-4" />
                             Nuevo Workflow
                         </Button>
                     </Link>
                 </div>
 
-                {/* Estadísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Tareas Pendientes</CardTitle>
-                            <Clock className="h-4 w-4 text-[#2a3d83]" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{stats.tareas_pendientes}</div>
-                            <p className="text-xs text-gray-500 mt-1">Requieren tu atención</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Instancias Activas</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-[#2a3d83]" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{stats.instancias_activas}</div>
-                            <p className="text-xs text-gray-500 mt-1">En proceso</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Completadas este Mes</CardTitle>
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{stats.completadas_mes}</div>
-                            <p className="text-xs text-gray-500 mt-1">Finalizadas exitosamente</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Promedio Duración</CardTitle>
-                            <Clock className="h-4 w-4 text-[#2a3d83]" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{stats.promedio_duracion}h</div>
-                            <p className="text-xs text-gray-500 mt-1">Tiempo promedio</p>
-                        </CardContent>
-                    </Card>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Tareas Pendientes</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.tareas_pendientes}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Clock className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Instancias Activas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.instancias_activas}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <TrendingUp className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Completadas este Mes</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.completadas_mes}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Promedio Duración</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{stats.promedio_duracion}h</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Clock className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Tareas Pendientes */}
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                                <Clock className="w-5 h-5 text-orange-600" />
+                    <div className="bg-white rounded-lg border overflow-hidden">
+                        <div className="border-b bg-gray-50 px-6 py-4">
+                            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <Clock className="w-5 h-5 text-[#2a3d83]" />
                                 Tareas Pendientes
-                            </CardTitle>
-                            <CardDescription className="text-gray-600">
+                            </h2>
+                            <p className="text-sm text-gray-600 mt-1">
                                 Tareas que requieren tu atención
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                            </p>
+                        </div>
+                        <div className="p-6">
                             {tareas_pendientes && tareas_pendientes.length > 0 ? (
                                 <div className="space-y-4">
                                     {tareas_pendientes.map((tarea) => (
-                                        <div key={tarea.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <div key={tarea.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div>
                                                     <h4 className="font-medium text-gray-900">
@@ -198,9 +199,9 @@ export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuar
                                                         <p className="text-sm text-gray-600 mt-1">{tarea.descripcion}</p>
                                                     )}
                                                 </div>
-                                                <Badge variant="outline" className="text-yellow-600">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                                     {tarea.estado}
-                                                </Badge>
+                                                </span>
                                             </div>
 
                                             {tarea.fecha_vencimiento && (
@@ -212,7 +213,7 @@ export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuar
 
                                             <div className="mt-3 flex gap-2">
                                                 <Link href={`/admin/workflow/${tarea.instancia_id}`}>
-                                                    <Button variant="outline" size="sm">
+                                                    <Button variant="outline" size="sm" className="text-[#2a3d83] hover:text-[#1e2b5f]">
                                                         Ver Detalles
                                                     </Button>
                                                 </Link>
@@ -221,39 +222,34 @@ export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuar
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <CheckCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                        No hay tareas pendientes
-                                    </h3>
-                                    <p className="text-gray-600">
-                                        Excelente! No tienes tareas pendientes.
-                                    </p>
+                                <div className="text-center py-8 text-gray-500">
+                                    <CheckCircle className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
+                                    <p>No hay tareas pendientes</p>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
 
                     {/* Instancias de Workflow */}
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-blue-600" />
+                    <div className="bg-white rounded-lg border overflow-hidden">
+                        <div className="border-b bg-gray-50 px-6 py-4">
+                            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-[#2a3d83]" />
                                 Mis Instancias
-                            </CardTitle>
-                            <CardDescription className="text-gray-600">
+                            </h2>
+                            <p className="text-sm text-gray-600 mt-1">
                                 Workflows que has iniciado
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                            </p>
+                        </div>
+                        <div className="p-6">
                             {instancias_usuario && instancias_usuario.length > 0 ? (
                                 <div className="space-y-4">
                                     {instancias_usuario.map((instancia) => (
-                                        <div key={instancia.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <div key={instancia.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div>
                                                     <Link href={`/admin/workflow/${instancia.id}`}>
-                                                        <h4 className="font-medium text-blue-600 hover:underline">
+                                                        <h4 className="font-medium text-[#2a3d83] hover:text-[#1e2b5f] hover:underline">
                                                             {instancia.workflow_nombre}
                                                         </h4>
                                                     </Link>
@@ -286,7 +282,7 @@ export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuar
 
                                             <div className="mt-3">
                                                 <Link href={`/admin/workflow/${instancia.id}`}>
-                                                    <Button variant="outline" size="sm">
+                                                    <Button variant="outline" size="sm" className="text-[#2a3d83] hover:text-[#1e2b5f]">
                                                         Ver Estado
                                                     </Button>
                                                 </Link>
@@ -295,15 +291,10 @@ export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuar
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                        No has iniciado workflows
-                                    </h3>
-                                    <p className="text-gray-600 mb-6">
-                                        Inicia tu primer proceso de workflow.
-                                    </p>
-                                    <Link href="/admin/workflow/create">
+                                <div className="text-center py-8 text-gray-500">
+                                    <FileText className="w-12 h-12 mx-auto mb-4 text-[#2a3d83]" />
+                                    <p>No has iniciado workflows</p>
+                                    <Link href="/admin/workflow/create" className="mt-4 inline-block">
                                         <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
                                             <Plus className="w-4 h-4 mr-2" />
                                             Nuevo Workflow
@@ -311,8 +302,8 @@ export default function WorkflowIndex({ tareas_pendientes = [], instancias_usuar
                                     </Link>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         </AppLayout>
