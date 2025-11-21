@@ -147,14 +147,14 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
             tipo_prestamo: data.tipo_prestamo === 'todos' ? '' : data.tipo_prestamo,
         };
         
-        router.get(route('admin.prestamos.index'), filtrosLimpios, {
+        router.get('/admin/prestamos', filtrosLimpios, {
             preserveState: true,
             preserveScroll: true,
         });
     };
 
     const limpiarFiltros = () => {
-        router.visit(route('admin.prestamos.index'));
+        router.visit('/admin/prestamos');
     };
 
     const formatearFecha = (fecha: string) => {
@@ -189,13 +189,13 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                     
                     <div className="flex items-center space-x-2">
                         <Button variant="outline" asChild>
-                            <Link href={route('admin.prestamos.reportes')}>
+                            <Link href="/admin/prestamos/reportes/estadisticas">
                                 <BarChart3 className="h-4 w-4 mr-2" />
                                 Reportes
                             </Link>
                         </Button>
                         <Button asChild>
-                            <Link href={route('admin.prestamos.create')}>
+                            <Link href="/admin/prestamos/create">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Nuevo Préstamo
                             </Link>
@@ -465,7 +465,7 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="outline" size="sm" asChild>
-                                                    <Link href={route('admin.prestamos.show', prestamo.id)}>
+                                                    <Link href={`/admin/prestamos/${prestamo.id}`}>
                                                         <Eye className="h-4 w-4 mr-1" />
                                                         Ver
                                                     </Link>

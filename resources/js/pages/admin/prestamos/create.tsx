@@ -120,7 +120,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('admin.prestamos.store'));
+        post('/admin/prestamos');
     };
 
     const expedienteSeleccionado = expedientes.find(exp => exp.id.toString() === data.expediente_id);
@@ -142,7 +142,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                     <div>
                         <div className="flex items-center space-x-2">
                             <Link 
-                                href={route('admin.prestamos.index')}
+                                href="/admin/prestamos"
                                 className="text-sm text-muted-foreground hover:text-foreground"
                             >
                                 Préstamos
@@ -156,7 +156,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                     
                     <div className="flex items-center space-x-2">
                         <Button type="button" variant="outline" asChild>
-                            <Link href={route('admin.prestamos.index')}>
+                            <Link href="/admin/prestamos">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 Cancelar
                             </Link>
@@ -507,7 +507,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                 {/* Botones de acción */}
                 <div className="flex justify-end space-x-2">
                     <Button type="button" variant="outline" asChild>
-                        <Link href={route('admin.prestamos.index')}>
+                        <Link href="/admin/prestamos">
                             Cancelar
                         </Link>
                     </Button>
