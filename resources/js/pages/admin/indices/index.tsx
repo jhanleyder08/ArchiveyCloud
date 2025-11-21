@@ -190,90 +190,91 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: 'Administración', href: '#' },
+            { title: 'Índices Electrónicos', href: '/admin/indices' },
+        ]}>
             <Head title="Índices Electrónicos" />
             
-            <div className="container mx-auto py-6">
+            <div className="space-y-6">
                 {/* Header */}
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                            <Database className="w-8 h-8 text-indigo-600" />
+                <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center gap-2">
+                        <Database className="h-6 w-6 text-[#2a3d83]" />
+                        <h1 className="text-2xl font-semibold text-gray-900">
                             Índices Electrónicos
                         </h1>
-                        <p className="text-gray-600 mt-1">
-                            Sistema automático de indexación y búsqueda de documentos y expedientes
-                        </p>
                     </div>
                     <div className="flex gap-3">
                         <Link href="/admin/indices/estadisticas/dashboard">
                             <Button variant="outline">
-                                <BarChart3 className="w-4 h-4 mr-2" />
+                                <BarChart3 className="w-4 h-4 mr-2 text-[#2a3d83]" />
                                 Estadísticas
                             </Button>
                         </Link>
                         <Button onClick={() => setMostrarFiltros(!mostrarFiltros)} variant="outline">
-                            <Filter className="w-4 h-4 mr-2" />
+                            <Filter className="w-4 h-4 mr-2 text-[#2a3d83]" />
                             Filtros Avanzados
                         </Button>
                     </div>
                 </div>
 
                 {/* Estadísticas Resumen */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <Database className="h-8 w-8 text-indigo-600" />
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Total Índices</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.total_indices.toLocaleString()}</p>
-                                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Índices</p>
+                                <p className="text-2xl font-semibold text-gray-900">{estadisticas.total_indices.toLocaleString()}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Database className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                     
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <Star className="h-8 w-8 text-yellow-600" />
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Documentos Vitales</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.documentos_vitales.toLocaleString()}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Documentos Vitales</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.documentos_vitales.toLocaleString()}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Star className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <Archive className="h-8 w-8 text-purple-600" />
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Valor Histórico</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.documentos_historicos.toLocaleString()}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Valor Histórico</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.documentos_historicos.toLocaleString()}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Archive className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <HardDrive className="h-8 w-8 text-green-600" />
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Tamaño Total</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.tamaño_total}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Tamaño Total</p>
+                                <p className="text-2xl font-semibold text-gray-900">{estadisticas.tamaño_total}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <HardDrive className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Alertas */}
                 {estadisticas.indices_desactualizados > 0 && (
-                    <Alert className="mb-6 border-yellow-200 bg-yellow-50">
-                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <Alert className="border-yellow-200 bg-yellow-50">
+                        <AlertTriangle className="h-4 w-4 text-[#2a3d83]" />
                         <AlertDescription className="text-yellow-800">
                             Hay <strong>{estadisticas.indices_desactualizados}</strong> índices que necesitan actualización (más de 6 meses sin actualizar).
                         </AlertDescription>
@@ -460,7 +461,7 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
                     <CardContent>
                         {indices.data.length === 0 ? (
                             <div className="text-center py-8">
-                                <Database className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                                <Database className="w-16 h-16 mx-auto text-[#2a3d83] mb-4" />
                                 <p className="text-gray-500">No se encontraron índices con los criterios especificados</p>
                             </div>
                         ) : (
@@ -471,8 +472,8 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     {indice.tipo_entidad === 'expediente' ? 
-                                                        <FolderOpen className="w-5 h-5 text-blue-600" /> : 
-                                                        <FileText className="w-5 h-5 text-green-600" />
+                                                        <FolderOpen className="w-5 h-5 text-[#2a3d83]" /> : 
+                                                        <FileText className="w-5 h-5 text-[#2a3d83]" />
                                                     }
                                                     <h3 className="font-semibold text-gray-900">{indice.titulo}</h3>
                                                     {indice.es_reciente && (
@@ -522,14 +523,13 @@ export default function IndicesIndex({ indices, estadisticas, filtros, opcionesF
                                             
                                             <div className="flex items-center gap-2">
                                                 <Link href={`/admin/indices/${indice.id}`}>
-                                                    <Button variant="outline" size="sm">
-                                                        <Eye className="w-4 h-4 mr-1" />
-                                                        Ver
-                                                    </Button>
+                                                    <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
                                                 </Link>
-                                                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                                                <button className="p-2 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors">
                                                     <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>

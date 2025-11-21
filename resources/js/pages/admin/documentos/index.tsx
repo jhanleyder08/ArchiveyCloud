@@ -228,7 +228,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
     return (
         <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Gestión de Documentos" />
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-2">
@@ -372,49 +372,33 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                 <div className="bg-white rounded-lg border overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50">
+                            <thead className="bg-gray-50 border-b">
                                 <tr>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
-                                        Documento
-                                    </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
-                                        Expediente
-                                    </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
-                                        Estado
-                                    </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
-                                        Formato
-                                    </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
-                                        Tamaño
-                                    </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
-                                        Fecha
-                                    </th>
-                                    <th className="text-right p-4 font-medium text-sm text-gray-900">
-                                        Acciones
-                                    </th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Documento</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Expediente</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Estado</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Formato</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Tamaño</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Fecha</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-gray-200">
                                 {!documentos?.data || documentos.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="p-8 text-center text-gray-500">
-                                            No hay documentos disponibles
+                                        <td colSpan={7} className="py-8 px-6 text-center text-gray-500">
+                                            No se encontraron documentos.
                                         </td>
                                     </tr>
                                 ) : (
                                     documentos?.data?.map((documento) => (
-                                        <tr key={documento.id} className="border-b hover:bg-gray-50/50">
-                                            <td className="p-4">
-                                                <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10">
-                                                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                                            <FileText className="h-5 w-5 text-[#2a3d83]" />
-                                                        </div>
+                                        <tr key={documento.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="py-4 px-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-8 w-8 bg-[#2a3d83] rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                                        {documento.titulo.charAt(0).toUpperCase()}
                                                     </div>
-                                                    <div className="ml-4">
+                                                    <div>
                                                         <div className="text-sm font-medium text-gray-900">
                                                             {documento.titulo}
                                                         </div>
@@ -424,7 +408,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="py-4 px-6">
                                                 {documento.expediente ? (
                                                     <div>
                                                         <div className="text-sm font-medium text-gray-900">
@@ -438,81 +422,71 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                                                     <span className="text-sm text-gray-400">Sin expediente</span>
                                                 )}
                                             </td>
-                                            <td className="p-4">
-                                                <Badge className={getEstadoBadgeColor(documento.estado)}>
+                                            <td className="py-4 px-6">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEstadoBadgeColor(documento.estado)}`}>
                                                     {estados[documento.estado] || documento.estado}
-                                                </Badge>
+                                                </span>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="py-4 px-6">
                                                 <div className="flex items-center space-x-2">
-                                                    <Badge className={getSoporteBadgeColor(documento.tipo_soporte)}>
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSoporteBadgeColor(documento.tipo_soporte)}`}>
                                                         {tiposSoporte[documento.tipo_soporte] || documento.tipo_soporte}
-                                                    </Badge>
+                                                    </span>
                                                     <span className="text-xs text-gray-500 uppercase">
                                                         {documento.formato}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-sm text-gray-900">
+                                            <td className="py-4 px-6 text-sm text-gray-900">
                                                 {formatFileSize(documento.tamaño)}
                                             </td>
-                                            <td className="p-4 text-sm text-gray-500">
+                                            <td className="py-4 px-6 text-sm text-gray-600">
                                                 {new Date(documento.created_at).toLocaleDateString('es-ES')}
                                             </td>
-                                            <td className="p-4 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <TooltipProvider>
+                                            <td className="py-4 px-6">
+                                                <TooltipProvider>
+                                                    <div className="flex items-center gap-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
+                                                                <button
                                                                     onClick={() => window.location.href = `/admin/documentos/${documento.id}`}
-                                                                    className="h-8 w-8"
+                                                                    className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
                                                                 >
                                                                     <Eye className="h-4 w-4" />
-                                                                </Button>
+                                                                </button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
                                                                 <p>Ver detalle</p>
                                                             </TooltipContent>
                                                         </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
+                                                                <button
                                                                     onClick={() => setShowEditModal(documento)}
-                                                                    className="h-8 w-8"
+                                                                    className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
                                                                 >
                                                                     <Edit className="h-4 w-4" />
-                                                                </Button>
+                                                                </button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
-                                                                <p>Editar</p>
+                                                                <p>Editar documento</p>
                                                             </TooltipContent>
                                                         </Tooltip>
-                                                    </TooltipProvider>
-                                                    <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
+                                                                <button
                                                                     onClick={() => setShowDeleteModal(documento)}
-                                                                    className="h-8 w-8 text-red-600 hover:text-red-700"
+                                                                    className="p-2 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors"
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
-                                                                </Button>
+                                                                </button>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
-                                                                <p>Eliminar</p>
+                                                                <p>Eliminar documento</p>
                                                             </TooltipContent>
                                                         </Tooltip>
-                                                    </TooltipProvider>
-                                                </div>
+                                                    </div>
+                                                </TooltipProvider>
                                             </td>
                                         </tr>
                                     ))
@@ -522,25 +496,69 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                     </div>
 
                     {/* Pagination */}
-                    {documentos?.last_page && documentos.last_page > 1 && (
-                        <div className="mt-6 flex items-center justify-between px-6 pb-6">
-                            <p className="text-sm text-gray-600">
+                    {documentos?.data && documentos.data.length > 0 && (
+                        <div className="flex items-center justify-between bg-white border rounded-lg px-6 py-3">
+                            <div className="text-sm text-gray-600">
                                 Mostrando <span className="font-medium">{documentos?.from || 0}</span> a{' '}
                                 <span className="font-medium">{documentos?.to || 0}</span> de{' '}
                                 <span className="font-medium">{documentos?.total || 0}</span> documentos
-                            </p>
-                            <div className="flex gap-2">
-                                {documentos?.links?.map((link) => (
-                                    <Button
-                                        key={link.label}
-                                        variant={link.active ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => link.url && (window.location.href = link.url)}
-                                        disabled={!link.url}
-                                    >
-                                        <span dangerouslySetInnerHTML={{ __html: link.label }} />
-                                    </Button>
-                                ))}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {documentos?.links?.map((link, index) => {
+                                    if (link.label.includes('Previous')) {
+                                        return (
+                                            <Link
+                                                key={index}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                                                    link.url 
+                                                        ? 'text-gray-700 hover:bg-gray-50' 
+                                                        : 'text-gray-300 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                Anterior
+                                            </Link>
+                                        );
+                                    }
+                                    
+                                    if (link.label.includes('Next')) {
+                                        return (
+                                            <Link
+                                                key={index}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                                                    link.url 
+                                                        ? 'text-gray-700 hover:bg-gray-50' 
+                                                        : 'text-gray-300 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                Siguiente
+                                            </Link>
+                                        );
+                                    }
+
+                                    // Number pages
+                                    if (!isNaN(Number(link.label))) {
+                                        return (
+                                            <Link
+                                                key={index}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                                    link.active
+                                                        ? 'bg-[#2a3d83] text-white'
+                                                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {link.label}
+                                            </Link>
+                                        );
+                                    }
+
+                                    return null;
+                                })}
                             </div>
                         </div>
                     )}

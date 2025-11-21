@@ -143,14 +143,14 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
             estado: data.estado === 'todos' ? '' : data.estado,
         };
         
-        router.get(route('admin.disposiciones.index'), filtrosLimpios, {
+        router.get('/admin/disposiciones', filtrosLimpios, {
             preserveState: true,
             preserveScroll: true,
         });
     };
 
     const limpiarFiltros = () => {
-        router.visit(route('admin.disposiciones.index'));
+        router.visit('/admin/disposiciones');
     };
 
     const formatearFecha = (fecha: string) => {
@@ -179,14 +179,14 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                     
                     <div className="flex items-center space-x-2">
                         <Button variant="outline" asChild>
-                            <Link href={route('admin.disposiciones.reportes')}>
+                            <Link href="/admin/disposiciones/reportes">
                                 <BarChart3 className="h-4 w-4 mr-2" />
                                 Reportes
                             </Link>
                         </Button>
-                        <Button asChild>
-                            <Link href={route('admin.disposiciones.create')}>
-                                <Plus className="h-4 w-4 mr-2" />
+                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors" asChild>
+                            <Link href="/admin/disposiciones/create">
+                                <Plus className="h-4 w-4" />
                                 Nueva Disposición
                             </Link>
                         </Button>
@@ -194,96 +194,84 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                 </div>
 
                 {/* Estadísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
-                                    <Archive className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Total</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.total_disposiciones}</p>
-                                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total</p>
+                                <p className="text-2xl font-semibold text-gray-900">{estadisticas.total_disposiciones}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Archive className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                     
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg">
-                                    <Clock className="h-6 w-6 text-yellow-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                                    <p className="text-2xl font-bold text-yellow-700">{estadisticas.pendientes}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Pendientes</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.pendientes}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Clock className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
-                                    <Search className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">En Revisión</p>
-                                    <p className="text-2xl font-bold text-blue-700">{estadisticas.en_revision}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">En Revisión</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.en_revision}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Search className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Aprobadas</p>
-                                    <p className="text-2xl font-bold text-green-700">{estadisticas.aprobadas}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Aprobadas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.aprobadas}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg">
-                                    <Archive className="h-6 w-6 text-purple-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Ejecutadas</p>
-                                    <p className="text-2xl font-bold text-purple-700">{estadisticas.ejecutadas}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Ejecutadas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.ejecutadas}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Archive className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-lg">
-                                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Vencidas</p>
-                                    <p className="text-2xl font-bold text-red-700">{estadisticas.vencidas}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Vencidas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.vencidas}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <AlertTriangle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Alertas de disposiciones próximas a vencer */}
                 {proximasVencer.length > 0 && (
                     <Alert className="border-orange-200 bg-orange-50">
-                        <AlertCircleIcon className="h-4 w-4 text-orange-600" />
+                        <AlertCircleIcon className="h-4 w-4 text-[#2a3d83]" />
                         <AlertDescription>
                             <div className="flex items-center justify-between">
                                 <div>
@@ -429,7 +417,7 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center space-x-2">
-                                                        {disposicion.expediente ? <Archive className="h-4 w-4 text-blue-500" /> : <FileText className="h-4 w-4 text-green-500" />}
+                                                        {disposicion.expediente ? <Archive className="h-4 w-4 text-[#2a3d83]" /> : <FileText className="h-4 w-4 text-[#2a3d83]" />}
                                                         <div>
                                                             <p className="font-medium">
                                                                 {disposicion.expediente 
@@ -450,20 +438,20 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center space-x-2">
-                                                        <User className="h-4 w-4 text-gray-400" />
+                                                        <User className="h-4 w-4 text-[#2a3d83]" />
                                                         <span>{disposicion.responsable?.name || 'Sin responsable asignado'}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center space-x-2">
-                                                        <Calendar className="h-4 w-4 text-gray-400" />
+                                                        <Calendar className="h-4 w-4 text-[#2a3d83]" />
                                                         <span>{formatearFecha(disposicion.fecha_propuesta)}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="space-y-1">
                                                         <div className="flex items-center space-x-2">
-                                                            <Calendar className="h-4 w-4 text-gray-400" />
+                                                            <Calendar className="h-4 w-4 text-[#2a3d83]" />
                                                             <span className={disposicion.esta_vencida ? 'text-red-600 font-medium' : ''}>
                                                                 {formatearFecha(disposicion.fecha_vencimiento_retencion)}
                                                             </span>
@@ -481,12 +469,11 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="outline" size="sm" asChild>
-                                                        <Link href={route('admin.disposiciones.show', disposicion.id)}>
-                                                            <Eye className="h-4 w-4 mr-1" />
-                                                            Ver
-                                                        </Link>
-                                                    </Button>
+                                                    <Link href={`/admin/disposiciones/${disposicion.id}`}>
+                                                        <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
+                                                            <Eye className="h-4 w-4" />
+                                                        </button>
+                                                    </Link>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -495,16 +482,16 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                             </div>
                         ) : (
                             <div className="text-center py-8">
-                                <Archive className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                <Archive className="h-12 w-12 text-[#2a3d83] mx-auto mb-4" />
                                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                                     No hay disposiciones finales
                                 </h3>
                                 <p className="text-gray-500 mb-4">
                                     No se encontraron disposiciones que coincidan con los criterios de búsqueda.
                                 </p>
-                                <Button asChild>
-                                    <Link href={route('admin.disposiciones.create')}>
-                                        <Plus className="h-4 w-4 mr-2" />
+                                <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors" asChild>
+                                    <Link href="/admin/disposiciones/create">
+                                        <Plus className="h-4 w-4" />
                                         Crear Primera Disposición
                                     </Link>
                                 </Button>

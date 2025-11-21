@@ -145,112 +145,124 @@ export default function ReportesDashboard({
         : 0;
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: 'Administración', href: '#' },
+            { title: 'Reportes', href: '/admin/reportes' },
+            { title: 'Dashboard Ejecutivo', href: '/admin/reportes/dashboard' },
+        ]}>
             <Head title="Dashboard Ejecutivo - Reportes" />
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-2">
                         <BarChart3 className="h-6 w-6 text-[#2a3d83]" />
-                        <div>
-                            <h1 className="text-2xl font-semibold text-gray-900">
-                                Dashboard Ejecutivo
-                            </h1>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Métricas y estadísticas del sistema documental
-                            </p>
-                        </div>
+                        <h1 className="text-2xl font-semibold text-gray-900">
+                            Dashboard Ejecutivo
+                        </h1>
                     </div>
                     <Badge variant="outline" className="flex items-center space-x-1">
-                        <Activity className="h-3 w-3" />
+                        <Activity className="h-3 w-3 text-[#2a3d83]" />
                         <span>Tiempo real</span>
                     </Badge>
                 </div>
 
                 {/* Métricas principales */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Total Expedientes</CardTitle>
-                            <Archive className="h-4 w-4 text-[#2a3d83]" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{metricas.total_expedientes.toLocaleString()}</div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                {metricas.expedientes_abiertos} abiertos
-                            </p>
-                        </CardContent>
-                    </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Expedientes</p>
+                                <p className="text-2xl font-semibold text-gray-900">{metricas.total_expedientes.toLocaleString()}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {metricas.expedientes_abiertos} abiertos
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Archive className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Total Documentos</CardTitle>
-                            <FileText className="h-4 w-4 text-[#2a3d83]" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{metricas.total_documentos.toLocaleString()}</div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                +{metricas.documentos_mes_actual} este mes
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Documentos</p>
+                                <p className="text-2xl font-semibold text-gray-900">{metricas.total_documentos.toLocaleString()}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    +{metricas.documentos_mes_actual} este mes
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <FileText className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Expedientes Abiertos</CardTitle>
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{metricas.expedientes_abiertos}</div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                {metricas.total_expedientes > 0 ? Math.round((metricas.expedientes_abiertos / metricas.total_expedientes) * 100) : 0}% del total
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Expedientes Abiertos</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{metricas.expedientes_abiertos}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {metricas.total_expedientes > 0 ? Math.round((metricas.expedientes_abiertos / metricas.total_expedientes) * 100) : 0}% del total
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Expedientes Cerrados</CardTitle>
-                            <Archive className="h-4 w-4 text-gray-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{metricas.expedientes_cerrados}</div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                {metricas.total_expedientes > 0 ? Math.round((metricas.expedientes_cerrados / metricas.total_expedientes) * 100) : 0}% del total
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Expedientes Cerrados</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{metricas.expedientes_cerrados}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {metricas.total_expedientes > 0 ? Math.round((metricas.expedientes_cerrados / metricas.total_expedientes) * 100) : 0}% del total
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Archive className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Almacenamiento</CardTitle>
-                            <HardDrive className="h-4 w-4 text-[#2a3d83]" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{metricas.tamaño_total_gb} GB</div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                {metricas.total_documentos > 0 ? Math.round(metricas.tamaño_total_gb / metricas.total_documentos * 1024) : 0} MB promedio
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Almacenamiento</p>
+                                <p className="text-2xl font-semibold text-gray-900">{metricas.tamaño_total_gb} GB</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {metricas.total_documentos > 0 ? Math.round(metricas.tamaño_total_gb / metricas.total_documentos * 1024) : 0} MB promedio
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <HardDrive className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card className="border border-gray-200 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Cumplimiento TRD</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-[#2a3d83]" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{porcentajeCumplimiento}%</div>
-                            <Progress value={porcentajeCumplimiento} className="mt-1" />
-                        </CardContent>
-                    </Card>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Cumplimiento TRD</p>
+                                <p className="text-2xl font-semibold text-gray-900">{porcentajeCumplimiento}%</p>
+                                <Progress value={porcentajeCumplimiento} className="mt-2" />
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <BarChart3 className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Gráficos principales */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Expedientes por Estado */}
-                    <Card className="border border-gray-200 shadow-sm">
+                    <Card className="bg-white border border-gray-200 shadow-sm">
                         <CardHeader>
                             <CardTitle className="text-lg font-semibold text-gray-900">Expedientes por Estado (Últimos 12 meses)</CardTitle>
                             <CardDescription className="text-gray-600">Evolución temporal de los expedientes</CardDescription>
@@ -269,8 +281,8 @@ export default function ReportesDashboard({
                                             type="monotone" 
                                             dataKey={estado} 
                                             stackId="1" 
-                                            stroke={estadoColors[estado]} 
-                                            fill={estadoColors[estado]}
+                                            stroke={estadoColors[estado] || '#2a3d83'} 
+                                            fill={estadoColors[estado] || '#2a3d83'}
                                             fillOpacity={0.6}
                                         />
                                     ))}
@@ -280,7 +292,7 @@ export default function ReportesDashboard({
                     </Card>
 
                     {/* Documentos por Tipo */}
-                    <Card className="border border-gray-200 shadow-sm">
+                    <Card className="bg-white border border-gray-200 shadow-sm">
                         <CardHeader>
                             <CardTitle className="text-lg font-semibold text-gray-900">Documentos por Tipo</CardTitle>
                             <CardDescription className="text-gray-600">Distribución de tipos documentales</CardDescription>
@@ -295,7 +307,7 @@ export default function ReportesDashboard({
                                         labelLine={false}
                                         label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                                         outerRadius={80}
-                                        fill="#8884d8"
+                                        fill="#2a3d83"
                                         dataKey="total"
                                     >
                                         {documentosPorTipo.slice(0, 6).map((entry, index) => (
@@ -319,7 +331,7 @@ export default function ReportesDashboard({
                     </TabsList>
 
                     <TabsContent value="series" className="space-y-4">
-                        <Card className="border border-gray-200 shadow-sm">
+                        <Card className="bg-white border border-gray-200 shadow-sm">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-gray-900">Series Documentales más Utilizadas</CardTitle>
                                 <CardDescription className="text-gray-600">Series con mayor número de expedientes</CardDescription>
@@ -337,9 +349,9 @@ export default function ReportesDashboard({
                                                     <p className="text-sm text-gray-600">{serie.nombre}</p>
                                                 </div>
                                             </div>
-                                            <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-[#2a3d83]">
                                                 {serie.expedientes_count} expedientes
-                                            </Badge>
+                                            </span>
                                         </div>
                                     ))}
                                 </div>
@@ -348,7 +360,7 @@ export default function ReportesDashboard({
                     </TabsContent>
 
                     <TabsContent value="actividad" className="space-y-4">
-                        <Card className="border border-gray-200 shadow-sm">
+                        <Card className="bg-white border border-gray-200 shadow-sm">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-gray-900">Actividad Reciente</CardTitle>
                                 <CardDescription className="text-gray-600">Últimas 20 acciones en el sistema</CardDescription>
@@ -358,7 +370,7 @@ export default function ReportesDashboard({
                                     {actividadReciente.slice(0, 20).map((actividad) => (
                                         <div key={actividad.id} className="flex items-start space-x-3 pb-3 border-b border-gray-200 last:border-b-0">
                                             <div className="flex-shrink-0">
-                                                <Activity className="h-4 w-4 text-gray-400 mt-1" />
+                                                <Activity className="h-4 w-4 text-[#2a3d83] mt-1" />
                                             </div>
                                             <div className="flex-grow">
                                                 <div className="flex items-center justify-between">
@@ -384,8 +396,8 @@ export default function ReportesDashboard({
                     </TabsContent>
 
                     <TabsContent value="cumplimiento" className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Card className="border border-gray-200 shadow-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card className="bg-white border border-gray-200 shadow-sm">
                                 <CardHeader>
                                     <CardTitle className="text-lg font-semibold text-gray-900">Cumplimiento de Series</CardTitle>
                                     <CardDescription className="text-gray-600">Series documentadas vs. total</CardDescription>
@@ -405,7 +417,7 @@ export default function ReportesDashboard({
                                 </CardContent>
                             </Card>
 
-                            <Card className="border border-gray-200 shadow-sm">
+                            <Card className="bg-white border border-gray-200 shadow-sm">
                                 <CardHeader>
                                     <CardTitle className="text-lg font-semibold text-gray-900">Cumplimiento de Subseries</CardTitle>
                                     <CardDescription className="text-gray-600">Subseries documentadas vs. total</CardDescription>
@@ -428,7 +440,7 @@ export default function ReportesDashboard({
                     </TabsContent>
 
                     <TabsContent value="almacenamiento" className="space-y-4">
-                        <Card className="border border-gray-200 shadow-sm">
+                        <Card className="bg-white border border-gray-200 shadow-sm">
                             <CardHeader>
                                 <CardTitle className="text-lg font-semibold text-gray-900">Crecimiento de Almacenamiento</CardTitle>
                                 <CardDescription className="text-gray-600">Evolución del almacenamiento por mes</CardDescription>
@@ -442,8 +454,8 @@ export default function ReportesDashboard({
                                         <YAxis yAxisId="right" orientation="right" />
                                         <Tooltip />
                                         <Legend />
-                                        <Bar yAxisId="left" dataKey="documentos" fill="#8884d8" name="Documentos" />
-                                        <Line yAxisId="right" type="monotone" dataKey="tamaño_mb" stroke="#82ca9d" name="Tamaño (MB)" />
+                                        <Bar yAxisId="left" dataKey="documentos" fill="#2a3d83" name="Documentos" />
+                                        <Line yAxisId="right" type="monotone" dataKey="tamaño_mb" stroke="#2a3d83" name="Tamaño (MB)" />
                                     </LineChart>
                                 </ResponsiveContainer>
                             </CardContent>

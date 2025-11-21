@@ -219,15 +219,15 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
             
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center gap-2">
                         <FolderOpen className="h-6 w-6 text-[#2a3d83]" />
                         <h1 className="text-2xl font-semibold text-gray-900">
                             Gestión de Expedientes
                         </h1>
                     </div>
                     <Link href="/admin/expedientes/create">
-                        <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f] flex items-center gap-2">
+                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
                             <Plus className="h-4 w-4" />
                             Crear Expediente
                         </Button>
@@ -235,154 +235,74 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                 </div>
 
                 {/* Estadísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                    <Archive className="h-4 w-4 text-blue-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.total}</p>
-                                    <p className="text-xs font-medium text-gray-500">Total</p>
-                                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Expedientes</p>
+                                <p className="text-2xl font-semibold text-gray-900">{estadisticas.total}</p>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-green-100 rounded-lg">
-                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.abiertos}</p>
-                                    <p className="text-xs font-medium text-gray-500">Abiertos</p>
-                                </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Archive className="h-6 w-6 text-[#2a3d83]" />
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-gray-100 rounded-lg">
-                                    <Archive className="h-4 w-4 text-gray-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.cerrados}</p>
-                                    <p className="text-xs font-medium text-gray-500">Cerrados</p>
-                                </div>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Abiertos</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.abiertos}</p>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-indigo-100 rounded-lg">
-                                    <FileText className="h-4 w-4 text-indigo-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.electronicos}</p>
-                                    <p className="text-xs font-medium text-gray-500">Electrónicos</p>
-                                </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-gray-100 rounded-lg">
-                                    <Archive className="h-4 w-4 text-gray-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.fisicos}</p>
-                                    <p className="text-xs font-medium text-gray-500">Físicos</p>
-                                </div>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Cerrados</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.cerrados}</p>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-yellow-100 rounded-lg">
-                                    <Archive className="h-4 w-4 text-yellow-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.hibridos}</p>
-                                    <p className="text-xs font-medium text-gray-500">Híbridos</p>
-                                </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Archive className="h-6 w-6 text-[#2a3d83]" />
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-orange-100 rounded-lg">
-                                    <Calendar className="h-4 w-4 text-orange-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.proximos_vencer}</p>
-                                    <p className="text-xs font-medium text-gray-500">Próx. Vencer</p>
-                                </div>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Próx. Vencer</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.proximos_vencer}</p>
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex items-center">
-                                <div className="p-2 bg-red-100 rounded-lg">
-                                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.vencidos}</p>
-                                    <p className="text-xs font-medium text-gray-500">Vencidos</p>
-                                </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Calendar className="h-6 w-6 text-[#2a3d83]" />
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Filtros */}
-                <Card>
-                    <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Filtros de Búsqueda</CardTitle>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="flex items-center gap-2"
-                            >
-                                <Filter className="h-4 w-4" />
-                                Filtros Avanzados
-                                <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {/* Búsqueda básica */}
-                        <div className="flex gap-4">
-                            <div className="flex-1">
+                <div className="bg-white rounded-lg border p-6">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-80">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <Input
-                                    placeholder="Buscar por código, nombre o descripción..."
+                                    placeholder="Buscar expedientes..."
                                     value={currentFilters.search}
                                     onChange={(e) => setCurrentFilters(prev => ({ ...prev, search: e.target.value }))}
-                                    className="w-full"
+                                    className="pl-10"
                                 />
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <Select 
                                 value={currentFilters.estado} 
                                 onValueChange={(value) => setCurrentFilters(prev => ({ ...prev, estado: value }))}
                             >
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Estado" />
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todos los estados" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos los estados</SelectItem>
@@ -393,132 +313,57 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <div className="flex gap-2">
-                                <Button onClick={aplicarFiltros} className="flex items-center gap-2">
-                                    <Search className="h-4 w-4" />
-                                    Buscar
-                                </Button>
-                                <Button variant="outline" onClick={limpiarFiltros}>
-                                    Limpiar
-                                </Button>
-                            </div>
+                            <Button onClick={aplicarFiltros} className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
+                                <Search className="h-4 w-4 mr-2" />
+                                Buscar
+                            </Button>
+                            <Button variant="outline" onClick={limpiarFiltros}>
+                                Limpiar
+                            </Button>
                         </div>
-
-                        {/* Filtros avanzados */}
-                        {showFilters && (
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
-                                <Select 
-                                    value={currentFilters.tipo_expediente} 
-                                    onValueChange={(value) => setCurrentFilters(prev => ({ ...prev, tipo_expediente: value }))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Tipo" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los tipos</SelectItem>
-                                        {opciones.tipos.map((tipo) => (
-                                            <SelectItem key={tipo.value} value={tipo.value}>
-                                                {tipo.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <Select 
-                                    value={currentFilters.serie_id} 
-                                    onValueChange={(value) => setCurrentFilters(prev => ({ ...prev, serie_id: value }))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Serie" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas las series</SelectItem>
-                                        {opciones.series_disponibles.map((serie) => (
-                                            <SelectItem key={serie.id} value={serie.id.toString()}>
-                                                {serie.codigo} - {serie.nombre}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <Select 
-                                    value={currentFilters.area_responsable} 
-                                    onValueChange={(value) => setCurrentFilters(prev => ({ ...prev, area_responsable: value }))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Área" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas las áreas</SelectItem>
-                                        {opciones.areas_disponibles.map((area) => (
-                                            <SelectItem key={area.value} value={area.value}>
-                                                {area.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <Select 
-                                    value={currentFilters.proximidad_vencimiento} 
-                                    onValueChange={(value) => setCurrentFilters(prev => ({ ...prev, proximidad_vencimiento: value }))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Vencimiento" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Sin filtro de vencimiento</SelectItem>
-                                        {opciones.proximidad_vencimiento.map((proximidad) => (
-                                            <SelectItem key={proximidad.value} value={proximidad.value}>
-                                                {proximidad.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
                 {/* Tabla de Expedientes */}
                 <div className="bg-white rounded-lg border overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50">
+                            <thead className="bg-gray-50 border-b">
                                 <tr>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">
                                         Expediente
                                     </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">
                                         Serie/Subserie
                                     </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">
                                         Estado/Tipo
                                     </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">
                                         Responsable
                                     </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">
                                         Volumen/Folios
                                     </th>
-                                    <th className="text-left p-4 font-medium text-sm text-gray-900">
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">
                                         Fechas
                                     </th>
-                                    <th className="text-right p-4 font-medium text-sm text-gray-900">
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">
                                         Acciones
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-gray-200">
                                 {expedientes.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="p-8 text-center text-gray-500">
-                                            No hay expedientes disponibles
+                                        <td colSpan={7} className="py-8 px-6 text-center text-gray-500">
+                                            No se encontraron expedientes.
                                         </td>
                                     </tr>
                                 ) : (
                                     expedientes.data.map((expediente) => (
-                                        <tr key={expediente.id} className="border-t hover:bg-gray-50">
-                                            <td className="p-4">
+                                        <tr key={expediente.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="py-4 px-6">
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
                                                         <p className="font-medium text-gray-900">
@@ -536,7 +381,7 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="py-4 px-6">
                                                 <div className="space-y-1">
                                                     {expediente.serie && (
                                                         <p className="text-sm font-medium text-gray-900">
@@ -553,13 +398,13 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                     </p>
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="py-4 px-6">
                                                 <div className="space-y-2">
                                                     {getEstadoBadge(expediente.estado)}
                                                     {getTipoBadge(expediente.tipo_expediente)}
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="py-4 px-6">
                                                 <div className="space-y-1">
                                                     {expediente.usuario_responsable && (
                                                         <>
@@ -573,7 +418,7 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="py-4 px-6">
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-16 bg-gray-200 rounded-full h-2">
@@ -596,7 +441,7 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                     </p>
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="py-4 px-6">
                                                 <div className="space-y-1">
                                                     <p className="text-xs text-gray-600">
                                                         <strong>Apertura:</strong><br />
@@ -616,28 +461,26 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="p-4">
-                                                <div className="flex items-center justify-end gap-2">
+                                            <td className="py-4 px-6">
+                                                <div className="flex items-center gap-2">
                                                     <Link href={`/admin/expedientes/${expediente.id}`}>
-                                                        <Button variant="ghost" size="sm" title="Ver expediente">
+                                                        <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
                                                             <Eye className="h-4 w-4" />
-                                                        </Button>
+                                                        </button>
                                                     </Link>
                                                     <Link href={`/admin/expedientes/${expediente.id}/edit`}>
-                                                        <Button variant="ghost" size="sm" title="Editar expediente">
+                                                        <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
                                                             <Edit className="h-4 w-4" />
-                                                        </Button>
+                                                        </button>
                                                     </Link>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        title="Exportar directorio"
+                                                    <button 
+                                                        className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
                                                         onClick={() => {
                                                             window.open(`/admin/expedientes/${expediente.id}/exportar-directorio?formato=json`, '_blank');
                                                         }}
                                                     >
                                                         <Download className="h-4 w-4" />
-                                                    </Button>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -648,24 +491,69 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                     </div>
 
                     {/* Paginación */}
-                    {expedientes.last_page > 1 && (
-                        <div className="px-4 py-3 border-t bg-gray-50">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-500">
-                                    Mostrando {expedientes.from} a {expedientes.to} de {expedientes.total} expedientes
-                                </div>
-                                <div className="flex space-x-1">
-                                    {expedientes.links.map((link, index) => (
-                                        <Button
-                                            key={index}
-                                            variant={link.active ? "default" : "outline"}
-                                            size="sm"
-                                            onClick={() => link.url && router.get(link.url)}
-                                            disabled={!link.url}
-                                            dangerouslySetInnerHTML={{ __html: link.label }}
-                                        />
-                                    ))}
-                                </div>
+                    {expedientes.data.length > 0 && (
+                        <div className="flex items-center justify-between bg-white border rounded-lg px-6 py-3">
+                            <div className="text-sm text-gray-600">
+                                Mostrando <span className="font-medium">{expedientes.from || 0}</span> a{' '}
+                                <span className="font-medium">{expedientes.to || 0}</span> de{' '}
+                                <span className="font-medium">{expedientes.total || 0}</span> expedientes
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {expedientes.links.map((link, index) => {
+                                    if (link.label.includes('Previous')) {
+                                        return (
+                                            <Link
+                                                key={index}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                                                    link.url 
+                                                        ? 'text-gray-700 hover:bg-gray-50' 
+                                                        : 'text-gray-300 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                Anterior
+                                            </Link>
+                                        );
+                                    }
+                                    
+                                    if (link.label.includes('Next')) {
+                                        return (
+                                            <Link
+                                                key={index}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3 py-2 border border-gray-300 rounded-md text-sm font-medium ${
+                                                    link.url 
+                                                        ? 'text-gray-700 hover:bg-gray-50' 
+                                                        : 'text-gray-300 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                Siguiente
+                                            </Link>
+                                        );
+                                    }
+
+                                    // Number pages
+                                    if (!isNaN(Number(link.label))) {
+                                        return (
+                                            <Link
+                                                key={index}
+                                                href={link.url || '#'}
+                                                preserveState
+                                                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                                    link.active
+                                                        ? 'bg-[#2a3d83] text-white'
+                                                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {link.label}
+                                            </Link>
+                                        );
+                                    }
+
+                                    return null;
+                                })}
                             </div>
                         </div>
                     )}

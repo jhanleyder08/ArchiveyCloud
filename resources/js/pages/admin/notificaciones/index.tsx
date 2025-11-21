@@ -123,7 +123,7 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
             prioridad: filtrosForm.prioridad === 'todos' ? '' : filtrosForm.prioridad,
         };
         
-        router.get(route('admin.notificaciones.index'), filtrosLimpios, {
+        router.get('/admin/notificaciones', filtrosLimpios, {
             preserveState: true,
             preserveScroll: true,
         });
@@ -135,12 +135,12 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
             tipo: 'todos',
             prioridad: 'todos',
         });
-        router.visit(route('admin.notificaciones.index'));
+        router.visit('/admin/notificaciones');
     };
 
     const marcarComoLeida = async (id: number) => {
         try {
-            await fetch(route('admin.notificaciones.marcar-leida', id), {
+            await fetch(`/admin/notificaciones/${id}/marcar-leida`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
 
     const marcarTodasLeidas = async () => {
         try {
-            await fetch(route('admin.notificaciones.marcar-todas-leidas'), {
+            await fetch('/admin/notificaciones/marcar-todas-leidas', {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
 
     const archivarNotificacion = async (id: number) => {
         try {
-            await fetch(route('admin.notificaciones.archivar', id), {
+            await fetch(`/admin/notificaciones/${id}/archivar`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -199,158 +199,128 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
     };
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: 'Administración', href: '#' },
+            { title: 'Notificaciones', href: '/admin/notificaciones' },
+        ]}>
             <Head title="Notificaciones" />
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                        Centro de Notificaciones
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Gestiona tus notificaciones y alertas del sistema
-                    </p>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                    {estadisticas.pendientes > 0 && (
-                        <Button onClick={marcarTodasLeidas} variant="outline">
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Marcar todas como leídas
-                        </Button>
-                    )}
-                    <Button variant="outline" asChild>
-                        <Link href={route('admin.notificaciones.admin')}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Panel Admin
-                        </Link>
-                    </Button>
-                </div>
-            </div>
-
             <div className="space-y-6">
-                {/* Estadísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg">
-                                    <Bell className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Total</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.total}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                {/* Header */}
+                <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center gap-2">
+                        <Bell className="h-6 w-6 text-[#2a3d83]" />
+                        <h1 className="text-2xl font-semibold text-gray-900">
+                            Centro de Notificaciones
+                        </h1>
+                    </div>
                     
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg">
-                                    <BellRing className="h-6 w-6 text-yellow-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                                    <p className="text-2xl font-bold text-yellow-700">{estadisticas.pendientes}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="flex items-center space-x-2">
+                        {estadisticas.pendientes > 0 && (
+                            <Button onClick={marcarTodasLeidas} variant="outline">
+                                <CheckCircle className="h-4 w-4 mr-2 text-[#2a3d83]" />
+                                Marcar todas como leídas
+                            </Button>
+                        )}
+                        <Button variant="outline" asChild>
+                            <Link href="/admin/notificaciones/admin">
+                                <Settings className="h-4 w-4 mr-2 text-[#2a3d83]" />
+                                Panel Admin
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
 
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg">
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Leídas</p>
-                                    <p className="text-2xl font-bold text-green-700">{estadisticas.leidas}</p>
-                                </div>
+                {/* Estadísticas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Total</p>
+                                <p className="text-2xl font-semibold text-gray-900">{estadisticas.total}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <Bell className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Pendientes</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.pendientes}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <BellRing className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <Card>
-                        <CardContent className="flex items-center p-6">
-                            <div className="flex items-center">
-                                <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-lg">
-                                    <AlertTriangle className="h-6 w-6 text-red-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Críticas</p>
-                                    <p className="text-2xl font-bold text-red-700">{estadisticas.criticas}</p>
-                                </div>
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Leídas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.leidas}</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <CheckCircle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg border p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Críticas</p>
+                                <p className="text-2xl font-semibold text-[#2a3d83]">{estadisticas.criticas}</p>
+                            </div>
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <AlertTriangle className="h-6 w-6 text-[#2a3d83]" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Filtros */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                            <Filter className="h-5 w-5" />
-                            <span>Filtros</span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <Label>Estado</Label>
-                                <Select value={filtrosForm.estado} onValueChange={(value) => setFiltrosForm({...filtrosForm, estado: value})}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="todos">Todos los estados</SelectItem>
-                                        <SelectItem value="pendiente">Pendientes</SelectItem>
-                                        <SelectItem value="leida">Leídas</SelectItem>
-                                        <SelectItem value="archivada">Archivadas</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Tipo</Label>
-                                <Select value={filtrosForm.tipo} onValueChange={(value) => setFiltrosForm({...filtrosForm, tipo: value})}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="todos">Todos los tipos</SelectItem>
-                                        <SelectItem value="expediente_vencido">Expedientes vencidos</SelectItem>
-                                        <SelectItem value="expediente_proximo_vencer">Expedientes próximos</SelectItem>
-                                        <SelectItem value="prestamo_vencido">Préstamos vencidos</SelectItem>
-                                        <SelectItem value="prestamo_proximo_vencer">Préstamos próximos</SelectItem>
-                                        <SelectItem value="disposicion_pendiente">Disposiciones pendientes</SelectItem>
-                                        <SelectItem value="sistema">Sistema</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Prioridad</Label>
-                                <Select value={filtrosForm.prioridad} onValueChange={(value) => setFiltrosForm({...filtrosForm, prioridad: value})}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="todos">Todas las prioridades</SelectItem>
-                                        <SelectItem value="baja">Baja</SelectItem>
-                                        <SelectItem value="media">Media</SelectItem>
-                                        <SelectItem value="alta">Alta</SelectItem>
-                                        <SelectItem value="critica">Crítica</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                <div className="bg-white rounded-lg border p-6">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-80">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    type="text"
+                                    placeholder="Buscar notificaciones..."
+                                    className="pl-10"
+                                />
                             </div>
                         </div>
-
-                        <div className="flex items-center space-x-2 mt-4">
-                            <Button onClick={aplicarFiltros}>
+                        <div className="flex items-center gap-2">
+                            <Select value={filtrosForm.estado} onValueChange={(value) => setFiltrosForm({...filtrosForm, estado: value})}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todos los estados" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todos">Todos los estados</SelectItem>
+                                    <SelectItem value="pendiente">Pendientes</SelectItem>
+                                    <SelectItem value="leida">Leídas</SelectItem>
+                                    <SelectItem value="archivada">Archivadas</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={filtrosForm.prioridad} onValueChange={(value) => setFiltrosForm({...filtrosForm, prioridad: value})}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Todas las prioridades" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="todos">Todas las prioridades</SelectItem>
+                                    <SelectItem value="baja">Baja</SelectItem>
+                                    <SelectItem value="media">Media</SelectItem>
+                                    <SelectItem value="alta">Alta</SelectItem>
+                                    <SelectItem value="critica">Crítica</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Button onClick={aplicarFiltros} className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
                                 <Search className="h-4 w-4 mr-2" />
                                 Aplicar Filtros
                             </Button>
@@ -358,124 +328,114 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
                                 Limpiar
                             </Button>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
 
                 {/* Tabla de Notificaciones */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Mis Notificaciones ({notificaciones.total})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {notificaciones.data.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-12"></TableHead>
-                                            <TableHead>Notificación</TableHead>
-                                            <TableHead>Prioridad</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead>Fecha</TableHead>
-                                            <TableHead className="text-right">Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {notificaciones.data.map((notificacion) => {
-                                            const IconComponent = getIconComponent(notificacion.icono);
-                                            return (
-                                                <TableRow 
-                                                    key={notificacion.id} 
-                                                    className={notificacion.estado === 'pendiente' ? 'bg-blue-50' : ''}
-                                                >
-                                                    <TableCell>
-                                                        <div className={`p-2 rounded-lg ${
-                                                            notificacion.prioridad === 'critica' ? 'bg-red-100' :
-                                                            notificacion.prioridad === 'alta' ? 'bg-orange-100' :
-                                                            notificacion.prioridad === 'media' ? 'bg-yellow-100' :
-                                                            'bg-blue-100'
-                                                        }`}>
-                                                            <IconComponent className={`h-4 w-4 ${notificacion.color_prioridad}`} />
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div>
-                                                            <p className="font-medium">{notificacion.titulo}</p>
-                                                            <p className="text-sm text-gray-500 mt-1">{notificacion.mensaje}</p>
-                                                            {notificacion.creado_por && (
-                                                                <p className="text-xs text-gray-400 mt-1">
-                                                                    Por: {notificacion.creado_por.name}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline" className={prioridadColors[notificacion.prioridad]}>
-                                                            {notificacion.prioridad.charAt(0).toUpperCase() + notificacion.prioridad.slice(1)}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline" className={estadoColors[notificacion.estado]}>
-                                                            {notificacion.estado === 'pendiente' ? 'Pendiente' :
-                                                             notificacion.estado === 'leida' ? 'Leída' : 'Archivada'}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="text-sm">
-                                                            {formatearFecha(notificacion.created_at)}
-                                                            {notificacion.leida_en && (
-                                                                <p className="text-xs text-gray-500">
-                                                                    Leída: {formatearFecha(notificacion.leida_en)}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="flex items-center justify-end space-x-2">
-                                                            {notificacion.accion_url && (
-                                                                <Button variant="outline" size="sm" asChild>
-                                                                    <Link href={notificacion.accion_url}>
-                                                                        <Eye className="h-4 w-4" />
-                                                                    </Link>
-                                                                </Button>
-                                                            )}
-                                                            {notificacion.estado === 'pendiente' && (
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="sm"
-                                                                    onClick={() => marcarComoLeida(notificacion.id)}
-                                                                >
-                                                                    <CheckCircle className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="sm"
-                                                                onClick={() => archivarNotificacion(notificacion.id)}
+                <div className="bg-white rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50 border-b">
+                                <tr>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900"></th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Notificación</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Prioridad</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Estado</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Fecha</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                                {notificaciones.data.length > 0 ? (
+                                    notificaciones.data.map((notificacion) => {
+                                        const IconComponent = getIconComponent(notificacion.icono);
+                                        return (
+                                            <tr 
+                                                key={notificacion.id} 
+                                                className={`hover:bg-gray-50 transition-colors ${notificacion.estado === 'pendiente' ? 'bg-blue-50' : ''}`}
+                                            >
+                                                <td className="py-4 px-6">
+                                                    <div className="p-2 rounded-lg bg-blue-100">
+                                                        <IconComponent className="h-4 w-4 text-[#2a3d83]" />
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">{notificacion.titulo}</p>
+                                                        <p className="text-sm text-gray-500 mt-1">{notificacion.mensaje}</p>
+                                                        {notificacion.creado_por && (
+                                                            <p className="text-xs text-gray-400 mt-1">
+                                                                Por: {notificacion.creado_por.name}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${prioridadColors[notificacion.prioridad]}`}>
+                                                        {notificacion.prioridad.charAt(0).toUpperCase() + notificacion.prioridad.slice(1)}
+                                                    </span>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${estadoColors[notificacion.estado]}`}>
+                                                        {notificacion.estado === 'pendiente' ? 'Pendiente' :
+                                                         notificacion.estado === 'leida' ? 'Leída' : 'Archivada'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div className="text-sm text-gray-600">
+                                                        {formatearFecha(notificacion.created_at)}
+                                                        {notificacion.leida_en && (
+                                                            <p className="text-xs text-gray-500">
+                                                                Leída: {formatearFecha(notificacion.leida_en)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div className="flex items-center gap-2">
+                                                        {notificacion.accion_url && (
+                                                            <Link href={notificacion.accion_url}>
+                                                                <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
+                                                                    <Eye className="h-4 w-4" />
+                                                                </button>
+                                                            </Link>
+                                                        )}
+                                                        {notificacion.estado === 'pendiente' && (
+                                                            <button 
+                                                                onClick={() => marcarComoLeida(notificacion.id)}
+                                                                className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
                                                             >
-                                                                <Archive className="h-4 w-4" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        ) : (
-                            <div className="text-center py-8">
-                                <Bell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                    No hay notificaciones
-                                </h3>
-                                <p className="text-gray-500">
-                                    No tienes notificaciones que coincidan con los criterios seleccionados.
-                                </p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                                                <CheckCircle className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                        <button 
+                                                            onClick={() => archivarNotificacion(notificacion.id)}
+                                                            className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                        >
+                                                            <Archive className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan={6} className="py-8 px-6 text-center text-gray-500">
+                                            <Bell className="h-12 w-12 text-[#2a3d83] mx-auto mb-4" />
+                                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                No hay notificaciones
+                                            </h3>
+                                            <p className="text-gray-500">
+                                                No tienes notificaciones que coincidan con los criterios seleccionados.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </AppLayout>
     );
