@@ -195,24 +195,14 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                     
                     <div className="flex items-center space-x-2">
                         <Button variant="outline" asChild>
-<<<<<<< HEAD
-                            <Link href="/admin/prestamos/reportes/estadisticas">
-=======
                             <Link href="/admin/prestamos/reportes">
->>>>>>> f7ddb4050c613c42273797ada8de100eb52c0c25
                                 <BarChart3 className="h-4 w-4 mr-2" />
                                 Reportes
                             </Link>
                         </Button>
-<<<<<<< HEAD
                         <Button asChild>
                             <Link href="/admin/prestamos/create">
                                 <Plus className="h-4 w-4 mr-2" />
-=======
-                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors" asChild>
-                            <Link href="/admin/prestamos/create">
-                                <Plus className="h-4 w-4" />
->>>>>>> f7ddb4050c613c42273797ada8de100eb52c0c25
                                 Nuevo Préstamo
                             </Link>
                         </Button>
@@ -431,18 +421,6 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                                                         </p>
                                                     )}
                                                 </div>
-<<<<<<< HEAD
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/admin/prestamos/${prestamo.id}`}>
-                                                        <Eye className="h-4 w-4 mr-1" />
-                                                        Ver
-                                                    </Link>
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-=======
                                             </td>
                                             <td className="py-4 px-6">
                                                 <Link href={`/admin/prestamos/${prestamo.id}`}>
@@ -452,7 +430,6 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                                                 </Link>
                                             </td>
                                         </tr>
->>>>>>> f7ddb4050c613c42273797ada8de100eb52c0c25
                                     ))
                                 ) : (
                                     <tr>
