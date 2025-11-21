@@ -399,7 +399,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('dashboard-ejecutivo')->name('dashboard-ejecutivo.')->middleware('permission:administracion.dashboard.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'index'])->name('index');
             Route::get('/datos-grafico', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'datosGrafico'])->name('datos-grafico');
-            Route::post('/exportar-pdf', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'exportarPDF'])->name('exportar-pdf');
+            Route::get('/exportar-pdf', [App\Http\Controllers\Admin\DashboardEjecutivoController::class, 'exportarPDF'])->name('exportar-pdf');
         });
 
         // Sistema de Optimización y Monitoreo - Protegido con permisos

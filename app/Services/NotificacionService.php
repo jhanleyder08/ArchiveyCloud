@@ -44,7 +44,7 @@ class NotificacionService
         // Simular lógica con expedientes antiguos (más de 1 año abiertos)
         $expedientesProximos = Expediente::where('fecha_apertura', '<', Carbon::now()->subYear())
             ->where('fecha_cierre', null)
-            ->where('estado_ciclo_vida', '!=', 'eliminado')
+            ->where('estado', '!=', 'eliminado')
             ->limit(5) // Limitar para pruebas
             ->get();
 
@@ -60,7 +60,7 @@ class NotificacionService
             };
 
             if (!$this->existeNotificacionReciente($expediente->id, 'App\\Models\\Expediente', 'expediente_proximo_vencer', 7)) {
-                $usuarios = $this->obtenerUsuariosRelevantes($expediente->productor_id ?? null);
+                $usuarios = $this->obtenerUsuariosRelevantes($expediente->responsable_id ?? null);
 
                 $datos = [
                     'tipo' => 'expediente_proximo_vencer',
@@ -99,7 +99,7 @@ class NotificacionService
             $diasAbierto = Carbon::now()->diffInDays(Carbon::parse($expediente->fecha_apertura));
             
             if (!$this->existeNotificacionReciente($expediente->id, 'App\\Models\\Expediente', 'expediente_vencido', 14)) {
-                $usuarios = $this->obtenerUsuariosRelevantes($expediente->productor_id ?? null);
+                $usuarios = $this->obtenerUsuariosRelevantes($expediente->responsable_id ?? null);
 
                 $datos = [
                     'tipo' => 'expediente_vencido',

@@ -25,7 +25,7 @@ interface Expediente {
     id: number;
     numero_expediente: string;
     titulo: string;
-    estado_ciclo_vida: string;
+    estado: string;
     ubicacion_fisica: string;
 }
 
@@ -263,7 +263,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                                                     <h4 className="font-medium">{expediente.numero_expediente}</h4>
                                                     <p className="text-sm text-muted-foreground">{expediente.titulo}</p>
                                                     <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
-                                                        <span>Estado: {expediente.estado_ciclo_vida}</span>
+                                                        <span>Estado: {expediente.estado}</span>
                                                         <span className="flex items-center">
                                                             <MapPin className="h-3 w-3 mr-1" />
                                                             {expediente.ubicacion_fisica}

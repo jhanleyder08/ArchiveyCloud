@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -99,6 +99,7 @@ export default function DashboardEjecutivo({
     const [autoRefresh, setAutoRefresh] = useState(false);
     const [lastRefresh, setLastRefresh] = useState(new Date());
 
+
     // Auto-refresh cada 5 minutos si está habilitado
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -157,10 +158,14 @@ export default function DashboardEjecutivo({
                             <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
                             {autoRefresh ? 'Auto' : 'Manual'}
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <a 
+                            href={`/admin/dashboard-ejecutivo/exportar-pdf?t=${Date.now()}`}
+                            target="_blank"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+                        >
                             <Download className="h-4 w-4 mr-2" />
                             Exportar PDF
-                        </Button>
+                        </a>
                     </div>
                 </div>
             </div>

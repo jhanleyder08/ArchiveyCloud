@@ -136,9 +136,9 @@ class CacheService
                     'documents_this_month' => \App\Models\Documento::whereMonth('created_at', now()->month)
                         ->whereYear('created_at', now()->year)
                         ->count(),
-                    'expedientes_by_state' => \App\Models\Expediente::groupBy('estado_ciclo_vida')
-                        ->selectRaw('estado_ciclo_vida, count(*) as count')
-                        ->pluck('count', 'estado_ciclo_vida')
+                    'expedientes_by_state' => \App\Models\Expediente::groupBy('estado')
+                        ->selectRaw('estado, count(*) as count')
+                        ->pluck('count', 'estado')
                         ->toArray(),
                 ];
             }

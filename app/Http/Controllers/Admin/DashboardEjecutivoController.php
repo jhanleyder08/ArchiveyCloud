@@ -97,8 +97,8 @@ class DashboardEjecutivoController extends Controller
             'expedientes_creados_semana' => Expediente::where('created_at', '>=', $semana_pasada)->count(),
             
             // Cumplimiento normativo (usando estados del ciclo de vida)
-            'expedientes_vencidos' => Expediente::where('estado_ciclo_vida', 'eliminado')->count(),
-            'expedientes_proximo_vencimiento' => Expediente::where('estado_ciclo_vida', 'central')
+            'expedientes_vencidos' => Expediente::where('estado', 'eliminado')->count(),
+            'expedientes_proximo_vencimiento' => Expediente::where('estado', 'semiactivo')
                 ->whereDate('created_at', '<', $hoy->copy()->subYears(2))->count(),
             
             // Flujos de trabajo (temporalmente 0 si no existe WorkflowDocumento)
@@ -127,7 +127,7 @@ class DashboardEjecutivoController extends Controller
             ->limit(10)
             ->get(),
             
-            'expedientes_urgentes' => Expediente::whereIn('estado_ciclo_vida', ['tramite', 'gestion'])
+            'expedientes_urgentes' => Expediente::whereIn('estado', ['en_tramite', 'activo'])
                 ->whereDate('created_at', '<=', Carbon::now()->subMonths(6))
                 ->latest()
                 ->limit(5)
@@ -143,7 +143,7 @@ class DashboardEjecutivoController extends Controller
     private function obtenerEstadisticasCumplimiento()
     {
         $total_expedientes = Expediente::count();
-        $expedientes_en_regla = Expediente::whereIn('estado_ciclo_vida', ['tramite', 'gestion'])->count();
+        $expedientes_en_regla = Expediente::whereIn('estado', ['en_tramite', 'activo'])->count();
         
         $porcentaje_cumplimiento = $total_expedientes > 0 ? 
             round(($expedientes_en_regla / $total_expedientes) * 100, 2) : 100;
@@ -156,9 +156,9 @@ class DashboardEjecutivoController extends Controller
             // Cumplimiento por series
             'cumplimiento_por_series' => SerieDocumental::select('series_documentales.nombre')
                 ->selectRaw('COUNT(expedientes.id) as total_expedientes')
-                ->selectRaw('COUNT(CASE WHEN expedientes.estado_ciclo_vida IN ("tramite", "gestion") THEN 1 END) as en_regla')
-                ->selectRaw('ROUND((COUNT(CASE WHEN expedientes.estado_ciclo_vida IN ("tramite", "gestion") THEN 1 END) / COUNT(expedientes.id)) * 100, 2) as porcentaje')
-                ->leftJoin('expedientes', 'series_documentales.id', '=', 'expedientes.serie_documental_id')
+                ->selectRaw('COUNT(CASE WHEN expedientes.estado IN ("en_tramite", "activo") THEN 1 END) as en_regla')
+                ->selectRaw('ROUND((COUNT(CASE WHEN expedientes.estado IN ("en_tramite", "activo") THEN 1 END) / COUNT(expedientes.id)) * 100, 2) as porcentaje')
+                ->leftJoin('expedientes', 'series_documentales.id', '=', 'expedientes.serie_id')
                 ->groupBy('series_documentales.id', 'series_documentales.nombre')
                 ->having('total_expedientes', '>', 0)
                 ->orderByDesc('porcentaje')
@@ -201,7 +201,7 @@ class DashboardEjecutivoController extends Controller
         return User::select('users.id', 'users.name', 'users.email')
             ->selectRaw('
                 (SELECT COUNT(*) FROM documentos WHERE created_by = users.id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as documentos_creados,
-                (SELECT COUNT(*) FROM expedientes WHERE productor_id = users.id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as expedientes_gestionados,
+                (SELECT COUNT(*) FROM expedientes WHERE created_by = users.id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as expedientes_gestionados,
                 0 as workflows_iniciados
             ')
             ->having(DB::raw('documentos_creados + expedientes_gestionados'), '>', 0)
@@ -217,9 +217,9 @@ class DashboardEjecutivoController extends Controller
     {
         return [
             // Distribución por estados de expedientes
-            'expedientes_por_estado' => Expediente::select('estado_ciclo_vida as estado')
+            'expedientes_por_estado' => Expediente::select('estado')
                 ->selectRaw('COUNT(*) as total')
-                ->groupBy('estado_ciclo_vida')
+                ->groupBy('estado')
                 ->get(),
             
             // Distribución por tipos de documentos
@@ -274,9 +274,26 @@ class DashboardEjecutivoController extends Controller
      */
     public function exportarPDF()
     {
-        // Implementar exportación a PDF del dashboard
-        // Para futuras implementaciones
-        return response()->json(['message' => 'Funcionalidad en desarrollo']);
+        // Obtener todos los datos del dashboard
+        $metricas_generales = $this->obtenerMetricasGenerales();
+        $kpis_criticos = $this->obtenerKPIsCriticos();
+        $alertas_criticas = $this->obtenerAlertasCriticas();
+        $cumplimiento = $this->obtenerEstadisticasCumplimiento();
+        $tendencias = $this->obtenerTendencias();
+        $usuarios_activos = $this->obtenerUsuariosActivos();
+        $distribucion_trabajo = $this->obtenerDistribucionTrabajo();
+
+        $data = [
+            'metricas_generales' => $metricas_generales,
+            'kpis_criticos' => $kpis_criticos,
+            'alertas_criticas' => $alertas_criticas,
+            'cumplimiento' => $cumplimiento,
+            'tendencias' => $tendencias,
+            'usuarios_activos' => $usuarios_activos,
+            'distribucion_trabajo' => $distribucion_trabajo,
+        ];
+
+        return \App\Services\DashboardPdfService::exportDashboardEjecutivo($data);
     }
 
     /**
@@ -350,7 +367,7 @@ class DashboardEjecutivoController extends Controller
     {
         return SerieDocumental::select('series_documentales.nombre')
             ->selectRaw('COUNT(expedientes.id) as total_expedientes')
-            ->leftJoin('expedientes', 'series_documentales.id', '=', 'expedientes.serie_documental_id')
+            ->leftJoin('expedientes', 'series_documentales.id', '=', 'expedientes.serie_id')
             ->groupBy('series_documentales.id', 'series_documentales.nombre')
             ->having('total_expedientes', '>', 0)
             ->orderByDesc('total_expedientes')

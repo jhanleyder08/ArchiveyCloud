@@ -99,7 +99,7 @@ class ProcessAutomaticNotifications extends Command
                 'prioridad' => 'alta',
                 'relacionado_id' => $expediente->id,
                 'relacionado_tipo' => 'App\Models\Expediente',
-                'user_id' => $expediente->productor_id,
+                'user_id' => $expediente->responsable_id,
             ]);
             $count++;
         }
@@ -132,7 +132,7 @@ class ProcessAutomaticNotifications extends Command
                 'prioridad' => 'critica',
                 'relacionado_id' => $expediente->id,
                 'relacionado_tipo' => 'App\Models\Expediente',
-                'user_id' => $expediente->productor_id,
+                'user_id' => $expediente->responsable_id,
             ]);
             $count++;
         }
