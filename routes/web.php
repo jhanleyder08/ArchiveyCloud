@@ -102,6 +102,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'destroy'])->name('users.destroy');
         });
         
+        // Gestión de Roles y Permisos - Solo Super Administrador
+        Route::middleware('can:manage-roles')->prefix('roles')->name('roles.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\RoleController::class, 'index'])->name('index');
+            Route::put('/{role}/permissions', [App\Http\Controllers\Admin\RoleController::class, 'updatePermissions'])->name('update-permissions');
+            Route::patch('/{role}/toggle-status', [App\Http\Controllers\Admin\RoleController::class, 'toggleStatus'])->name('toggle-status');
+        });
+        
         // Gestión de Tablas de Retención Documental (TRD) - Protegido con permisos
         Route::prefix('trd')->name('trd.')->middleware('permission:trd.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminTRDController::class, 'index'])->name('index');

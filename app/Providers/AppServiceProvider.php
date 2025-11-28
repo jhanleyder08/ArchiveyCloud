@@ -15,6 +15,7 @@ use App\Listeners\LogValidationResults;
 use App\Listeners\NotifyValidationIssues;
 use App\Listeners\SignatureEventListener;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -40,6 +41,11 @@ class AppServiceProvider extends ServiceProvider
             Documento::observe(DocumentoObserver::class);
             Expediente::observe(ExpedienteObserver::class);
         }
+        
+        // Gate para gestión de roles (solo Super Administrador)
+        Gate::define('manage-roles', function ($user) {
+            return $user->role && $user->role->name === 'Super Administrador';
+        });
     }
 
     /**

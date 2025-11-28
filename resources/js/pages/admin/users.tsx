@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Users, Plus, Search, Filter, Edit, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Users, Plus, Search, Filter, Edit, Trash2, UserCheck, UserX, Shield, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,8 +11,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const breadcrumbItems = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -27,13 +27,8 @@ interface User {
     email_verified_at: string | null;
     active: boolean;
     created_at: string;
-    role_id: number;
-    documento_identidad?: string;
-    tipo_documento?: string;
-    cargo?: string;
-    dependencia?: string;
-    fecha_ingreso?: string;
-    estado_cuenta?: string;
+    updated_at: string;
+    role_id: number | null;
     role?: {
         id: number;
         name: string;
@@ -47,7 +42,6 @@ interface PaginatedUsers {
         label: string;
         active: boolean;
     }>;
-    // Laravel pagination can return meta object or properties directly
     meta?: {
         current_page: number;
         from: number;
@@ -56,7 +50,6 @@ interface PaginatedUsers {
         to: number;
         total: number;
     };
-    // Direct properties from Laravel paginator
     current_page?: number;
     from?: number;
     last_page?: number;
@@ -89,7 +82,8 @@ interface Props {
 }
 
 export default function AdminUsers({ users, stats, roles, filters }: Props) {
-    const { flash } = usePage<{flash: {success?: string, error?: string}}>().props;
+    const { flash } = usePage<{ flash: { success?: string, error?: string } }>().props;
+    const permissions = usePermissions();
     const [search, setSearch] = useState(filters.search || '');
     const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -100,7 +94,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
 
-    // Reactive search with debounce
+    // Auto-submit search with debounce
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             router.get('/admin/users', {
@@ -110,31 +104,24 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                 preserveState: true,
                 replace: true,
             });
-        }, 500); // 500ms debounce
+        }, 500);
 
         return () => clearTimeout(timeoutId);
     }, [searchQuery, statusFilter]);
-    
+
     // Debug: Monitorear cuando se abre el modal de edición (solo en desarrollo)
     useEffect(() => {
         if (showEditModal && import.meta.env.DEV) {
             console.log('Modal de edición abierto para usuario:', showEditModal);
             console.log('Estado inicial de editForm:', editForm);
         }
-    }, [showEditModal]); // Solo cuando cambia showEditModal, no editForm
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        // This is now handled by useEffect
-    };
+    }, [showEditModal]);
 
     const handleToggleStatus = (user: User) => {
         router.patch(`/admin/users/${user.id}/toggle-status`, {}, {
             preserveState: true,
         });
     };
-
-
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('es-ES');
@@ -149,7 +136,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Gestión de Usuarios" />
-            
+
             <div className="space-y-6">
                 {/* Flash Messages */}
                 {flash?.success && (
@@ -164,202 +151,28 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                 )}
 
                 {/* Header */}
-                <div className="flex items-center justify-between pt-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <Users className="h-6 w-6 text-[#2a3d83]" />
-                        <h1 className="text-2xl font-semibold text-gray-900">
-                            Gestión de Usuarios
-                        </h1>
+                        <h1 className="text-2xl font-semibold text-gray-900">Gestión de Usuarios</h1>
                     </div>
-                    <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-                        <DialogTrigger asChild>
-                            <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
-                                <Plus className="h-4 w-4" />
-                                Nuevo Usuario
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle className="text-xl font-semibold text-gray-900">Crear Nuevo Usuario</DialogTitle>
-                                <DialogDescription className="text-sm text-gray-600">
-                                    Complete los siguientes datos para crear un nuevo usuario en el sistema.
-                                </DialogDescription>
-                            </DialogHeader>
-                            {/* Mostrar errores generales si existen */}
-                            {Object.keys(createErrors).length > 0 && (
-                                <Alert variant="destructive" className="mb-4">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertDescription>
-                                        <strong>Por favor corrija los siguientes errores:</strong>
-                                        <ul className="list-disc list-inside mt-2 space-y-1">
-                                            {Object.entries(createErrors).map(([key, message]) => (
-                                                <li key={key} className="text-sm">{message}</li>
-                                            ))}
-                                        </ul>
-                                    </AlertDescription>
-                                </Alert>
-                            )}
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                // Validar que el formulario esté completo antes de enviar
-                                if (!createForm.name || !createForm.email || !createForm.role_id || !createForm.password || !createForm.password_confirmation) {
-                                    alert('Por favor complete todos los campos requeridos');
-                                    return;
-                                }
-                                
-                                // Validar que las contraseñas coincidan
-                                if (createForm.password !== createForm.password_confirmation) {
-                                    alert('Las contraseñas no coinciden');
-                                    return;
-                                }
-                                
-                                // Preparar datos para enviar
-                                const formData = {
-                                    name: createForm.name.trim(),
-                                    email: createForm.email.trim().toLowerCase(),
-                                    password: createForm.password,
-                                    password_confirmation: createForm.password_confirmation,
-                                    role_id: createForm.role_id ? parseInt(createForm.role_id) : null,
-                                    verify_email: Boolean(createForm.verify_email),
-                                };
-                                
-                                router.post('/admin/users', formData, {
-                                    onSuccess: () => {
-                                        setShowCreateModal(false);
-                                        setCreateForm({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
-                                        setCreateErrors({});
-                                    },
-                                    onError: (errors) => {
-                                        console.error('Error al crear usuario:', errors);
-                                        // Guardar errores para mostrar en el formulario
-                                        const errorMap: Record<string, string> = {};
-                                        if (errors) {
-                                            Object.keys(errors).forEach(key => {
-                                                const errorMessage = Array.isArray(errors[key]) ? errors[key][0] : errors[key];
-                                                errorMap[key] = errorMessage;
-                                            });
-                                        }
-                                        setCreateErrors(errorMap);
-                                    }
-                                });
-                            }} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="create-name">Nombre Completo</Label>
-                                    <Input
-                                        id="create-name"
-                                        type="text"
-                                        value={createForm.name}
-                                        onChange={(e) => {
-                                            setCreateForm({...createForm, name: e.target.value});
-                                            if (createErrors.name) setCreateErrors({...createErrors, name: ''});
-                                        }}
-                                        placeholder="Nombre completo del usuario"
-                                        required
-                                        className={createErrors.name ? 'border-red-500' : ''}
-                                    />
-                                    <InputError message={createErrors.name} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="create-email">Email</Label>
-                                    <Input
-                                        id="create-email"
-                                        type="email"
-                                        value={createForm.email}
-                                        onChange={(e) => {
-                                            setCreateForm({...createForm, email: e.target.value});
-                                            if (createErrors.email) setCreateErrors({...createErrors, email: ''});
-                                        }}
-                                        placeholder="usuario@ejemplo.com"
-                                        required
-                                        className={createErrors.email ? 'border-red-500' : ''}
-                                    />
-                                    <InputError message={createErrors.email} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="create-password">Contraseña</Label>
-                                    <Input
-                                        id="create-password"
-                                        type="password"
-                                        value={createForm.password}
-                                        onChange={(e) => {
-                                            setCreateForm({...createForm, password: e.target.value});
-                                            if (createErrors.password) setCreateErrors({...createErrors, password: ''});
-                                        }}
-                                        placeholder="Contraseña temporal"
-                                        required
-                                        minLength={8}
-                                        className={createErrors.password ? 'border-red-500' : ''}
-                                    />
-                                    <InputError message={createErrors.password} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="create-password-confirmation">Confirmar Contraseña</Label>
-                                    <Input
-                                        id="create-password-confirmation"
-                                        type="password"
-                                        value={createForm.password_confirmation}
-                                        onChange={(e) => {
-                                            setCreateForm({...createForm, password_confirmation: e.target.value});
-                                            if (createErrors.password_confirmation) setCreateErrors({...createErrors, password_confirmation: ''});
-                                        }}
-                                        placeholder="Confirmar contraseña"
-                                        required
-                                        minLength={8}
-                                        className={createErrors.password_confirmation ? 'border-red-500' : ''}
-                                    />
-                                    <InputError message={createErrors.password_confirmation} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="create-role">Rol</Label>
-                                    <Select value={createForm.role_id} onValueChange={(value) => {
-                                        setCreateForm({...createForm, role_id: value});
-                                        if (createErrors.role_id) setCreateErrors({...createErrors, role_id: ''});
-                                    }}>
-                                        <SelectTrigger className={createErrors.role_id ? 'border-red-500' : ''}>
-                                            <SelectValue placeholder="Selecciona un rol" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map((role) => (
-                                                <SelectItem key={role.id} value={role.id.toString()}>
-                                                    {role.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <InputError message={createErrors.role_id} />
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                        id="verify-email"
-                                        checked={createForm.verify_email}
-                                        onCheckedChange={(checked) => setCreateForm({...createForm, verify_email: checked === true})}
-                                    />
-                                    <Label htmlFor="verify-email" className="text-sm font-normal cursor-pointer">
-                                        Verificar email automáticamente (no enviar correo de verificación)
-                                    </Label>
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                    Si no marca esta opción, se enviará un correo de verificación al usuario.
-                                </div>
-                                <DialogFooter>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => {
-                                            setShowCreateModal(false);
-                                            setCreateForm({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
-                                            setCreateErrors({});
-                                        }}
-                                    >
-                                        Cancelar
-                                    </Button>
-                                    <Button type="submit" className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
-                                        Crear Usuario
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+
+                    <div className="flex gap-2">
+                        {/* Botón Gestionar Roles - Solo para Super Administrador */}
+                        {permissions.isSuperAdmin() && (
+                            <Link href="/admin/roles">
+                                <Button variant="outline" className="border-[#2a3d83] text-[#2a3d83] hover:bg-blue-50">
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    Gestionar Roles
+                                </Button>
+                            </Link>
+                        )}
+
+                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
+                            <Plus className="h-4 w-4" />
+                            Nuevo Usuario
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -375,7 +188,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -389,7 +202,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -403,7 +216,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                             </div>
                         </div>
                     </div>
-                    
+
                     {stats.without_role > 0 && (
                         <div className="bg-white rounded-lg border border-red-200 p-6">
                             <div className="flex items-center justify-between">
@@ -512,32 +325,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                         <div className="flex items-center gap-2">
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            // Obtener el role_id del usuario
-                                                                            const roleId = user.role?.id || user.role_id;
-                                                                            
-                                                                            // Debug solo en desarrollo
-                                                                            if (import.meta.env.DEV) {
-                                                                                console.log('Usuario seleccionado para edición:', {
-                                                                                    id: user.id,
-                                                                                    name: user.name,
-                                                                                    role: user.role,
-                                                                                    role_id: user.role_id,
-                                                                                    roleIdFinal: roleId
-                                                                                });
-                                                                            }
-                                                                            
-                                                                            setEditForm({ 
-                                                                                name: user.name, 
-                                                                                email: user.email, 
-                                                                                role_id: roleId ? roleId.toString() : '',
-                                                                                active: user.active !== undefined ? user.active : true
-                                                                            });
-                                                                            setShowEditModal(user);
-                                                                        }}
-                                                                        className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
-                                                                    >
+                                                                    <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
                                                                         <Edit className="h-4 w-4" />
                                                                     </button>
                                                                 </TooltipTrigger>
@@ -545,7 +333,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                                     <p>Editar usuario</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                            
+
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <button
@@ -567,7 +355,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                                     <p>{user.active ? 'Desactivar usuario' : 'Activar usuario'}</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                            
+
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <button
@@ -660,203 +448,6 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                         </div>
                     </div>
                 )}
-
-
-
-                {/* Edit User Modal */}
-                <Dialog open={!!showEditModal} onOpenChange={(open) => {
-                    if (!open) {
-                        setShowEditModal(null);
-                        setEditForm({ name: '', email: '', role_id: '', active: true });
-                    }
-                }}>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-semibold text-gray-900">
-                                Editar Usuario
-                            </DialogTitle>
-                            <DialogDescription className="text-sm text-gray-600">
-                                Modifique los datos del usuario según sea necesario.
-                            </DialogDescription>
-                        </DialogHeader>
-                        {/* Alerta si el usuario no tiene rol asignado */}
-                        {showEditModal && !showEditModal.role_id && (
-                            <Alert className="mb-4 border-yellow-500 bg-yellow-50">
-                                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                <AlertDescription className="text-yellow-800">
-                                    <strong>Atención:</strong> Este usuario actualmente no tiene un rol asignado. 
-                                    Por favor, seleccione un rol antes de guardar.
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            
-                            // Validación antes de enviar
-                            if (!editForm.role_id || editForm.role_id === '') {
-                                alert('Por favor seleccione un rol para el usuario. El rol es obligatorio.');
-                                return;
-                            }
-                            
-                            if (showEditModal) {
-                                // Preparar datos para enviar, convirtiendo role_id a número
-                                const formData = {
-                                    name: editForm.name.trim(),
-                                    email: editForm.email.trim().toLowerCase(),
-                                    role_id: editForm.role_id ? parseInt(editForm.role_id) : null,
-                                    active: editForm.active
-                                };
-                                
-                                // Debug solo en desarrollo
-                                if (import.meta.env.DEV) {
-                                    console.log('Estado actual de editForm:', editForm);
-                                    console.log('Enviando datos:', formData);
-                                    console.log('Usuario a editar:', showEditModal.id);
-                                }
-                                
-                                router.put(`/admin/users/${showEditModal.id}`, formData, {
-                                    onSuccess: () => {
-                                        if (import.meta.env.DEV) {
-                                            console.log('Usuario actualizado exitosamente');
-                                        }
-                                        setShowEditModal(null);
-                                        setEditForm({ name: '', email: '', role_id: '', active: true });
-                                        
-                                        // Recargar la página para actualizar permisos en Inertia
-                                        // Esto es especialmente importante cuando se cambia el rol de un usuario
-                                        router.reload({ only: ['users', 'stats', 'auth'] });
-                                    },
-                                    onError: (errors) => {
-                                        console.error('Errores de validación:', errors);
-                                    }
-                                });
-                            }
-                        }} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-name">Nombre Completo</Label>
-                                    <Input
-                                        id="edit-name"
-                                        type="text"
-                                        value={editForm.name}
-                                        onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                                        placeholder="Nombre completo del usuario"
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-email">Email</Label>
-                                    <Input
-                                        id="edit-email"
-                                        type="email"
-                                        value={editForm.email}
-                                        onChange={(e) => setEditForm({...editForm, email: e.target.value})}
-                                        placeholder="usuario@ejemplo.com"
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-role">Rol</Label>
-                                    <Select 
-                                        key={`edit-role-${showEditModal?.id}-${editForm.role_id}`}
-                                        value={editForm.role_id} 
-                                        onValueChange={(value) => {
-                                            // Debug solo en desarrollo
-                                            if (import.meta.env.DEV) {
-                                                console.log('Rol seleccionado:', value);
-                                            }
-                                            setEditForm({...editForm, role_id: value});
-                                        }}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecciona un rol" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map((role) => (
-                                                <SelectItem key={role.id} value={role.id.toString()}>
-                                                    {role.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {editForm.role_id && (
-                                        <p className="text-xs text-gray-500">Rol actual: {roles.find(r => r.id.toString() === editForm.role_id)?.name}</p>
-                                    )}
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <input 
-                                        type="checkbox" 
-                                        id="edit-active"
-                                        checked={editForm.active}
-                                        onChange={(e) => setEditForm({...editForm, active: e.target.checked})}
-                                        className="h-4 w-4 rounded border-gray-300 text-[#2a3d83] focus:ring-[#2a3d83]"
-                                    />
-                                    <label htmlFor="edit-active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                        Usuario Activo
-                                    </label>
-                                </div>
-                                <DialogFooter>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => setShowEditModal(null)}
-                                    >
-                                        Cancelar
-                                    </Button>
-                                    <Button type="submit" className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
-                                        Guardar Cambios
-                                    </Button>
-                                </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Delete Confirmation Modal */}
-                <Dialog open={!!showDeleteModal} onOpenChange={(open) => {
-                    if (!open) {
-                        setShowDeleteModal(null);
-                    }
-                }}>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-semibold text-gray-900">Eliminar Usuario</DialogTitle>
-                            <DialogDescription className="text-sm text-gray-600">
-                                Esta acción no se puede deshacer. El usuario será eliminado permanentemente del sistema.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                            <p className="text-gray-700">
-                                ¿Estás seguro de que deseas eliminar al usuario <strong>{showDeleteModal?.name}</strong>?
-                            </p>
-                            <p className="text-gray-600 mt-2">
-                                Email: <strong>{showDeleteModal?.email}</strong>
-                            </p>
-                        </div>
-                        <DialogFooter>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setShowDeleteModal(null)}
-                            >
-                                Cancelar
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={() => {
-                                    if (showDeleteModal) {
-                                        router.delete(`/admin/users/${showDeleteModal.id}`, {
-                                            onSuccess: () => {
-                                                setShowDeleteModal(null);
-                                            }
-                                        });
-                                    }
-                                }}
-                            >
-                                Eliminar Usuario
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
         </AppLayout>
     );
