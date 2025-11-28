@@ -69,6 +69,7 @@ interface Stats {
     total: number;
     active: number;
     pending: number;
+    without_role: number;
 }
 
 interface Role {
@@ -113,6 +114,14 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
 
         return () => clearTimeout(timeoutId);
     }, [searchQuery, statusFilter]);
+    
+    // Debug: Monitorear cuando se abre el modal de edición (solo en desarrollo)
+    useEffect(() => {
+        if (showEditModal && import.meta.env.DEV) {
+            console.log('Modal de edición abierto para usuario:', showEditModal);
+            console.log('Estado inicial de editForm:', editForm);
+        }
+    }, [showEditModal]); // Solo cuando cambia showEditModal, no editForm
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -354,7 +363,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-white rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
@@ -394,6 +403,20 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                             </div>
                         </div>
                     </div>
+                    
+                    {stats.without_role > 0 && (
+                        <div className="bg-white rounded-lg border border-red-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-red-600 font-medium">⚠️ Sin Rol</p>
+                                    <p className="text-2xl font-semibold text-red-700">{stats.without_role}</p>
+                                </div>
+                                <div className="p-3 bg-red-100 rounded-full">
+                                    <AlertCircle className="h-6 w-6 text-red-600" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Search and Filters */}
@@ -421,6 +444,11 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                     <SelectItem value="active">Activos</SelectItem>
                                     <SelectItem value="inactive">Inactivos</SelectItem>
                                     <SelectItem value="pending">Pendientes</SelectItem>
+                                    {stats.without_role > 0 && (
+                                        <SelectItem value="without_role" className="text-red-600 font-medium">
+                                            ⚠️ Sin Rol ({stats.without_role})
+                                        </SelectItem>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -463,9 +491,15 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                 </td>
                                                 <td className="py-4 px-6 text-gray-600">{user.email}</td>
                                                 <td className="py-4 px-6">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-[#2a3d83]">
-                                                        {user.role?.name || 'Sin rol'}
-                                                    </span>
+                                                    {user.role?.name ? (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-[#2a3d83]">
+                                                            {user.role.name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                            ⚠️ Sin rol asignado
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
@@ -480,10 +514,24 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                                 <TooltipTrigger asChild>
                                                                     <button
                                                                         onClick={() => {
+                                                                            // Obtener el role_id del usuario
+                                                                            const roleId = user.role?.id || user.role_id;
+                                                                            
+                                                                            // Debug solo en desarrollo
+                                                                            if (import.meta.env.DEV) {
+                                                                                console.log('Usuario seleccionado para edición:', {
+                                                                                    id: user.id,
+                                                                                    name: user.name,
+                                                                                    role: user.role,
+                                                                                    role_id: user.role_id,
+                                                                                    roleIdFinal: roleId
+                                                                                });
+                                                                            }
+                                                                            
                                                                             setEditForm({ 
                                                                                 name: user.name, 
                                                                                 email: user.email, 
-                                                                                role_id: user.role?.id?.toString() || user.role_id?.toString() || '',
+                                                                                role_id: roleId ? roleId.toString() : '',
                                                                                 active: user.active !== undefined ? user.active : true
                                                                             });
                                                                             setShowEditModal(user);
@@ -631,19 +679,52 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                 Modifique los datos del usuario según sea necesario.
                             </DialogDescription>
                         </DialogHeader>
+                        {/* Alerta si el usuario no tiene rol asignado */}
+                        {showEditModal && !showEditModal.role_id && (
+                            <Alert className="mb-4 border-yellow-500 bg-yellow-50">
+                                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                <AlertDescription className="text-yellow-800">
+                                    <strong>Atención:</strong> Este usuario actualmente no tiene un rol asignado. 
+                                    Por favor, seleccione un rol antes de guardar.
+                                </AlertDescription>
+                            </Alert>
+                        )}
                         <form onSubmit={(e) => {
                             e.preventDefault();
+                            
+                            // Validación antes de enviar
+                            if (!editForm.role_id || editForm.role_id === '') {
+                                alert('Por favor seleccione un rol para el usuario. El rol es obligatorio.');
+                                return;
+                            }
+                            
                             if (showEditModal) {
-                                const formData = editForm;
+                                // Preparar datos para enviar, convirtiendo role_id a número
+                                const formData = {
+                                    name: editForm.name.trim(),
+                                    email: editForm.email.trim().toLowerCase(),
+                                    role_id: editForm.role_id ? parseInt(editForm.role_id) : null,
+                                    active: editForm.active
+                                };
                                 
-                                console.log('Enviando datos:', formData);
-                                console.log('Usuario a editar:', showEditModal.id);
+                                // Debug solo en desarrollo
+                                if (import.meta.env.DEV) {
+                                    console.log('Estado actual de editForm:', editForm);
+                                    console.log('Enviando datos:', formData);
+                                    console.log('Usuario a editar:', showEditModal.id);
+                                }
                                 
                                 router.put(`/admin/users/${showEditModal.id}`, formData, {
                                     onSuccess: () => {
-                                        console.log('Usuario actualizado exitosamente');
+                                        if (import.meta.env.DEV) {
+                                            console.log('Usuario actualizado exitosamente');
+                                        }
                                         setShowEditModal(null);
                                         setEditForm({ name: '', email: '', role_id: '', active: true });
+                                        
+                                        // Recargar la página para actualizar permisos en Inertia
+                                        // Esto es especialmente importante cuando se cambia el rol de un usuario
+                                        router.reload({ only: ['users', 'stats', 'auth'] });
                                     },
                                     onError: (errors) => {
                                         console.error('Errores de validación:', errors);
@@ -675,7 +756,17 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-role">Rol</Label>
-                                    <Select value={editForm.role_id} onValueChange={(value) => setEditForm({...editForm, role_id: value})}>
+                                    <Select 
+                                        key={`edit-role-${showEditModal?.id}-${editForm.role_id}`}
+                                        value={editForm.role_id} 
+                                        onValueChange={(value) => {
+                                            // Debug solo en desarrollo
+                                            if (import.meta.env.DEV) {
+                                                console.log('Rol seleccionado:', value);
+                                            }
+                                            setEditForm({...editForm, role_id: value});
+                                        }}
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecciona un rol" />
                                         </SelectTrigger>
@@ -687,6 +778,9 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                    {editForm.role_id && (
+                                        <p className="text-xs text-gray-500">Rol actual: {roles.find(r => r.id.toString() === editForm.role_id)?.name}</p>
+                                    )}
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <input 

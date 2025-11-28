@@ -30,6 +30,8 @@ class AdminUserController extends Controller
                     $query->where('active', false);
                 } elseif ($status === 'pending') {
                     $query->whereNull('email_verified_at');
+                } elseif ($status === 'without_role') {
+                    $query->whereNull('role_id');
                 }
             })
             ->latest()
@@ -40,6 +42,7 @@ class AdminUserController extends Controller
             'total' => User::count(),
             'active' => User::whereNotNull('email_verified_at')->where('active', true)->count(),
             'pending' => User::whereNull('email_verified_at')->count(),
+            'without_role' => User::whereNull('role_id')->count(),
         ];
 
         // Obtener todos los roles disponibles para los formularios
@@ -164,6 +167,10 @@ class AdminUserController extends Controller
             'active' => 'boolean',
         ]);
 
+        // Verificar si se está cambiando el rol
+        $roleChanged = $user->role_id != $request->role_id;
+        $isCurrentUser = $user->id === auth()->id();
+
         $updateData = [
             'name' => $request->name,
             'email' => $request->email,
@@ -178,8 +185,22 @@ class AdminUserController extends Controller
 
         $user->update($updateData);
 
+        $message = 'Usuario actualizado exitosamente.';
+        
+        // Si se cambió el rol, agregar mensaje adicional
+        if ($roleChanged) {
+            $newRole = \App\Models\Role::find($request->role_id);
+            $message .= " Nuevo rol: {$newRole->name}";
+            
+            // Si el usuario editó su propio rol, recargar completamente la página
+            // para actualizar los permisos y el sidebar
+            if ($isCurrentUser) {
+                $message .= ' Los cambios se aplicarán inmediatamente.';
+            }
+        }
+
         return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario actualizado exitosamente.');
+            ->with('success', $message);
     }
 
     /**
