@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 // import { dashboard } from '@/routes/index'; // Comentado temporalmente para evitar errores
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { 
+import {
     Archive,
     BarChart3,
     BellRing,
@@ -22,6 +22,7 @@ import {
     HelpCircle,
     Key,
     LayoutGrid,
+    Mail,
     Search,
     Settings,
     Shield,
@@ -145,6 +146,12 @@ const getMainNavItems = (): NavItem[] => [
                 permission: 'workflow.gestionar',
             },
             {
+                title: 'Cuentas de Correo',
+                href: '/email-accounts',
+                icon: Mail,
+                permission: 'administracion.configuracion.gestionar',
+            },
+            {
                 title: 'Servicios Externos',
                 href: '/admin/servicios-externos',
                 icon: BellRing,
@@ -214,16 +221,16 @@ export function AppSidebar() {
                     }
                     return true;
                 }
-                
+
                 // Verificar si el usuario tiene el permiso
                 const hasAccess = hasPermission(item.permission);
-                
+
                 if (hasAccess && item.items) {
                     // Filtrar sub-items también
                     const filteredSubItems = filterItems(item.items);
                     return { ...item, items: filteredSubItems };
                 }
-                
+
                 return hasAccess;
             }).map(item => {
                 // Asegurar que los sub-items también estén filtrados
@@ -240,47 +247,47 @@ export function AppSidebar() {
     return (
         <>
             <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href="/dashboard" prefetch>
-                                <AppLogo />
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarHeader>
+                <SidebarHeader>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton size="lg" asChild>
+                                <Link href="/dashboard" prefetch>
+                                    <AppLogo />
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarHeader>
 
-            <SidebarContent>
-                <NavMain items={filteredNavItems} />
-            </SidebarContent>
+                <SidebarContent>
+                    <NavMain items={filteredNavItems} />
+                </SidebarContent>
 
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
-                
-                {/* Support Button */}
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            onClick={() => setShowSupportModal(true)}
-                            className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
-                        >
-                            <HelpCircle className="h-5 w-5" />
-                            <span>Soporte Técnico</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-                
-                <NavUser />
-            </SidebarFooter>
-        </Sidebar>
+                <SidebarFooter>
+                    <NavFooter items={footerNavItems} className="mt-auto" />
 
-        {/* Support Modal */}
-        <SupportModal 
-            open={showSupportModal} 
-            onOpenChange={setShowSupportModal} 
-        />
+                    {/* Support Button */}
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                onClick={() => setShowSupportModal(true)}
+                                className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
+                            >
+                                <HelpCircle className="h-5 w-5" />
+                                <span>Soporte Técnico</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+
+                    <NavUser />
+                </SidebarFooter>
+            </Sidebar>
+
+            {/* Support Modal */}
+            <SupportModal
+                open={showSupportModal}
+                onOpenChange={setShowSupportModal}
+            />
         </>
     );
 }

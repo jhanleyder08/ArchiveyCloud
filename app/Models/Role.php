@@ -186,6 +186,11 @@ class Role extends Model
      */
     public function hasPermission(string $permisoNombre): bool
     {
+        // Super Administrador tiene acceso a TODOS los permisos automáticamente
+        if ($this->name === 'Super Administrador') {
+            return true;
+        }
+        
         // Verificar permisos directos
         $permisoDirecto = $this->permisos()
             ->where('nombre', $permisoNombre)
@@ -208,6 +213,11 @@ class Role extends Model
      */
     public function hasAnyPermission(array $permisos): bool
     {
+        // Super Administrador tiene acceso a TODOS los permisos automáticamente
+        if ($this->name === 'Super Administrador') {
+            return true;
+        }
+        
         foreach ($permisos as $permiso) {
             if ($this->hasPermission($permiso)) {
                 return true;
@@ -221,6 +231,11 @@ class Role extends Model
      */
     public function hasAllPermissions(array $permisos): bool
     {
+        // Super Administrador tiene acceso a TODOS los permisos automáticamente
+        if ($this->name === 'Super Administrador') {
+            return true;
+        }
+        
         foreach ($permisos as $permiso) {
             if (!$this->hasPermission($permiso)) {
                 return false;

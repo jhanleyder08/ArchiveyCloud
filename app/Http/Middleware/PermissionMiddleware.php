@@ -22,6 +22,11 @@ class PermissionMiddleware
 
         $user = auth()->user();
         
+        // Super Administrador tiene acceso automático a TODO
+        if ($user->hasRole('Super Administrador')) {
+            return $next($request);
+        }
+        
         // Verificar si el usuario tiene alguno de los permisos requeridos
         $hasPermission = false;
         foreach ($permissions as $permission) {

@@ -286,6 +286,11 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function hasPermission(string $permisoNombre): bool
     {
+        // Super Administrador tiene acceso a TODOS los permisos automáticamente
+        if ($this->hasRole('Super Administrador')) {
+            return true;
+        }
+        
         // Verificar permisos directos del usuario
         $permisoDirecto = $this->permisos()
             ->where('nombre', $permisoNombre)

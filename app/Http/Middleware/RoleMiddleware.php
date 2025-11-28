@@ -21,6 +21,11 @@ class RoleMiddleware
 
         $user = auth()->user();
         
+        // Super Administrador tiene acceso automático a TODO
+        if ($user->hasRole('Super Administrador')) {
+            return $next($request);
+        }
+        
         // Verificar si el usuario tiene alguno de los roles requeridos
         $hasRole = false;
         foreach ($roles as $role) {
