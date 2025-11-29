@@ -71,6 +71,12 @@ class AdminCCDController extends Controller
      */
     public function create()
     {
+        // Obtener padres disponibles para crear un nuevo CCD
+        $padresDisponibles = CuadroClasificacionDocumental::where('nivel', '<', 5) // No pueden ser padres las subseries (nivel 5)
+            ->select('id', 'codigo', 'nombre', 'nivel')
+            ->orderBy('codigo')
+            ->get();
+
         $opciones = [
             'estados' => [
                 ['value' => 'borrador', 'label' => 'Borrador'],
@@ -85,6 +91,7 @@ class AdminCCDController extends Controller
                 ['value' => '4', 'label' => 'Nivel 4 - Serie'],
                 ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
             ],
+            'padres_disponibles' => $padresDisponibles,
         ];
 
         return Inertia::render('admin/ccd/create', [
@@ -139,6 +146,13 @@ class AdminCCDController extends Controller
      */
     public function edit(CuadroClasificacionDocumental $ccd)
     {
+        // Obtener padres disponibles (todos los CCD excepto el actual y sus descendientes)
+        $padresDisponibles = CuadroClasificacionDocumental::where('id', '!=', $ccd->id)
+            ->where('nivel', '<', 5) // No pueden ser padres las subseries (nivel 5)
+            ->select('id', 'codigo', 'nombre', 'nivel')
+            ->orderBy('codigo')
+            ->get();
+
         $opciones = [
             'estados' => [
                 ['value' => 'borrador', 'label' => 'Borrador'],
@@ -153,6 +167,7 @@ class AdminCCDController extends Controller
                 ['value' => '4', 'label' => 'Nivel 4 - Serie'],
                 ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
             ],
+            'padres_disponibles' => $padresDisponibles,
         ];
 
         return Inertia::render('admin/ccd/edit', [
