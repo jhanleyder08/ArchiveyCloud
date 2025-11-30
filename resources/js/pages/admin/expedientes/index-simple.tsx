@@ -21,7 +21,7 @@ import {
 
 interface Expediente {
     id: number;
-    numero_expediente: string;
+    codigo: string;
     titulo: string;
     descripcion: string;
     tipo_expediente: string;
@@ -216,7 +216,7 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                     {expedientes.data.map((expediente) => (
                                         <tr key={expediente.id} className="border-b hover:bg-gray-50">
                                             <td className="p-3 font-mono text-sm">
-                                                {expediente.numero_expediente}
+                                                {expediente.codigo}
                                             </td>
                                             <td className="p-3">
                                                 <div>

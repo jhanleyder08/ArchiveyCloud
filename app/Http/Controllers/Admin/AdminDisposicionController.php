@@ -84,23 +84,22 @@ class AdminDisposicionController extends Controller
      */
     public function create()
     {
-        // Expedientes próximos a vencer su retención (90 días)
-        $expedientesVencimiento = Expediente::where('fecha_cierre', '<=', Carbon::now()->subYears(5))
-            ->whereDoesntHave('disposicionFinal')
-            ->select('id', 'numero_expediente', 'titulo', 'fecha_cierre')
-            ->orderBy('fecha_cierre')
+        // Todos los expedientes sin disposición final
+        $expedientesVencimiento = Expediente::whereDoesntHave('disposicionFinal')
+            ->select('id', 'codigo', 'titulo', 'fecha_cierre')
+            ->orderBy('fecha_cierre', 'desc')
+            ->limit(100)
             ->get();
 
-        // Documentos próximos a vencer
-        $documentosVencimiento = Documento::where('created_at', '<=', Carbon::now()->subYears(3))
-            ->whereDoesntHave('disposicionFinal')
-            ->select('id', 'nombre', 'expediente_id', 'created_at')
-            ->with('expediente:id,numero_expediente,titulo')
-            ->orderBy('created_at')
+        // Todos los documentos sin disposición final
+        $documentosVencimiento = Documento::whereDoesntHave('disposicionFinal')
+            ->select('id', 'titulo', 'expediente_id', 'created_at')
+            ->with('expediente:id,codigo,titulo')
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
             ->get();
 
         $usuarios = User::select('id', 'name', 'email')
-            ->where('estado', 'activo')
             ->orderBy('name')
             ->get();
 
@@ -121,22 +120,43 @@ class AdminDisposicionController extends Controller
             'expediente_id' => 'required_if:tipo_item,expediente|exists:expedientes,id',
             'documento_id' => 'required_if:tipo_item,documento|exists:documentos,id',
             'tipo_disposicion' => 'required|in:conservacion_permanente,eliminacion_controlada,transferencia_historica,digitalizacion,microfilmacion',
-            'fecha_vencimiento_retencion' => 'required|date',
-            'justificacion' => 'required|string|min:50|max:2000',
+            'fecha_propuesta' => 'required|date',
+            'justificacion' => 'required|string|min:10|max:2000',
             'observaciones' => 'nullable|string|max:1000',
+            'responsable_id' => 'nullable|exists:users,id',
+            'responsable_externo_nombre' => 'nullable|string|max:255',
+            'responsable_externo_cargo' => 'nullable|string|max:255',
+            'responsable_externo_entidad' => 'nullable|string|max:255',
+            'responsable_externo_email' => 'nullable|email|max:255',
         ]);
 
-        DB::transaction(function () use ($validated) {
+        // Validar que haya un responsable (registrado o externo)
+        if (empty($validated['responsable_id']) && empty($validated['responsable_externo_nombre'])) {
+            return back()->withErrors(['responsable_id' => 'Debe seleccionar un responsable registrado o ingresar datos de un responsable externo.']);
+        }
+
+        DB::transaction(function () use ($validated, $request) {
+            // Preparar datos del responsable externo si aplica
+            $datosResponsableExterno = null;
+            if (!empty($validated['responsable_externo_nombre'])) {
+                $datosResponsableExterno = [
+                    'nombre' => $validated['responsable_externo_nombre'],
+                    'cargo' => $validated['responsable_externo_cargo'] ?? null,
+                    'entidad' => $validated['responsable_externo_entidad'] ?? null,
+                    'email' => $validated['responsable_externo_email'] ?? null,
+                ];
+            }
+
             $disposicion = DisposicionFinal::create([
                 'expediente_id' => $validated['expediente_id'] ?? null,
                 'documento_id' => $validated['documento_id'] ?? null,
-                'responsable_id' => auth()->id(),
+                'responsable_id' => $validated['responsable_id'] ?? auth()->id(),
                 'tipo_disposicion' => $validated['tipo_disposicion'],
                 'estado' => DisposicionFinal::ESTADO_PENDIENTE,
-                'fecha_vencimiento_retencion' => $validated['fecha_vencimiento_retencion'],
-                'fecha_propuesta' => Carbon::now(),
+                'fecha_propuesta' => $validated['fecha_propuesta'],
                 'justificacion' => $validated['justificacion'],
-                'observaciones' => $validated['observaciones'],
+                'observaciones' => $validated['observaciones'] ?? null,
+                'datos_responsable_externo' => $datosResponsableExterno, // Laravel lo convierte automáticamente a JSON
             ]);
 
             // Registrar en auditoría
@@ -145,7 +165,7 @@ class AdminDisposicionController extends Controller
                 'accion' => 'crear_disposicion_final',
                 'tabla_afectada' => 'disposicion_finals',
                 'registro_id' => $disposicion->id,
-                'descripcion' => "Nueva disposición final propuesta: {$disposicion->tipo_disposicion_label}",
+                'descripcion' => "Nueva disposición final propuesta: {$disposicion->tipo_disposicion}",
                 'datos_nuevos' => $disposicion->toJson(),
             ]);
         });

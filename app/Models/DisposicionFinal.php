@@ -34,6 +34,7 @@ class DisposicionFinal extends Model
         'metodo_eliminacion',
         'empresa_ejecutora',
         'certificado_destruccion',
+        'datos_responsable_externo',
     ];
 
     protected $casts = [
@@ -44,6 +45,7 @@ class DisposicionFinal extends Model
         'documentos_soporte' => 'array',
         'metadata_proceso' => 'array',
         'cumple_normativa' => 'boolean',
+        'datos_responsable_externo' => 'array',
     ];
 
     // Constantes para tipos de disposición
@@ -107,7 +109,7 @@ class DisposicionFinal extends Model
     public function getItemAfectadoAttribute(): string
     {
         if ($this->expediente) {
-            return "Expediente: {$this->expediente->numero_expediente} - {$this->expediente->titulo}";
+            return "Expediente: {$this->expediente->codigo} - {$this->expediente->titulo}";
         }
         
         if ($this->documento) {

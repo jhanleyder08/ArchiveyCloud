@@ -51,7 +51,7 @@ interface Subserie {
 
 interface Expediente {
     id: number;
-    numero_expediente: string;
+    codigo: string;
     titulo: string;
     estado_ciclo_vida: string;
     fecha_apertura: string;
@@ -267,7 +267,7 @@ export default function SerieShow({ serie }: Props) {
                                                 <div key={expediente.id} className="flex items-center justify-between p-4 border rounded-lg">
                                                     <div className="flex-1">
                                                         <div className="flex items-center space-x-2">
-                                                            <h4 className="font-semibold">{expediente.numero_expediente}</h4>
+                                                            <h4 className="font-semibold">{expediente.codigo}</h4>
                                                             <Badge className={getEstadoColor(expediente.estado_ciclo_vida)}>
                                                                 {expediente.estado_ciclo_vida}
                                                             </Badge>

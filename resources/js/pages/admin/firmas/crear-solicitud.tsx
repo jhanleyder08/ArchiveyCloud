@@ -55,7 +55,7 @@ interface Documento {
     tipo_documento: string;
     expediente?: {
         id: number;
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
     };
 }
@@ -275,7 +275,7 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
                                                             <div className="text-xs text-gray-500">
                                                                 {documento.tipo_documento}
                                                                 {documento.expediente && (
-                                                                    <span> • Exp: {documento.expediente.numero_expediente}</span>
+                                                                    <span> • Exp: {documento.expediente.codigo}</span>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -415,7 +415,7 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
                                                 </p>
                                                 {documentoSeleccionado.expediente && (
                                                     <p className="text-sm text-blue-700">
-                                                        Expediente: {documentoSeleccionado.expediente.numero_expediente} - {documentoSeleccionado.expediente.titulo}
+                                                        Expediente: {documentoSeleccionado.expediente.codigo} - {documentoSeleccionado.expediente.titulo}
                                                     </p>
                                                 )}
                                             </div>

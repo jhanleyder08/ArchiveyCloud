@@ -86,7 +86,7 @@ interface Prestamo {
 interface ProximoVencer {
     id: number;
     expediente?: {
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
     };
     documento?: {
@@ -304,7 +304,7 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                                         <div key={prestamo.id} className="text-sm">
                                             <span className="font-medium">
                                                 {prestamo.expediente 
-                                                    ? `${prestamo.expediente.numero_expediente} - ${prestamo.expediente.titulo}`
+                                                    ? `${prestamo.expediente.codigo} - ${prestamo.expediente.titulo}`
                                                     : prestamo.documento?.nombre
                                                 }
                                             </span>

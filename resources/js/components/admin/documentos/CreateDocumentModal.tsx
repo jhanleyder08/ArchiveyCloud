@@ -12,7 +12,7 @@ import { CloudArrowUpIcon, DocumentTextIcon, ExclamationTriangleIcon } from '@he
 interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    expedientes: Array<{ id: number; numero_expediente: string; titulo: string; }>;
+    expedientes: Array<{ id: number; codigo: string; titulo: string; }>;
     tipologias: Array<{ id: number; nombre: string; categoria: string; }>;
     formatosDisponibles: string[];
     tiposSoporte: Record<string, string>;
@@ -261,7 +261,7 @@ const CreateDocumentModal = ({
                                 <SelectContent>
                                     {expedientes.map((expediente) => (
                                         <SelectItem key={expediente.id} value={expediente.id.toString()}>
-                                            {expediente.numero_expediente} - {expediente.titulo}
+                                            {expediente.codigo} - {expediente.titulo}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

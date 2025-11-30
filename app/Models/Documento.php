@@ -294,6 +294,14 @@ class Documento extends Model
     }
 
     /**
+     * Relación con disposición final
+     */
+    public function disposicionFinal()
+    {
+        return $this->hasOne(DisposicionFinal::class, 'documento_id');
+    }
+
+    /**
      * Scope para documentos activos
      */
     public function scopeActivos($query)

@@ -40,7 +40,7 @@ interface DisposicionFinal {
     estado_label: string;
     expediente?: {
         id: number;
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
         serie_documental: string;
         ubicacion_fisica: string;
@@ -54,7 +54,7 @@ interface DisposicionFinal {
         ubicacion_fisica: string;
         expediente: {
             id: number;
-            numero_expediente: string;
+            codigo: string;
             titulo: string;
             serie_documental: string;
         };
@@ -236,7 +236,7 @@ export default function DisposicionShow({ disposicion }: Props) {
                                 {disposicion.expediente ? (
                                     <div className="space-y-4">
                                         <div>
-                                            <h3 className="font-semibold text-lg">{disposicion.expediente.numero_expediente}</h3>
+                                            <h3 className="font-semibold text-lg">{disposicion.expediente.codigo}</h3>
                                             <p className="text-gray-600 mt-1">{disposicion.expediente.titulo}</p>
                                         </div>
                                         
@@ -290,7 +290,7 @@ export default function DisposicionShow({ disposicion }: Props) {
                                         <div>
                                             <h3 className="font-semibold text-lg">{disposicion.documento?.nombre}</h3>
                                             <p className="text-gray-600 mt-1">
-                                                Expediente: {disposicion.documento?.expediente.numero_expediente} - {disposicion.documento?.expediente.titulo}
+                                                Expediente: {disposicion.documento?.expediente.codigo} - {disposicion.documento?.expediente.titulo}
                                             </p>
                                         </div>
                                         

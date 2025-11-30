@@ -35,7 +35,7 @@ class AdminRetencionDisposicionController extends Controller
     {
         $query = ProcesoRetencionDisposicion::with([
             'documento:id,codigo_documento,titulo,estado',
-            'expediente:id,numero_expediente,titulo,estado',
+            'expediente:id,codigo,titulo,estado',
             'trd:id,codigo,nombre,version',
             'serieDocumental:id,nombre,codigo',
             'usuarioCreador:id,name'
@@ -51,7 +51,7 @@ class AdminRetencionDisposicionController extends Controller
                            ->orWhere('titulo', 'like', "%{$search}%");
                   })
                   ->orWhereHas('expediente', function($subQ) use ($search) {
-                      $subQ->where('numero_expediente', 'like', "%{$search}%")
+                      $subQ->where('codigo', 'like', "%{$search}%")
                            ->orWhere('titulo', 'like', "%{$search}%");
                   });
             });
@@ -308,7 +308,7 @@ class AdminRetencionDisposicionController extends Controller
     {
         $query = AlertaRetencion::with([
             'procesoRetencion.documento:id,codigo_documento,titulo',
-            'procesoRetencion.expediente:id,numero_expediente,titulo'
+            'procesoRetencion.expediente:id,codigo,titulo'
         ]);
 
         // Filtros

@@ -89,7 +89,7 @@ interface Props {
         success?: string;
         error?: string;
     };
-    expedientes: Array<{ id: number; numero_expediente: string; titulo: string; }>;
+    expedientes: Array<{ id: number; codigo: string; titulo: string; }>;
     tipologias: Array<{ id: number; nombre: string; categoria: string; }>;
 }
 

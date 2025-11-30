@@ -80,7 +80,7 @@ interface DocumentoGenerado {
   nombre: string;
   expediente: {
     id: number;
-    numero_expediente: string;
+    codigo: string;
     titulo: string;
   } | null;
   usuario_creador: {
@@ -569,7 +569,7 @@ export default function PlantillasShow({
                                   <p>Creado por: {documento.usuario_creador.name}</p>
                                   <p>Fecha: {new Date(documento.created_at).toLocaleDateString('es-ES')}</p>
                                   {documento.expediente && (
-                                    <p>Expediente: {documento.expediente.numero_expediente}</p>
+                                    <p>Expediente: {documento.expediente.codigo}</p>
                                   )}
                                 </div>
                               </div>

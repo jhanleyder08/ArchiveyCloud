@@ -29,7 +29,7 @@ interface Documento {
     formato: string;
     tamaño: number;
     expediente?: {
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
     };
     firmado_digitalmente: boolean;
@@ -154,7 +154,7 @@ export default function FirmarDocumento({ documento, firmasExistentes, puedeFire
                                         <>
                                             <div>
                                                 <Label className="text-sm font-medium text-gray-600">Expediente</Label>
-                                                <p>{documento.expediente.numero_expediente}</p>
+                                                <p>{documento.expediente.codigo}</p>
                                             </div>
                                             <div>
                                                 <Label className="text-sm font-medium text-gray-600">Título Expediente</Label>

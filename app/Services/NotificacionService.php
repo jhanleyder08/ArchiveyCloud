@@ -65,7 +65,7 @@ class NotificacionService
                 $datos = [
                     'tipo' => 'expediente_proximo_vencer',
                     'titulo' => "Expediente requiere revisión",
-                    'mensaje' => "El expediente '{$expediente->numero_expediente}' lleva abierto {$diasAbierto} días sin cierre.",
+                    'mensaje' => "El expediente '{$expediente->codigo}' lleva abierto {$diasAbierto} días sin cierre.",
                     'prioridad' => $prioridad,
                     'accion_url' => "/admin/expedientes/{$expediente->id}",
                     'relacionado_id' => $expediente->id,
@@ -104,7 +104,7 @@ class NotificacionService
                 $datos = [
                     'tipo' => 'expediente_vencido',
                     'titulo' => "Expediente requiere cierre urgente",
-                    'mensaje' => "El expediente '{$expediente->numero_expediente}' lleva {$diasAbierto} días abierto. Requiere cierre inmediato.",
+                    'mensaje' => "El expediente '{$expediente->codigo}' lleva {$diasAbierto} días abierto. Requiere cierre inmediato.",
                     'prioridad' => 'critica',
                     'accion_url' => "/admin/expedientes/{$expediente->id}",
                     'relacionado_id' => $expediente->id,

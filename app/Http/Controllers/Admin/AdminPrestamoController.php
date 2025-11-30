@@ -88,12 +88,12 @@ class AdminPrestamoController extends Controller
      */
     public function create()
     {
-        $expedientes = Expediente::select('id', 'numero_expediente', 'titulo', 'estado_ciclo_vida', 'ubicacion_fisica')
+        $expedientes = Expediente::select('id', 'codigo', 'titulo', 'estado_ciclo_vida', 'ubicacion_fisica')
             ->where('estado_ciclo_vida', '!=', 'eliminado')
-            ->orderBy('numero_expediente')
+            ->orderBy('codigo')
             ->get();
 
-        $documentos = Documento::with('expediente:id,numero_expediente,titulo')
+        $documentos = Documento::with('expediente:id,codigo,titulo')
             ->select('id', 'nombre', 'expediente_id', 'ubicacion_fisica')
             ->orderBy('nombre')
             ->get();
@@ -343,7 +343,7 @@ class AdminPrestamoController extends Controller
         $tipo = $request->input('tipo', 'expediente');
 
         if ($tipo === 'expediente') {
-            $resultados = Expediente::where('numero_expediente', 'like', "%{$query}%")
+            $resultados = Expediente::where('codigo', 'like', "%{$query}%")
                 ->orWhere('titulo', 'like', "%{$query}%")
                 ->where('estado_ciclo_vida', '!=', 'eliminado')
                 ->whereNotIn('id', function ($q) {
@@ -352,11 +352,11 @@ class AdminPrestamoController extends Controller
                         ->where('estado', 'prestado')
                         ->whereNotNull('expediente_id');
                 })
-                ->select('id', 'numero_expediente', 'titulo', 'ubicacion_fisica', 'estado_ciclo_vida')
+                ->select('id', 'codigo', 'titulo', 'ubicacion_fisica', 'estado_ciclo_vida')
                 ->limit(10)
                 ->get();
         } else {
-            $resultados = Documento::with('expediente:id,numero_expediente,titulo')
+            $resultados = Documento::with('expediente:id,codigo,titulo')
                 ->where('nombre', 'like', "%{$query}%")
                 ->whereNotIn('id', function ($q) {
                     $q->select('documento_id')

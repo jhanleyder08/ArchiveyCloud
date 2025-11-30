@@ -12,7 +12,7 @@ import { ArrowLeft, Save, Search, Archive, FileText, User, Calendar, CheckCircle
 
 interface Expediente {
     id: number;
-    numero_expediente: string;
+    codigo: string;
     titulo: string;
     estado_ciclo_vida: string;
     ubicacion_fisica: string;
@@ -23,11 +23,11 @@ interface Expediente {
 
 interface Documento {
     id: number;
-    nombre: string;
+    titulo: string;
     expediente_id: number;
     expediente: {
         id: number;
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
     };
 }
@@ -39,8 +39,8 @@ interface Usuario {
 }
 
 interface Props {
-    expedientes: Expediente[];
-    documentos: Documento[];
+    expedientesVencimiento: Expediente[];
+    documentosVencimiento: Documento[];
     usuarios: Usuario[];
     errors: Record<string, string>;
 }
@@ -53,10 +53,13 @@ const tipoDisposicionOptions = [
     { value: 'microfilmacion', label: 'Microfilmación' },
 ];
 
-export default function DisposicionesCreate({ expedientes, documentos, usuarios, errors }: Props) {
+export default function DisposicionesCreate({ expedientesVencimiento, documentosVencimiento, usuarios, errors }: Props) {
+    const expedientes = expedientesVencimiento || [];
+    const documentos = documentosVencimiento || [];
     const [busquedaExpediente, setBusquedaExpediente] = useState('');
     const [busquedaDocumento, setBusquedaDocumento] = useState('');
     const [busquedaUsuario, setBusquedaUsuario] = useState('');
+    const [esResponsableExterno, setEsResponsableExterno] = useState(false);
     
     const [expedientesFiltrados, setExpedientesFiltrados] = useState<Expediente[]>([]);
     const [documentosFiltrados, setDocumentosFiltrados] = useState<Documento[]>([]);
@@ -71,13 +74,17 @@ export default function DisposicionesCreate({ expedientes, documentos, usuarios,
         observaciones: '',
         fecha_propuesta: '',
         responsable_id: '',
+        responsable_externo_nombre: '',
+        responsable_externo_cargo: '',
+        responsable_externo_entidad: '',
+        responsable_externo_email: '',
     });
 
     // Filtrar expedientes
     useEffect(() => {
         if (busquedaExpediente) {
             const filtrados = expedientes.filter(exp => 
-                exp.numero_expediente.toLowerCase().includes(busquedaExpediente.toLowerCase()) ||
+                exp.codigo.toLowerCase().includes(busquedaExpediente.toLowerCase()) ||
                 exp.titulo.toLowerCase().includes(busquedaExpediente.toLowerCase())
             ).slice(0, 10);
             setExpedientesFiltrados(filtrados);
@@ -90,8 +97,8 @@ export default function DisposicionesCreate({ expedientes, documentos, usuarios,
     useEffect(() => {
         if (busquedaDocumento) {
             const filtrados = documentos.filter(doc => 
-                doc.nombre.toLowerCase().includes(busquedaDocumento.toLowerCase()) ||
-                doc.expediente.numero_expediente.toLowerCase().includes(busquedaDocumento.toLowerCase())
+                doc.titulo.toLowerCase().includes(busquedaDocumento.toLowerCase()) ||
+                doc.expediente.codigo.toLowerCase().includes(busquedaDocumento.toLowerCase())
             ).slice(0, 10);
             setDocumentosFiltrados(filtrados);
         } else {
@@ -207,46 +214,70 @@ export default function DisposicionesCreate({ expedientes, documentos, usuarios,
                     <CardContent className="space-y-4">
                         {data.tipo_item === 'expediente' ? (
                             <>
-                                <div className="space-y-2">
-                                    <Label>Buscar Expediente</Label>
-                                    <div className="relative">
-                                        <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                                        <Input
-                                            placeholder="Buscar por código o nombre..."
-                                            value={busquedaExpediente}
-                                            onChange={(e) => setBusquedaExpediente(e.target.value)}
-                                            className="pl-10"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                    {expedientesFiltrados.map((expediente) => (
-                                        <div
-                                            key={expediente.id}
-                                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                                data.expediente_id === expediente.id.toString()
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-border hover:border-primary/50'
-                                            }`}
-                                            onClick={() => setData('expediente_id', expediente.id.toString())}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex-1">
-                                                    <h4 className="font-medium">{expediente.numero_expediente}</h4>
-                                                    <p className="text-sm text-muted-foreground">{expediente.titulo}</p>
-                                                    <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
-                                                        <span>Serie: {expediente.serie_documental}</span>
-                                                        <span>Estado: {expediente.estado_ciclo_vida}</span>
-                                                    </div>
-                                                </div>
-                                                {data.expediente_id === expediente.id.toString() && (
-                                                    <CheckCircle className="h-5 w-5 text-primary" />
-                                                )}
+                                {!expedienteSeleccionado ? (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label>Buscar Expediente</Label>
+                                            <div className="relative">
+                                                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Buscar por código o nombre..."
+                                                    value={busquedaExpediente}
+                                                    onChange={(e) => setBusquedaExpediente(e.target.value)}
+                                                    className="pl-10"
+                                                />
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+
+                                        {expedientesFiltrados.length > 0 ? (
+                                            <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-2 bg-background shadow-lg">
+                                                <p className="text-xs text-muted-foreground px-2 py-1">
+                                                    {busquedaExpediente ? `${expedientesFiltrados.length} resultados` : `Mostrando ${expedientesFiltrados.length} expedientes disponibles`}
+                                                </p>
+                                                {expedientesFiltrados.map((expediente) => (
+                                                    <div
+                                                        key={expediente.id}
+                                                        className="p-3 rounded-lg cursor-pointer transition-colors hover:bg-primary/10 border border-transparent hover:border-primary"
+                                                        onClick={() => {
+                                                            setData('expediente_id', expediente.id.toString());
+                                                            setBusquedaExpediente('');
+                                                        }}
+                                                    >
+                                                        <h4 className="font-medium">{expediente.codigo}</h4>
+                                                        <p className="text-sm text-muted-foreground">{expediente.titulo}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <Alert>
+                                                <AlertDescription>
+                                                    No hay expedientes disponibles para disposición final.
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Alert className="bg-primary/5 border-primary">
+                                        <CheckCircle className="h-4 w-4 text-primary" />
+                                        <AlertDescription className="flex items-center justify-between">
+                                            <div>
+                                                <p className="font-medium">{expedienteSeleccionado.codigo}</p>
+                                                <p className="text-sm text-muted-foreground">{expedienteSeleccionado.titulo}</p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setData('expediente_id', '');
+                                                    setBusquedaExpediente('');
+                                                }}
+                                            >
+                                                Cambiar
+                                            </Button>
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
 
                                 {errors.expediente_id && (
                                     <p className="text-sm text-red-500">{errors.expediente_id}</p>
@@ -254,44 +285,74 @@ export default function DisposicionesCreate({ expedientes, documentos, usuarios,
                             </>
                         ) : (
                             <>
-                                <div className="space-y-2">
-                                    <Label>Buscar Documento</Label>
-                                    <div className="relative">
-                                        <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                                        <Input
-                                            placeholder="Buscar por nombre..."
-                                            value={busquedaDocumento}
-                                            onChange={(e) => setBusquedaDocumento(e.target.value)}
-                                            className="pl-10"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                    {documentosFiltrados.map((documento) => (
-                                        <div
-                                            key={documento.id}
-                                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                                data.documento_id === documento.id.toString()
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-border hover:border-primary/50'
-                                            }`}
-                                            onClick={() => setData('documento_id', documento.id.toString())}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex-1">
-                                                    <h4 className="font-medium">{documento.nombre}</h4>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Expediente: {documento.expediente.numero_expediente}
-                                                    </p>
-                                                </div>
-                                                {data.documento_id === documento.id.toString() && (
-                                                    <CheckCircle className="h-5 w-5 text-primary" />
-                                                )}
+                                {!documentoSeleccionado ? (
+                                    <>
+                                        <div className="space-y-2">
+                                            <Label>Buscar Documento</Label>
+                                            <div className="relative">
+                                                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Buscar por nombre..."
+                                                    value={busquedaDocumento}
+                                                    onChange={(e) => setBusquedaDocumento(e.target.value)}
+                                                    className="pl-10"
+                                                />
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+
+                                        {documentosFiltrados.length > 0 ? (
+                                            <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-2 bg-background shadow-lg">
+                                                <p className="text-xs text-muted-foreground px-2 py-1">
+                                                    {busquedaDocumento ? `${documentosFiltrados.length} resultados` : `Mostrando ${documentosFiltrados.length} documentos disponibles`}
+                                                </p>
+                                                {documentosFiltrados.map((documento) => (
+                                                    <div
+                                                        key={documento.id}
+                                                        className="p-3 rounded-lg cursor-pointer transition-colors hover:bg-primary/10 border border-transparent hover:border-primary"
+                                                        onClick={() => {
+                                                            setData('documento_id', documento.id.toString());
+                                                            setBusquedaDocumento('');
+                                                        }}
+                                                    >
+                                                        <h4 className="font-medium">{documento.titulo}</h4>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Expediente: {documento.expediente.codigo}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <Alert>
+                                                <AlertDescription>
+                                                    No hay documentos disponibles para disposición final.
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Alert className="bg-primary/5 border-primary">
+                                        <CheckCircle className="h-4 w-4 text-primary" />
+                                        <AlertDescription className="flex items-center justify-between">
+                                            <div>
+                                                <p className="font-medium">{documentoSeleccionado.titulo}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Expediente: {documentoSeleccionado.expediente.codigo}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setData('documento_id', '');
+                                                    setBusquedaDocumento('');
+                                                }}
+                                            >
+                                                Cambiar
+                                            </Button>
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
 
                                 {errors.documento_id && (
                                     <p className="text-sm text-red-500">{errors.documento_id}</p>
@@ -345,51 +406,125 @@ export default function DisposicionesCreate({ expedientes, documentos, usuarios,
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {/* Responsable */}
-                        <div className="space-y-2">
-                            <Label>Responsable *</Label>
-                            <div className="relative">
-                                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar usuario..."
-                                    value={busquedaUsuario}
-                                    onChange={(e) => setBusquedaUsuario(e.target.value)}
-                                    className="pl-10"
-                                />
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <Label>Responsable *</Label>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setEsResponsableExterno(!esResponsableExterno);
+                                        setData('responsable_id', '');
+                                        setBusquedaUsuario('');
+                                    }}
+                                >
+                                    {esResponsableExterno ? 'Usuario Registrado' : 'Usuario Externo'}
+                                </Button>
                             </div>
-                            
-                            {busquedaUsuario && (
-                                <div className="space-y-1 max-h-40 overflow-y-auto border rounded p-2">
-                                    {usuariosFiltrados.map((usuario) => (
-                                        <div
-                                            key={usuario.id}
-                                            className={`p-2 rounded cursor-pointer transition-colors ${
-                                                data.responsable_id === usuario.id.toString()
-                                                    ? 'bg-primary/10 border border-primary'
-                                                    : 'hover:bg-muted'
-                                            }`}
-                                            onClick={() => {
-                                                setData('responsable_id', usuario.id.toString());
-                                                setBusquedaUsuario(usuario.name);
-                                            }}
-                                        >
-                                            <p className="font-medium">{usuario.name}</p>
-                                            <p className="text-sm text-muted-foreground">{usuario.email}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
 
-                            {responsableSeleccionado && (
-                                <Alert>
-                                    <CheckCircle className="h-4 w-4" />
-                                    <AlertDescription>
-                                        <strong>Responsable:</strong> {responsableSeleccionado.name}
-                                    </AlertDescription>
-                                </Alert>
-                            )}
-                            
-                            {errors.responsable_id && (
-                                <p className="text-sm text-red-500">{errors.responsable_id}</p>
+                            {!esResponsableExterno ? (
+                                <>
+                                    {!responsableSeleccionado ? (
+                                        <>
+                                            <div className="relative">
+                                                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Buscar usuario registrado..."
+                                                    value={busquedaUsuario}
+                                                    onChange={(e) => setBusquedaUsuario(e.target.value)}
+                                                    className="pl-10"
+                                                />
+                                            </div>
+                                            
+                                            {busquedaUsuario && usuariosFiltrados.length > 0 && (
+                                                <div className="space-y-1 max-h-60 overflow-y-auto border rounded-lg p-2 bg-background shadow-lg">
+                                                    {usuariosFiltrados.map((usuario) => (
+                                                        <div
+                                                            key={usuario.id}
+                                                            className="p-3 rounded-lg cursor-pointer transition-colors hover:bg-primary/10 border border-transparent hover:border-primary"
+                                                            onClick={() => {
+                                                                setData('responsable_id', usuario.id.toString());
+                                                                setBusquedaUsuario('');
+                                                            }}
+                                                        >
+                                                            <p className="font-medium">{usuario.name}</p>
+                                                            <p className="text-sm text-muted-foreground">{usuario.email}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Alert className="bg-primary/5 border-primary">
+                                            <CheckCircle className="h-4 w-4 text-primary" />
+                                            <AlertDescription className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="font-medium">{responsableSeleccionado.name}</p>
+                                                    <p className="text-sm text-muted-foreground">{responsableSeleccionado.email}</p>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setData('responsable_id', '');
+                                                        setBusquedaUsuario('');
+                                                    }}
+                                                >
+                                                    Cambiar
+                                                </Button>
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+                                    
+                                    {errors.responsable_id && (
+                                        <p className="text-sm text-red-500">{errors.responsable_id}</p>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                                    <p className="text-sm text-muted-foreground">Ingrese los datos del responsable externo</p>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Nombre Completo *</Label>
+                                            <Input
+                                                placeholder="Nombre del responsable"
+                                                value={data.responsable_externo_nombre}
+                                                onChange={(e) => setData('responsable_externo_nombre', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Cargo *</Label>
+                                            <Input
+                                                placeholder="Cargo o posición"
+                                                value={data.responsable_externo_cargo}
+                                                onChange={(e) => setData('responsable_externo_cargo', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Entidad *</Label>
+                                            <Input
+                                                placeholder="Nombre de la entidad"
+                                                value={data.responsable_externo_entidad}
+                                                onChange={(e) => setData('responsable_externo_entidad', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Email</Label>
+                                            <Input
+                                                type="email"
+                                                placeholder="correo@ejemplo.com"
+                                                value={data.responsable_externo_email}
+                                                onChange={(e) => setData('responsable_externo_email', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
 

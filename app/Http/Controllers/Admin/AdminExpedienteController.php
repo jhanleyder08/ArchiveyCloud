@@ -25,7 +25,7 @@ class AdminExpedienteController extends Controller
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
-                    $q->where('numero_expediente', 'like', "%{$search}%")
+                    $q->where('codigo', 'like', "%{$search}%")
                       ->orWhere('titulo', 'like', "%{$search}%")
                       ->orWhere('descripcion', 'like', "%{$search}%");
                 });

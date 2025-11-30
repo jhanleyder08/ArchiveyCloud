@@ -71,7 +71,7 @@ class CacheService
                     'hash_integridad' => $document->hash_integridad,
                     'expediente' => [
                         'id' => $document->expediente->id ?? null,
-                        'numero_expediente' => $document->expediente->numero_expediente ?? null,
+                        'codigo' => $document->expediente->codigo ?? null,
                     ],
                 ];
             }

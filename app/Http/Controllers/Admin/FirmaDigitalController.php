@@ -44,7 +44,7 @@ class FirmaDigitalController extends Controller
                 'formato' => $documento->formato,
                 'tamaño' => $documento->tamaño,
                 'expediente' => $documento->expediente ? [
-                    'numero_expediente' => $documento->expediente->numero_expediente,
+                    'codigo' => $documento->expediente->codigo,
                     'titulo' => $documento->expediente->titulo,
                 ] : null,
                 'firmado_digitalmente' => $documento->firmado_digitalmente,
@@ -122,7 +122,7 @@ class FirmaDigitalController extends Controller
                 'nombre' => $documento->nombre,
                 'codigo' => $documento->codigo,
                 'expediente' => $documento->expediente ? [
-                    'numero_expediente' => $documento->expediente->numero_expediente,
+                    'codigo' => $documento->expediente->codigo,
                     'titulo' => $documento->expediente->titulo,
                 ] : null,
                 'firmado_digitalmente' => $documento->firmado_digitalmente,
@@ -202,7 +202,7 @@ class FirmaDigitalController extends Controller
                 return [
                     'id' => $firma->id,
                     'documento_nombre' => $firma->documento->nombre,
-                    'expediente' => $firma->documento->expediente?->numero_expediente,
+                    'expediente' => $firma->documento->expediente?->codigo,
                     'fecha_firma' => $firma->fecha_firma,
                     'motivo' => $firma->motivo_firma,
                     'valida' => $verificacion['valida'],

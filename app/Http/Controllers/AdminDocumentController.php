@@ -91,7 +91,7 @@ class AdminDocumentController extends Controller
         ];
 
         // Opciones para filtros
-        $expedientes = Expediente::select('id', 'numero_expediente', 'titulo')->orderBy('titulo')->get();
+        $expedientes = Expediente::select('id', 'codigo', 'titulo')->orderBy('titulo')->get();
         $tipologias = TipologiaDocumental::select('id', 'nombre', 'categoria')->orderBy('nombre')->get();
         
         $formatosDisponibles = collect(array_merge(

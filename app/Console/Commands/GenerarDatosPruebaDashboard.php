@@ -137,14 +137,14 @@ class GenerarDatosPruebaDashboard extends Command
             $numeroExpediente = "EXP-" . str_pad($i, 4, '0', STR_PAD_LEFT);
             
             // Verificar si el expediente ya existe
-            $expedienteExistente = \DB::table('expedientes')->where('numero_expediente', $numeroExpediente)->first();
+            $expedienteExistente = \DB::table('expedientes')->where('codigo', $numeroExpediente)->first();
             if ($expedienteExistente) {
                 $expedientes[] = $expedienteExistente;
                 continue;
             }
             
             $expedienteData = [
-                'numero_expediente' => $numeroExpediente,
+                'codigo' => $numeroExpediente,
                 'titulo' => "Expediente de prueba número {$i}",
                 'descripcion' => "Este es un expediente de prueba creado automáticamente para testing del Dashboard Ejecutivo",
                 'estado' => $estados[array_rand($estados)],

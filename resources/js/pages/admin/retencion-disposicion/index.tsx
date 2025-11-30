@@ -31,7 +31,7 @@ interface ProcesoRetencion {
     };
     expediente?: {
         id: number;
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
         estado: string;
     };

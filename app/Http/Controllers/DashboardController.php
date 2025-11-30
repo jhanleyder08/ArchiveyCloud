@@ -95,7 +95,7 @@ class DashboardController extends Controller
             ->map(function ($item) {
                 return [
                     'id' => $item->id,
-                    'numero_expediente' => $item->numero_expediente ?? $item->codigo,
+                    'codigo' => $item->codigo ?? $item->codigo,
                     'titulo' => $item->titulo ?? 'Sin título',
                     'fecha' => $item->created_at->format('d/m/Y'),
                     'estado' => $item->estado_ciclo_vida ?? $item->estado ?? 'abierto',

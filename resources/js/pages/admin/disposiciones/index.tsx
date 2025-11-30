@@ -53,7 +53,7 @@ interface DisposicionFinal {
     estado_label: string;
     expediente?: {
         id: number;
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
     };
     documento?: {
@@ -421,7 +421,7 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                                                         <div>
                                                             <p className="font-medium">
                                                                 {disposicion.expediente 
-                                                                    ? `${disposicion.expediente.numero_expediente}`
+                                                                    ? `${disposicion.expediente.codigo}`
                                                                     : disposicion.documento?.nombre
                                                                 }
                                                             </p>

@@ -22,7 +22,7 @@ class ExpedientesBasicSeeder extends Seeder
         // Crear expedientes de ejemplo
         $expedientes = [
             [
-                'numero_expediente' => 'EXP-2025-001',
+                'codigo' => 'EXP-2025-001',
                 'titulo' => 'Expediente de Contratación General',
                 'descripcion' => 'Expediente para procesos de contratación administrativa',
                 'serie_documental_id' => $series->id,
@@ -40,7 +40,7 @@ class ExpedientesBasicSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'numero_expediente' => 'EXP-2025-002',
+                'codigo' => 'EXP-2025-002',
                 'titulo' => 'Expediente de Correspondencia Oficial',
                 'descripcion' => 'Gestión de correspondencia institucional',
                 'serie_documental_id' => $series->id,
@@ -58,7 +58,7 @@ class ExpedientesBasicSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'numero_expediente' => 'EXP-2025-003',
+                'codigo' => 'EXP-2025-003',
                 'titulo' => 'Expediente de Informes de Gestión',
                 'descripcion' => 'Reportes mensuales y anuales de actividades',
                 'serie_documental_id' => $series->id,

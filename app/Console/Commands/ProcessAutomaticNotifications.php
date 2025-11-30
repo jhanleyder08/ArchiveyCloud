@@ -95,7 +95,7 @@ class ProcessAutomaticNotifications extends Command
             $this->crearNotificacion([
                 'tipo' => 'expediente_proximo_vencer',
                 'titulo' => 'Expediente próximo a vencer',
-                'mensaje' => "El expediente '{$expediente->numero_expediente}' está próximo a pasar a estado central. Revise si requiere acción.",
+                'mensaje' => "El expediente '{$expediente->codigo}' está próximo a pasar a estado central. Revise si requiere acción.",
                 'prioridad' => 'alta',
                 'relacionado_id' => $expediente->id,
                 'relacionado_tipo' => 'App\Models\Expediente',
@@ -128,7 +128,7 @@ class ProcessAutomaticNotifications extends Command
             $this->crearNotificacion([
                 'tipo' => 'expediente_vencido',
                 'titulo' => 'Expediente vencido - Acción requerida',
-                'mensaje' => "El expediente '{$expediente->numero_expediente}' ha superado el tiempo de gestión. Debe cambiar a estado central urgentemente.",
+                'mensaje' => "El expediente '{$expediente->codigo}' ha superado el tiempo de gestión. Debe cambiar a estado central urgentemente.",
                 'prioridad' => 'critica',
                 'relacionado_id' => $expediente->id,
                 'relacionado_tipo' => 'App\Models\Expediente',

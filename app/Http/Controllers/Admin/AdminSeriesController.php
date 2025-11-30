@@ -689,7 +689,7 @@ class AdminSeriesController extends Controller
         return $expedientes->map(function($expediente) {
             return [
                 'id' => $expediente->id,
-                'numero_expediente' => $expediente->numero_expediente,
+                'codigo' => $expediente->codigo,
                 'titulo' => $expediente->titulo,
                 'estado_ciclo_vida' => $expediente->estado_ciclo_vida,
                 'fecha_apertura' => $expediente->fecha_apertura,

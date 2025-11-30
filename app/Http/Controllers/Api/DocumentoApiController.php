@@ -47,7 +47,7 @@ class DocumentoApiController extends BaseApiController
      *       "hash_integridad": "abc123...",
      *       "expediente": {
      *         "id": 1,
-     *         "numero_expediente": "EXP-2024-001",
+     *         "codigo": "EXP-2024-001",
      *         "titulo": "Expediente de Contratos"
      *       },
      *       "tipologia": {
@@ -379,7 +379,7 @@ class DocumentoApiController extends BaseApiController
             $q->where('nombre', 'LIKE', "%{$searchTerm}%")
               ->orWhere('descripcion', 'LIKE', "%{$searchTerm}%")
               ->orWhereHas('expediente', function ($eq) use ($searchTerm) {
-                  $eq->where('numero_expediente', 'LIKE', "%{$searchTerm}%")
+                  $eq->where('codigo', 'LIKE', "%{$searchTerm}%")
                     ->orWhere('titulo', 'LIKE', "%{$searchTerm}%");
               });
         });
@@ -409,7 +409,7 @@ class DocumentoApiController extends BaseApiController
         if ($documento->relationLoaded('expediente') && $documento->expediente) {
             $data['expediente'] = [
                 'id' => $documento->expediente->id,
-                'numero_expediente' => $documento->expediente->numero_expediente,
+                'codigo' => $documento->expediente->codigo,
                 'titulo' => $documento->expediente->titulo,
             ];
         }

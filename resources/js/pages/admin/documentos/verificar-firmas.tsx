@@ -24,7 +24,7 @@ interface Documento {
     nombre: string;
     codigo: string;
     expediente?: {
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
     };
     firmado_digitalmente: boolean;
@@ -218,7 +218,7 @@ export default function VerificarFirmas({ documento, firmas, todasValidas, total
                             {documento.expediente && (
                                 <div>
                                     <div className="text-sm font-medium text-gray-600">Expediente</div>
-                                    <div className="text-sm">{documento.expediente.numero_expediente}</div>
+                                    <div className="text-sm">{documento.expediente.codigo}</div>
                                 </div>
                             )}
                         </div>

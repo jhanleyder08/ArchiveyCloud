@@ -337,7 +337,7 @@ class IndiceElectronicoService
     private function extraerMetadatosExpediente(Expediente $expediente): array
     {
         return [
-            'numero_expediente' => $expediente->numero_expediente,
+            'codigo' => $expediente->codigo,
             'estado' => $expediente->estado,
             'prioridad' => $expediente->prioridad,
             'fecha_apertura' => $expediente->fecha_apertura?->toISOString(),

@@ -77,7 +77,7 @@ interface IndiceData {
 interface EntidadRelacionada {
     id: number;
     titulo?: string;
-    numero_expediente?: string;
+    codigo?: string;
     estado?: string;
     fecha_apertura?: string;
     fecha_cierre?: string;
@@ -531,7 +531,7 @@ export default function IndicesShow({ indice, entidadRelacionada }: Props) {
                                             {indice.tipo_entidad === 'expediente' ? 'Número de Expediente' : 'Título del Documento'}
                                         </Label>
                                         <p className="font-medium">
-                                            {entidadRelacionada.numero_expediente || entidadRelacionada.titulo}
+                                            {entidadRelacionada.codigo || entidadRelacionada.titulo}
                                         </p>
                                     </div>
 

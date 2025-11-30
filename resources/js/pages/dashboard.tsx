@@ -62,7 +62,7 @@ interface DashboardProps {
     }>;
     expedientes_recientes: Array<{
         id: number;
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
         fecha: string;
         estado: string;
@@ -364,7 +364,7 @@ export default function Dashboard({
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1">
-                                                    <div className="text-sm font-medium">{expediente.numero_expediente}</div>
+                                                    <div className="text-sm font-medium">{expediente.codigo}</div>
                                                     <div className="text-xs text-muted-foreground line-clamp-1">
                                                         {expediente.titulo}
                                                     </div>

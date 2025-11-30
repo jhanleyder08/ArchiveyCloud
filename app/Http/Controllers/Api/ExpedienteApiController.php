@@ -91,7 +91,7 @@ class ExpedienteApiController extends BaseApiController
     /**
      * Crear nuevo expediente
      * 
-     * @bodyParam numero_expediente string Número del expediente (opcional, se auto-genera)
+     * @bodyParam codigo string Número del expediente (opcional, se auto-genera)
      * @bodyParam titulo string required Título del expediente
      * @bodyParam descripcion string Descripción del expediente
      * @bodyParam serie_documental_id int required ID de la serie documental
@@ -104,7 +104,7 @@ class ExpedienteApiController extends BaseApiController
     {
         try {
             $validatedData = $this->validateRequest($request, [
-                'numero_expediente' => 'nullable|string|unique:expedientes,numero_expediente',
+                'codigo' => 'nullable|string|unique:expedientes,codigo',
                 'titulo' => 'required|string|max:255',
                 'descripcion' => 'nullable|string|max:2000',
                 'serie_documental_id' => 'required|exists:series_documentales,id',
@@ -118,13 +118,13 @@ class ExpedienteApiController extends BaseApiController
             DB::beginTransaction();
 
             // Generar número de expediente si no se proporciona
-            if (empty($validatedData['numero_expediente'])) {
-                $validatedData['numero_expediente'] = $this->generarNumeroExpediente();
+            if (empty($validatedData['codigo'])) {
+                $validatedData['codigo'] = $this->generarNumeroExpediente();
             }
 
             // Crear expediente
             $expediente = Expediente::create([
-                'numero_expediente' => $validatedData['numero_expediente'],
+                'codigo' => $validatedData['codigo'],
                 'titulo' => $validatedData['titulo'],
                 'descripcion' => $validatedData['descripcion'] ?? null,
                 'serie_documental_id' => $validatedData['serie_documental_id'],
@@ -425,7 +425,7 @@ class ExpedienteApiController extends BaseApiController
     protected function applySearchFilter($query, string $searchTerm)
     {
         return $query->where(function ($q) use ($searchTerm) {
-            $q->where('numero_expediente', 'LIKE', "%{$searchTerm}%")
+            $q->where('codigo', 'LIKE', "%{$searchTerm}%")
               ->orWhere('titulo', 'LIKE', "%{$searchTerm}%")
               ->orWhere('descripcion', 'LIKE', "%{$searchTerm}%")
               ->orWhereJsonContains('palabras_clave', $searchTerm);
@@ -439,7 +439,7 @@ class ExpedienteApiController extends BaseApiController
     {
         $data = [
             'id' => $expediente->id,
-            'numero_expediente' => $expediente->numero_expediente,
+            'codigo' => $expediente->codigo,
             'titulo' => $expediente->titulo,
             'descripcion' => $expediente->descripcion,
             'estado' => $expediente->estado,
@@ -511,12 +511,12 @@ class ExpedienteApiController extends BaseApiController
         $prefix = "EXP-{$year}-";
         
         // Buscar el último número del año
-        $lastExpediente = Expediente::where('numero_expediente', 'LIKE', $prefix . '%')
-            ->orderBy('numero_expediente', 'desc')
+        $lastExpediente = Expediente::where('codigo', 'LIKE', $prefix . '%')
+            ->orderBy('codigo', 'desc')
             ->first();
             
         if ($lastExpediente) {
-            $lastNumber = (int) str_replace($prefix, '', $lastExpediente->numero_expediente);
+            $lastNumber = (int) str_replace($prefix, '', $lastExpediente->codigo);
             $nextNumber = $lastNumber + 1;
         } else {
             $nextNumber = 1;
