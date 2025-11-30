@@ -265,7 +265,7 @@ export default function PlantillasEdit({ plantilla, series, categorias }: PagePr
                             <SelectValue placeholder="Seleccionar serie" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Sin serie específica</SelectItem>
+                            <SelectItem value="0">Sin serie específica</SelectItem>
                             {series.map((serie) => (
                               <SelectItem key={serie.id} value={serie.id.toString()}>
                                 {serie.codigo} - {serie.nombre}
@@ -286,7 +286,7 @@ export default function PlantillasEdit({ plantilla, series, categorias }: PagePr
                               <SelectValue placeholder="Seleccionar subserie" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Sin subserie</SelectItem>
+                              <SelectItem value="0">Sin subserie</SelectItem>
                               {selectedSerie.subseries.map((subserie) => (
                                 <SelectItem key={subserie.id} value={subserie.id.toString()}>
                                   {subserie.codigo} - {subserie.nombre}

@@ -374,18 +374,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
         
         // Sistema de Préstamos y Consultas - Protegido con permisos
-        Route::prefix('prestamos')->name('prestamos.')->middleware('permission:prestamos.ver')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'index'])->name('index');
-            Route::get('/{prestamo}', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'show'])->name('show');
-            Route::get('/buscar/elementos', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'buscar'])->name('buscar');
-            
-            Route::middleware('permission:prestamos.gestionar')->group(function () {
-                Route::get('/create', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'create'])->name('create');
-                Route::post('/', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'store'])->name('store');
-                Route::put('/{prestamo}/devolver', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'devolver'])->name('devolver');
-                Route::put('/{prestamo}/renovar', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'renovar'])->name('renovar');
-                Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminPrestamoController::class, 'reportes'])->name('reportes');
-            });
+        Route::prefix('prestamos')->name('prestamos.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\PrestamoController::class, 'index'])->name('index');
+            Route::get('/reportes', [App\Http\Controllers\Admin\PrestamoController::class, 'reportes'])->name('reportes');
+            Route::get('/reportes/pdf', [App\Http\Controllers\Admin\PrestamoController::class, 'exportarReportesPDF'])->name('reportes.pdf');
+            Route::get('/create', [App\Http\Controllers\Admin\PrestamoController::class, 'create'])->name('create');
+            Route::post('/', [App\Http\Controllers\Admin\PrestamoController::class, 'store'])->name('store');
+            Route::get('/{prestamo}', [App\Http\Controllers\Admin\PrestamoController::class, 'show'])->name('show');
+            Route::get('/{prestamo}/edit', [App\Http\Controllers\Admin\PrestamoController::class, 'edit'])->name('edit');
+            Route::put('/{prestamo}', [App\Http\Controllers\Admin\PrestamoController::class, 'update'])->name('update');
+            Route::delete('/{prestamo}', [App\Http\Controllers\Admin\PrestamoController::class, 'destroy'])->name('destroy');
+            Route::put('/{prestamo}/devolver', [App\Http\Controllers\Admin\PrestamoController::class, 'devolver'])->name('devolver');
+            Route::put('/{prestamo}/renovar', [App\Http\Controllers\Admin\PrestamoController::class, 'renovar'])->name('renovar');
         });
 
         // Sistema de Disposición Final - Protegido con permisos

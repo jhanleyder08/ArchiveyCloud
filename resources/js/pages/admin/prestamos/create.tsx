@@ -23,7 +23,7 @@ import {
 
 interface Expediente {
     id: number;
-    numero_expediente: string;
+    codigo: string;
     titulo: string;
     estado: string;
     ubicacion_fisica: string;
@@ -31,12 +31,12 @@ interface Expediente {
 
 interface Documento {
     id: number;
-    nombre: string;
+    titulo: string;
     expediente_id: number;
     ubicacion_fisica: string;
-    expediente: {
+    expediente?: {
         id: number;
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
     };
 }
@@ -58,10 +58,25 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
     const [busquedaExpediente, setBusquedaExpediente] = useState('');
     const [busquedaDocumento, setBusquedaDocumento] = useState('');
     const [busquedaUsuario, setBusquedaUsuario] = useState('');
-    
-    const [expedientesFiltrados, setExpedientesFiltrados] = useState<Expediente[]>([]);
-    const [documentosFiltrados, setDocumentosFiltrados] = useState<Documento[]>([]);
     const [usuariosFiltrados, setUsuariosFiltrados] = useState<Usuario[]>([]);
+    const [tipoSolicitante, setTipoSolicitante] = useState<'usuario' | 'externo'>('usuario');
+    const [solicitanteExterno, setSolicitanteExterno] = useState({
+        nombre_completo: '',
+        tipo_documento: '',
+        numero_documento: '',
+        email: '',
+        telefono: '',
+        cargo: '',
+        dependencia: ''
+    });
+
+    // Helper para actualizar solicitante externo
+    const updateSolicitanteExterno = (field: string, value: string) => {
+        setSolicitanteExterno(prev => ({ ...prev, [field]: value }));
+        setData(field as any, value);
+    };
+    const [documentosFiltrados, setDocumentosFiltrados] = useState<Documento[]>([]);
+    const [expedientesFiltrados, setExpedientesFiltrados] = useState<Expediente[]>([]);
 
     const { data, setData, post, processing, isDirty } = useForm({
         tipo_prestamo: 'expediente' as 'expediente' | 'documento',
@@ -71,13 +86,22 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
         motivo: '',
         fecha_devolucion_esperada: '',
         observaciones: '',
+        // Datos del solicitante externo
+        tipo_solicitante: 'usuario' as 'usuario' | 'externo',
+        nombre_completo: '',
+        tipo_documento: '',
+        numero_documento: '',
+        email: '',
+        telefono: '',
+        cargo: '',
+        dependencia: ''
     });
 
     // Filtrar expedientes
     useEffect(() => {
         if (busquedaExpediente) {
             const filtrados = expedientes.filter(exp => 
-                exp.numero_expediente.toLowerCase().includes(busquedaExpediente.toLowerCase()) ||
+                exp.codigo.toLowerCase().includes(busquedaExpediente.toLowerCase()) ||
                 exp.titulo.toLowerCase().includes(busquedaExpediente.toLowerCase())
             ).slice(0, 10);
             setExpedientesFiltrados(filtrados);
@@ -90,8 +114,8 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
     useEffect(() => {
         if (busquedaDocumento) {
             const filtrados = documentos.filter(doc => 
-                doc.nombre.toLowerCase().includes(busquedaDocumento.toLowerCase()) ||
-                doc.expediente.numero_expediente.toLowerCase().includes(busquedaDocumento.toLowerCase())
+                doc.titulo.toLowerCase().includes(busquedaDocumento.toLowerCase()) ||
+                (doc.expediente?.codigo || '').toLowerCase().includes(busquedaDocumento.toLowerCase())
             ).slice(0, 10);
             setDocumentosFiltrados(filtrados);
         } else {
@@ -120,7 +144,69 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/admin/prestamos');
+        
+        // Validar campos requeridos
+        if (!data.tipo_prestamo) {
+            alert('Debe seleccionar el tipo de préstamo');
+            return;
+        }
+        
+        if (data.tipo_prestamo === 'expediente' && !data.expediente_id) {
+            alert('Debe seleccionar un expediente');
+            return;
+        }
+        
+        if (data.tipo_prestamo === 'documento' && !data.documento_id) {
+            alert('Debe seleccionar un documento');
+            return;
+        }
+        
+        if (tipoSolicitante === 'usuario' && !data.solicitante_id) {
+            alert('Debe seleccionar un usuario registrado');
+            return;
+        }
+        
+        if (tipoSolicitante === 'externo') {
+            if (!solicitanteExterno.nombre_completo || !solicitanteExterno.tipo_documento || 
+                !solicitanteExterno.numero_documento || !solicitanteExterno.email) {
+                alert('Debe completar todos los campos requeridos del solicitante externo');
+                return;
+            }
+        }
+        
+        if (!data.motivo) {
+            alert('Debe ingresar el motivo del préstamo');
+            return;
+        }
+        
+        if (!data.fecha_devolucion_esperada) {
+            alert('Debe seleccionar la fecha de devolución esperada');
+            return;
+        }
+        
+        // Preparar datos para envío
+        const formData = {
+            ...data,
+            tipo_solicitante: tipoSolicitante,
+            fecha_prestamo: new Date().toISOString().split('T')[0]
+        };
+        
+        // console.log('Enviando datos:', formData);
+        
+        // Actualizar el formulario con todos los datos antes de enviar
+        Object.keys(formData).forEach(key => {
+            setData(key as any, formData[key as keyof typeof formData]);
+        });
+        
+        post('/admin/prestamos', {
+            onSuccess: () => {
+                // Préstamo creado exitosamente - redirigirá automáticamente
+            },
+            onError: (errors) => {
+                console.error('Errores de validación:', errors);
+                alert('Error al crear el préstamo. Revisa los campos requeridos.');
+            }
+        });
     };
 
     const expedienteSeleccionado = expedientes.find(exp => exp.id.toString() === data.expediente_id);
@@ -260,7 +346,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <h4 className="font-medium">{expediente.numero_expediente}</h4>
+                                                    <h4 className="font-medium">{expediente.codigo}</h4>
                                                     <p className="text-sm text-muted-foreground">{expediente.titulo}</p>
                                                     <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
                                                         <span>Estado: {expediente.estado}</span>
@@ -282,7 +368,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                                     <Alert>
                                         <CheckCircle className="h-4 w-4" />
                                         <AlertDescription>
-                                            <strong>Expediente seleccionado:</strong> {expedienteSeleccionado.numero_expediente} - {expedienteSeleccionado.titulo}
+                                            <strong>Expediente seleccionado:</strong> {expedienteSeleccionado.codigo} - {expedienteSeleccionado.titulo}
                                         </AlertDescription>
                                     </Alert>
                                 )}
@@ -320,9 +406,9 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <h4 className="font-medium">{documento.nombre}</h4>
+                                                    <h4 className="font-medium">{documento.titulo}</h4>
                                                     <p className="text-sm text-muted-foreground">
-                                                        Expediente: {documento.expediente.numero_expediente} - {documento.expediente.titulo}
+                                                        Expediente: {documento.expediente?.codigo || 'N/A'} - {documento.expediente?.titulo || 'Sin expediente'}
                                                     </p>
                                                     <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
                                                         <span className="flex items-center">
@@ -343,9 +429,9 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                                     <Alert>
                                         <CheckCircle className="h-4 w-4" />
                                         <AlertDescription>
-                                            <strong>Documento seleccionado:</strong> {documentoSeleccionado.nombre}
+                                            <strong>Documento seleccionado:</strong> {documentoSeleccionado.titulo}
                                             <br />
-                                            <strong>Expediente:</strong> {documentoSeleccionado.expediente.numero_expediente} - {documentoSeleccionado.expediente.titulo}
+                                            <strong>Expediente:</strong> {documentoSeleccionado.expediente?.codigo || 'N/A'} - {documentoSeleccionado.expediente?.titulo || 'Sin expediente'}
                                         </AlertDescription>
                                     </Alert>
                                 )}
@@ -368,54 +454,213 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                         <CardDescription>Datos del solicitante y detalles del préstamo</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {/* Solicitante */}
-                        <div className="space-y-2">
-                            <Label htmlFor="solicitante">Solicitante *</Label>
-                            <div className="relative">
-                                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar usuario por nombre o email..."
-                                    value={busquedaUsuario}
-                                    onChange={(e) => setBusquedaUsuario(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-                            
-                            {busquedaUsuario && (
-                                <div className="space-y-1 max-h-40 overflow-y-auto border rounded p-2">
-                                    {usuariosFiltrados.map((usuario) => (
-                                        <div
-                                            key={usuario.id}
-                                            className={`p-2 rounded cursor-pointer transition-colors ${
-                                                data.solicitante_id === usuario.id.toString()
-                                                    ? 'bg-primary/10 border border-primary'
-                                                    : 'hover:bg-muted'
-                                            }`}
-                                            onClick={() => {
-                                                setData('solicitante_id', usuario.id.toString());
-                                                setBusquedaUsuario(usuario.name);
-                                            }}
-                                        >
-                                            <p className="font-medium">{usuario.name}</p>
-                                            <p className="text-sm text-muted-foreground">{usuario.email}</p>
-                                        </div>
-                                    ))}
+                        {/* Tipo de Solicitante */}
+                        <div className="space-y-4">
+                            <Label>Tipo de Solicitante *</Label>
+                            <div className="flex space-x-4">
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="radio"
+                                        id="usuario_registrado"
+                                        name="tipo_solicitante"
+                                        checked={tipoSolicitante === 'usuario'}
+                                        onChange={() => {
+                                            setTipoSolicitante('usuario');
+                                            setData('tipo_solicitante', 'usuario');
+                                            setData('solicitante_id', '');
+                                        }}
+                                        className="h-4 w-4"
+                                    />
+                                    <Label htmlFor="usuario_registrado" className="cursor-pointer">
+                                        Usuario Registrado
+                                    </Label>
                                 </div>
-                            )}
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="radio"
+                                        id="solicitante_externo"
+                                        name="tipo_solicitante"
+                                        checked={tipoSolicitante === 'externo'}
+                                        onChange={() => {
+                                            setTipoSolicitante('externo');
+                                            setData('tipo_solicitante', 'externo');
+                                            setData('solicitante_id', '');
+                                        }}
+                                        className="h-4 w-4"
+                                    />
+                                    <Label htmlFor="solicitante_externo" className="cursor-pointer">
+                                        Solicitante Externo
+                                    </Label>
+                                </div>
+                            </div>
+                        </div>
 
-                            {solicitanteSeleccionado && (
+                        {/* Solicitante Usuario Registrado */}
+                        {tipoSolicitante === 'usuario' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="solicitante">Buscar Usuario Registrado *</Label>
+                                <div className="relative">
+                                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Buscar usuario por nombre o email..."
+                                        value={busquedaUsuario}
+                                        onChange={(e) => setBusquedaUsuario(e.target.value)}
+                                        className="pl-10"
+                                    />
+                                </div>
+                                
+                                {busquedaUsuario && (
+                                    <div className="space-y-1 max-h-40 overflow-y-auto border rounded p-2">
+                                        {usuariosFiltrados.map((usuario) => (
+                                            <div
+                                                key={usuario.id}
+                                                className={`p-2 rounded cursor-pointer transition-colors ${
+                                                    data.solicitante_id === usuario.id.toString()
+                                                        ? 'bg-primary/10 border border-primary'
+                                                        : 'hover:bg-muted'
+                                                }`}
+                                                onClick={() => {
+                                                    setData('solicitante_id', usuario.id.toString());
+                                                    setBusquedaUsuario(usuario.name);
+                                                }}
+                                            >
+                                                <p className="font-medium">{usuario.name}</p>
+                                                <p className="text-sm text-muted-foreground">{usuario.email}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {solicitanteSeleccionado && (
+                                    <Alert>
+                                        <CheckCircle className="h-4 w-4" />
+                                        <AlertDescription>
+                                            <strong>Solicitante:</strong> {solicitanteSeleccionado.name} ({solicitanteSeleccionado.email})
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+                                
+                                {errors.solicitante_id && (
+                                    <p className="text-sm text-red-500">{errors.solicitante_id}</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Solicitante Externo */}
+                        {tipoSolicitante === 'externo' && (
+                            <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+                                <h4 className="font-medium text-gray-900">Datos del Solicitante Externo</h4>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Nombre Completo */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="nombre_completo">Nombre Completo *</Label>
+                                        <Input
+                                            id="nombre_completo"
+                                            placeholder="Nombre completo del solicitante"
+                                            value={solicitanteExterno.nombre_completo}
+                                            onChange={(e) => updateSolicitanteExterno('nombre_completo', e.target.value)}
+                                            className={errors.nombre_completo ? 'border-red-500' : ''}
+                                        />
+                                        {errors.nombre_completo && (
+                                            <p className="text-sm text-red-500">{errors.nombre_completo}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Tipo de Documento */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="tipo_documento">Tipo de Documento *</Label>
+                                        <select
+                                            id="tipo_documento"
+                                            value={solicitanteExterno.tipo_documento}
+                                            onChange={(e) => updateSolicitanteExterno('tipo_documento', e.target.value)}
+                                            className={`w-full px-3 py-2 border rounded-md ${errors.tipo_documento ? 'border-red-500' : 'border-gray-300'}`}
+                                        >
+                                            <option value="">Seleccionar tipo</option>
+                                            <option value="CC">Cédula de Ciudadanía</option>
+                                            <option value="CE">Cédula de Extranjería</option>
+                                            <option value="TI">Tarjeta de Identidad</option>
+                                            <option value="PP">Pasaporte</option>
+                                            <option value="NIT">NIT</option>
+                                        </select>
+                                        {errors.tipo_documento && (
+                                            <p className="text-sm text-red-500">{errors.tipo_documento}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Número de Documento */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="numero_documento">Número de Documento *</Label>
+                                        <Input
+                                            id="numero_documento"
+                                            placeholder="Número de identificación"
+                                            value={solicitanteExterno.numero_documento}
+                                            onChange={(e) => updateSolicitanteExterno('numero_documento', e.target.value)}
+                                            className={errors.numero_documento ? 'border-red-500' : ''}
+                                        />
+                                        {errors.numero_documento && (
+                                            <p className="text-sm text-red-500">{errors.numero_documento}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Email */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="email_externo">Email *</Label>
+                                        <Input
+                                            id="email_externo"
+                                            type="email"
+                                            placeholder="correo@ejemplo.com"
+                                            value={solicitanteExterno.email}
+                                            onChange={(e) => updateSolicitanteExterno('email', e.target.value)}
+                                            className={errors.email ? 'border-red-500' : ''}
+                                        />
+                                        {errors.email && (
+                                            <p className="text-sm text-red-500">{errors.email}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Teléfono */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="telefono">Teléfono</Label>
+                                        <Input
+                                            id="telefono"
+                                            placeholder="Número de teléfono"
+                                            value={solicitanteExterno.telefono}
+                                            onChange={(e) => updateSolicitanteExterno('telefono', e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Cargo */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="cargo">Cargo</Label>
+                                        <Input
+                                            id="cargo"
+                                            placeholder="Cargo o posición"
+                                            value={solicitanteExterno.cargo}
+                                            onChange={(e) => updateSolicitanteExterno('cargo', e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Dependencia */}
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor="dependencia">Dependencia/Institución</Label>
+                                        <Input
+                                            id="dependencia"
+                                            placeholder="Dependencia o institución de procedencia"
+                                            value={solicitanteExterno.dependencia}
+                                            onChange={(e) => updateSolicitanteExterno('dependencia', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
                                 <Alert>
-                                    <CheckCircle className="h-4 w-4" />
+                                    <AlertCircle className="h-4 w-4" />
                                     <AlertDescription>
-                                        <strong>Solicitante:</strong> {solicitanteSeleccionado.name} ({solicitanteSeleccionado.email})
+                                        <strong>Nota:</strong> Los datos del solicitante externo se guardarán como parte del registro del préstamo para fines de evidencia y trazabilidad.
                                     </AlertDescription>
                                 </Alert>
-                            )}
-                            
-                            {errors.solicitante_id && (
-                                <p className="text-sm text-red-500">{errors.solicitante_id}</p>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Motivo */}
@@ -484,8 +729,8 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
                                     </Badge>
                                     <span className="font-medium">
                                         {expedienteSeleccionado 
-                                            ? `${expedienteSeleccionado.numero_expediente} - ${expedienteSeleccionado.titulo}`
-                                            : documentoSeleccionado?.nombre
+                                            ? `${expedienteSeleccionado.codigo} - ${expedienteSeleccionado.titulo}`
+                                            : documentoSeleccionado?.titulo
                                         }
                                     </span>
                                 </div>

@@ -259,9 +259,6 @@ const DocumentoShow = ({ documento, puedeVisualizar }: Props) => {
                                             <Button
                                                 onClick={() => {
                                                     const url = documento.url_directa || documento.url_descarga;
-                                                    console.log('URL directa:', documento.url_directa);
-                                                    console.log('URL descarga:', documento.url_descarga);
-                                                    console.log('URL final:', url);
                                                     if (url) {
                                                         window.open(url, '_blank');
                                                     } else {

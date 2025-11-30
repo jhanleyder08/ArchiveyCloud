@@ -40,21 +40,31 @@ import {
 interface Prestamo {
     id: number;
     tipo_prestamo: 'expediente' | 'documento';
+    tipo_solicitante: 'usuario' | 'externo';
     expediente?: {
-        numero_expediente: string;
+        codigo: string;
         titulo: string;
         ubicacion_fisica: string;
     };
     documento?: {
-        nombre: string;
-        expediente: {
-            numero_expediente: string;
+        titulo: string;
+        expediente?: {
+            codigo: string;
             titulo: string;
         };
     };
-    solicitante: {
+    solicitante?: {
         name: string;
         email: string;
+    };
+    datos_solicitante_externo?: {
+        nombre_completo: string;
+        tipo_documento: string;
+        numero_documento: string;
+        email: string;
+        telefono?: string;
+        cargo?: string;
+        dependencia?: string;
     };
     prestamista: {
         name: string;
@@ -68,6 +78,9 @@ interface Prestamo {
     renovaciones: number;
     dias_restantes?: number;
     esta_vencido?: boolean;
+    // Campos calculados del backend
+    nombre_solicitante?: string;
+    contacto_solicitante?: string;
 }
 
 interface ProximoVencer {
@@ -167,12 +180,32 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
 
     const obtenerItemPrestado = (prestamo: Prestamo) => {
         if (prestamo.tipo_prestamo === 'expediente' && prestamo.expediente) {
-            return `${prestamo.expediente.numero_expediente} - ${prestamo.expediente.titulo}`;
+            return `${prestamo.expediente.codigo} - ${prestamo.expediente.titulo}`;
         }
         if (prestamo.tipo_prestamo === 'documento' && prestamo.documento) {
-            return prestamo.documento.nombre;
+            return prestamo.documento.titulo;
         }
         return 'Item no disponible';
+    };
+
+    const obtenerNombreSolicitante = (prestamo: Prestamo) => {
+        if (prestamo.tipo_solicitante === 'usuario' && prestamo.solicitante) {
+            return prestamo.solicitante.name;
+        }
+        if (prestamo.tipo_solicitante === 'externo' && prestamo.datos_solicitante_externo) {
+            return prestamo.datos_solicitante_externo.nombre_completo;
+        }
+        return prestamo.nombre_solicitante || 'Solicitante no disponible';
+    };
+
+    const obtenerContactoSolicitante = (prestamo: Prestamo) => {
+        if (prestamo.tipo_solicitante === 'usuario' && prestamo.solicitante) {
+            return prestamo.solicitante.email;
+        }
+        if (prestamo.tipo_solicitante === 'externo' && prestamo.datos_solicitante_externo) {
+            return prestamo.datos_solicitante_externo.email;
+        }
+        return prestamo.contacto_solicitante || 'No disponible';
     };
 
     return (
@@ -381,8 +414,13 @@ export default function PrestamosIndex({ prestamos, estadisticas, proximosVencer
                                             </td>
                                             <td className="py-4 px-6">
                                                 <div>
-                                                    <p className="text-sm font-medium text-gray-900">{prestamo.solicitante?.name || 'Usuario no disponible'}</p>
-                                                    <p className="text-xs text-gray-500">{prestamo.solicitante?.email || 'Email no disponible'}</p>
+                                                    <p className="text-sm font-medium text-gray-900">{obtenerNombreSolicitante(prestamo)}</p>
+                                                    <p className="text-xs text-gray-500">{obtenerContactoSolicitante(prestamo)}</p>
+                                                    {prestamo.tipo_solicitante === 'externo' && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 mt-1">
+                                                            Externo
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 text-sm text-gray-600">

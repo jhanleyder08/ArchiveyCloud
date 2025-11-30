@@ -14,6 +14,7 @@ class Prestamo extends Model
         'tipo_prestamo',
         'expediente_id',
         'documento_id',
+        'tipo_solicitante',
         'solicitante_id',
         'prestamista_id',
         'motivo',
@@ -25,6 +26,7 @@ class Prestamo extends Model
         'estado',
         'estado_devolucion',
         'renovaciones',
+        'datos_solicitante_externo',
     ];
 
     protected $casts = [
@@ -32,6 +34,7 @@ class Prestamo extends Model
         'fecha_devolucion_esperada' => 'datetime',
         'fecha_devolucion_real' => 'datetime',
         'renovaciones' => 'integer',
+        'datos_solicitante_externo' => 'array',
     ];
 
     // Relaciones
@@ -59,14 +62,40 @@ class Prestamo extends Model
     public function getItemPrestadoAttribute()
     {
         if ($this->tipo_prestamo === 'expediente' && $this->expediente) {
-            return $this->expediente->numero_expediente . ' - ' . $this->expediente->titulo;
+            return $this->expediente->codigo . ' - ' . $this->expediente->titulo;
         }
 
         if ($this->tipo_prestamo === 'documento' && $this->documento) {
-            return $this->documento->nombre;
+            return $this->documento->titulo;
         }
 
         return 'Item no disponible';
+    }
+
+    public function getNombreSolicitanteAttribute()
+    {
+        if ($this->tipo_solicitante === 'usuario' && $this->solicitante) {
+            return $this->solicitante->name;
+        }
+
+        if ($this->tipo_solicitante === 'externo' && $this->datos_solicitante_externo) {
+            return $this->datos_solicitante_externo['nombre_completo'] ?? 'Solicitante externo';
+        }
+
+        return 'Solicitante no disponible';
+    }
+
+    public function getContactoSolicitanteAttribute()
+    {
+        if ($this->tipo_solicitante === 'usuario' && $this->solicitante) {
+            return $this->solicitante->email;
+        }
+
+        if ($this->tipo_solicitante === 'externo' && $this->datos_solicitante_externo) {
+            return $this->datos_solicitante_externo['email'] ?? 'No disponible';
+        }
+
+        return 'No disponible';
     }
 
     public function getDiasPrestamoAttribute()
