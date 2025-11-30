@@ -6,6 +6,7 @@ use App\Models\CCD;
 use App\Models\CCDNivel;
 use App\Services\CCDService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -151,8 +152,26 @@ class CCDController extends Controller
      */
     public function edit(CCD $ccd): Response
     {
+        $opciones = [
+            'estados' => [
+                ['value' => 'borrador', 'label' => 'Borrador'],
+                ['value' => 'activo', 'label' => 'Activo'],
+                ['value' => 'inactivo', 'label' => 'Inactivo'],
+                ['value' => 'archivado', 'label' => 'Archivado'],
+            ],
+            'niveles' => [
+                ['value' => '1', 'label' => 'Nivel 1 - Fondo'],
+                ['value' => '2', 'label' => 'Nivel 2 - Sección'],
+                ['value' => '3', 'label' => 'Nivel 3 - Subsección'],
+                ['value' => '4', 'label' => 'Nivel 4 - Serie'],
+                ['value' => '5', 'label' => 'Nivel 5 - Subserie'],
+            ],
+            'padres_disponibles' => [],
+        ];
+
         return Inertia::render('admin/ccd/edit', [
             'ccd' => $ccd,
+            'opciones' => $opciones,
         ]);
     }
 
@@ -271,17 +290,13 @@ class CCDController extends Controller
         try {
             $nivel = $this->ccdService->agregarNivel($ccd, $validated);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Nivel agregado exitosamente',
+            return back()->with([
+                'success' => 'Nivel agregado exitosamente',
                 'nivel' => $nivel->load('padre'),
             ]);
         } catch (\Exception $e) {
             Log::error('Error al agregar nivel', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al agregar nivel: ' . $e->getMessage(),
-            ], 500);
+            return back()->with('error', 'Error al agregar nivel: ' . $e->getMessage());
         }
     }
 
@@ -304,17 +319,13 @@ class CCDController extends Controller
             $nivel->update($validated);
             $nivel->actualizarRuta();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Nivel actualizado exitosamente',
+            return back()->with([
+                'success' => 'Nivel actualizado exitosamente',
                 'nivel' => $nivel->fresh()->load('padre'),
             ]);
         } catch (\Exception $e) {
             Log::error('Error al actualizar nivel', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al actualizar nivel: ' . $e->getMessage(),
-            ], 500);
+            return back()->with('error', 'Error al actualizar nivel: ' . $e->getMessage());
         }
     }
 
@@ -325,24 +336,15 @@ class CCDController extends Controller
     {
         try {
             if (!$nivel->esHoja()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se puede eliminar un nivel que tiene hijos',
-                ], 400);
+                return back()->with('error', 'No se puede eliminar un nivel que tiene hijos');
             }
 
             $nivel->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Nivel eliminado exitosamente',
-            ]);
+            return back()->with('success', 'Nivel eliminado exitosamente');
         } catch (\Exception $e) {
             Log::error('Error al eliminar nivel', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al eliminar nivel: ' . $e->getMessage(),
-            ], 500);
+            return back()->with('error', 'Error al eliminar nivel: ' . $e->getMessage());
         }
     }
 
@@ -362,43 +364,51 @@ class CCDController extends Controller
                 : null;
 
             if (!$nivel->moverA($nuevoPadre)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se puede mover el nivel a esa posición',
-                ], 400);
+                return back()->with('error', 'No se puede mover el nivel a esa posición');
             }
 
             $nivel->orden = $validated['orden'];
             $nivel->save();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Nivel movido exitosamente',
+            return back()->with([
+                'success' => 'Nivel movido exitosamente',
                 'nivel' => $nivel->fresh()->load('padre'),
             ]);
         } catch (\Exception $e) {
             Log::error('Error al mover nivel', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al mover nivel: ' . $e->getMessage(),
-            ], 500);
+            return back()->with('error', 'Error al mover nivel: ' . $e->getMessage());
         }
     }
 
     /**
      * Obtener estructura jerárquica completa
      */
-    public function getEstructura(CCD $ccd)
+    public function getEstructura(CCD $ccd, Request $request)
     {
         try {
             $estructura = $this->ccdService->obtenerEstructuraJerarquica($ccd);
 
+            // Si es una petición Inertia, usar back()
+            if ($request->hasHeader('X-Inertia')) {
+                return back()->with([
+                    'success' => 'Estructura obtenida exitosamente',
+                    'estructura' => $estructura,
+                ]);
+            }
+
+            // Si es AJAX/API, devolver JSON
             return response()->json([
                 'success' => true,
                 'estructura' => $estructura,
             ]);
         } catch (\Exception $e) {
             Log::error('Error al obtener estructura', ['error' => $e->getMessage()]);
+            
+            // Si es una petición Inertia, usar back()
+            if ($request->hasHeader('X-Inertia')) {
+                return back()->with('error', 'Error al obtener estructura: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener estructura: ' . $e->getMessage(),
@@ -407,26 +417,50 @@ class CCDController extends Controller
     }
 
     /**
-     * Eliminar CCD
+     * Eliminar CCD (con eliminación en cascada de niveles)
      */
     public function destroy(CCD $ccd)
     {
-        if ($ccd->estado !== 'borrador') {
-            return back()->with('error', 'Solo se pueden eliminar CCDs en estado borrador');
-        }
-
-        if ($ccd->niveles()->count() > 0) {
-            return back()->with('error', 'No se puede eliminar un CCD que tiene niveles asociados');
-        }
-
         try {
+            DB::beginTransaction();
+
+            // Contar niveles antes de eliminar
+            $nivelesCount = $ccd->niveles()->count();
+            
+            // Eliminar todos los niveles asociados (la migración ya tiene onDelete cascade)
+            // Pero por seguridad, los eliminamos explícitamente
+            $ccd->niveles()->delete();
+            
+            // Eliminar vocabularios asociados
+            $ccd->vocabularios()->delete();
+            
+            // Eliminar versiones
+            $ccd->versiones()->delete();
+            
+            // Eliminar importaciones/exportaciones
+            $ccd->importaciones()->delete();
+            
+            // Finalmente eliminar el CCD
             $ccd->delete();
+
+            DB::commit();
+
+            $mensaje = $nivelesCount > 0 
+                ? "CCD y {$nivelesCount} nivel(es) asociado(s) eliminados exitosamente"
+                : 'CCD eliminado exitosamente';
 
             return redirect()
                 ->route('admin.ccd.index')
-                ->with('success', 'CCD eliminado exitosamente');
+                ->with('success', $mensaje);
+                
         } catch (\Exception $e) {
-            Log::error('Error al eliminar CCD', ['error' => $e->getMessage()]);
+            DB::rollBack();
+            Log::error('Error al eliminar CCD', [
+                'ccd_id' => $ccd->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return back()->with('error', 'Error al eliminar CCD: ' . $e->getMessage());
         }
     }

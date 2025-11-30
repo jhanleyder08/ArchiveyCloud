@@ -273,8 +273,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Gestión de Expedientes - Protegido con permisos
         Route::prefix('expedientes')->name('expedientes.')->middleware('permission:expedientes.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\ExpedienteController::class, 'index'])->name('index');
-            Route::get('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'show'])->name('show');
             
+            // IMPORTANTE: Rutas estáticas ANTES de rutas con parámetros
             Route::middleware('permission:expedientes.crear')->group(function () {
                 Route::get('/create', [App\Http\Controllers\ExpedienteController::class, 'create'])->name('create');
                 Route::post('/', [App\Http\Controllers\ExpedienteController::class, 'store'])->name('store');
@@ -292,6 +292,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::post('/{expediente}/transferencia', [App\Http\Controllers\ExpedienteController::class, 'crearTransferencia'])->name('crearTransferencia');
                 Route::get('/{expediente}/verificar-integridad', [App\Http\Controllers\ExpedienteController::class, 'verificarIntegridad'])->name('verificarIntegridad');
             });
+            
+            // Ruta show al final (después de rutas estáticas)
+            Route::get('/{expediente}', [App\Http\Controllers\ExpedienteController::class, 'show'])->name('show');
         });
         
         // Reportes y estadísticas - Protegido con permisos

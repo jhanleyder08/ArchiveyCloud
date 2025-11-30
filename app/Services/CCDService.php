@@ -48,6 +48,28 @@ class CCDService
         }
     }
 
+    public function actualizar(CCD $ccd, array $datos, User $usuario): CCD
+    {
+        DB::beginTransaction();
+        try {
+            // Actualizar los campos del CCD
+            $ccd->fill($datos);
+            $ccd->updated_by = $usuario->id;
+            $ccd->save();
+            
+            DB::commit();
+            return $ccd;
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error al actualizar CCD', [
+                'ccd_id' => $ccd->id,
+                'error' => $e->getMessage(),
+                'datos' => $datos
+            ]);
+            throw $e;
+        }
+    }
+
     public function obtenerEstructuraJerarquica(CCD $ccd): array
     {
         return $ccd->getEstructuraJerarquica();

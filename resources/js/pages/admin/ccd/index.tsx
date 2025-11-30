@@ -24,6 +24,7 @@ import {
     Save
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInertiaActions } from '@/hooks/useInertiaActions';
 
 interface CCD {
     id: number;
@@ -74,6 +75,11 @@ interface CCDIndexProps {
 }
 
 export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDIndexProps) {
+    // Hook para acciones sin recarga de página
+    const actions = useInertiaActions({
+        only: ['ccds', 'estadisticas'], // Solo recarga estos datos
+    });
+    
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [filterEstado, setFilterEstado] = useState(filters?.estado || 'all');
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -196,12 +202,11 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                     return;
                                 }
 
-                                post('/admin/ccd', {
+                                actions.create('/admin/ccd', createForm, {
+                                    successMessage: 'CCD creado exitosamente',
                                     onSuccess: () => {
                                         setShowCreateModal(false);
                                         reset();
-                                        toast.success('CCD creado exitosamente');
-                                        // La redirección del servidor actualizará la lista automáticamente
                                     },
                                     onError: (errors) => {
                                         console.error('Error al crear CCD:', errors);
@@ -500,6 +505,30 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                                             <Edit className="h-4 w-4" />
                                                         </button>
                                                     </Link>
+                                                    <button 
+                                                        onClick={() => {
+                                                            const nivelesCount = ccd.niveles_count || 0;
+                                                            const nivelesInfo = nivelesCount > 0 
+                                                                ? `\n\n⚠️ ADVERTENCIA: Este CCD tiene ${nivelesCount} nivel(es) asociado(s) que también serán eliminados.` 
+                                                                : '';
+                                                            
+                                                            const estadoWarning = ccd.estado !== 'borrador'
+                                                                ? `\n\n⚠️ Este CCD está en estado "${ccd.estado}". Se recomienda solo eliminar CCDs en borrador.`
+                                                                : '';
+                                                            
+                                                            actions.destroy(`/admin/ccd/${ccd.id}`, {
+                                                                confirmMessage: `¿Está seguro de eliminar el CCD "${ccd.nombre}"?${nivelesInfo}${estadoWarning}\n\nEsta acción NO se puede deshacer.`,
+                                                                successMessage: nivelesCount > 0 
+                                                                    ? `CCD y ${nivelesCount} nivel(es) eliminados exitosamente`
+                                                                    : 'CCD eliminado exitosamente',
+                                                                errorMessage: 'Error al eliminar el CCD',
+                                                            });
+                                                        }}
+                                                        className="p-2 rounded-md text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                                                        title="Eliminar CCD"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>

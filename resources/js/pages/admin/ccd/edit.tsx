@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,32 +12,26 @@ import {
     ArrowLeft, 
     Save, 
     FolderTree,
-    AlertTriangle,
     Info
 } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface CCDOption {
-    id: number;
-    codigo: string;
-    nombre: string;
-    nivel: number;
-}
+import { useInertiaActions } from '@/hooks/useInertiaActions';
 
 interface CCD {
     id: number;
     codigo: string;
     nombre: string;
     descripcion?: string;
-    entidad: string;
-    dependencia?: string;
-    nivel: number;
-    padre_id?: number;
-    orden_jerarquico: number;
-    estado: string;
-    activo: boolean;
-    notas?: string;
-    alcance?: string;
+    version: string;
+    estado: 'borrador' | 'activo' | 'inactivo' | 'archivado';
+    fecha_aprobacion?: string;
+    fecha_vigencia_inicio?: string;
+    fecha_vigencia_fin?: string;
+    aprobado_por?: number;
+    vocabulario_controlado?: any;
+    metadata?: any;
+    created_by: number;
+    updated_by?: number;
     created_at: string;
     updated_at: string;
 }
@@ -46,8 +40,6 @@ interface EditCCDProps {
     ccd: CCD;
     opciones: {
         estados: { value: string; label: string; }[];
-        niveles: { value: string; label: string; }[];
-        padres_disponibles: CCDOption[];
     };
 }
 
@@ -55,33 +47,28 @@ interface FormData {
     codigo: string;
     nombre: string;
     descripcion: string;
-    entidad: string;
-    dependencia: string;
-    nivel: number;
-    padre_id: string;
-    orden_jerarquico: number;
+    version: string;
     estado: string;
-    activo: boolean;
-    notas: string;
-    alcance: string;
+    fecha_vigencia_inicio: string;
+    fecha_vigencia_fin: string;
 }
 
 export default function EditCCD({ ccd, opciones }: EditCCDProps) {
+    // Hook para acciones sin recarga de página
+    const actions = useInertiaActions({
+        only: ['ccd'], // Solo recarga el CCD actualizado
+    });
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const { data, setData, put, processing, errors, reset } = useForm<FormData>({
+    const { data, setData, processing, errors } = useForm<FormData>({
         codigo: ccd.codigo || '',
         nombre: ccd.nombre || '',
         descripcion: ccd.descripcion || '',
-        entidad: ccd.entidad || '',
-        dependencia: ccd.dependencia || '',
-        nivel: ccd.nivel || 1,
-        padre_id: ccd.padre_id?.toString() || '',
-        orden_jerarquico: ccd.orden_jerarquico || 1,
+        version: ccd.version || '1.0',
         estado: ccd.estado || 'borrador',
-        activo: ccd.activo ?? true,
-        notas: ccd.notas || '',
-        alcance: ccd.alcance || '',
+        fecha_vigencia_inicio: ccd.fecha_vigencia_inicio ? ccd.fecha_vigencia_inicio.split('T')[0] : '',
+        fecha_vigencia_fin: ccd.fecha_vigencia_fin ? ccd.fecha_vigencia_fin.split('T')[0] : '',
     });
 
     const breadcrumbItems = [
@@ -95,24 +82,27 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
         e.preventDefault();
         setIsSubmitting(true);
 
-        put(`/admin/ccd/${ccd.id}`, {
+        actions.update(`/admin/ccd/${ccd.id}`, data, {
+            successMessage: 'Cuadro de Clasificación Documental actualizado exitosamente',
+            errorMessage: 'Error al actualizar el CCD. Revisa los campos marcados.',
             onSuccess: () => {
-                toast.success('Cuadro de Clasificación Documental actualizado exitosamente');
-                router.visit('/admin/ccd');
+                setIsSubmitting(false);
+                // Opcional: navegar de vuelta a la lista
+                actions.visit('/admin/ccd');
             },
             onError: (errors) => {
-                toast.error('Error al actualizar el CCD. Revisa los campos marcados.');
-            },
-            onFinish: () => {
                 setIsSubmitting(false);
+                console.error('Errores de validación:', errors);
             }
         });
     };
 
-    // Filtrar padres disponibles según el nivel seleccionado (excluyendo el elemento actual)
-    const padresDisponibles = opciones.padres_disponibles?.filter(padre => 
-        padre.nivel < data.nivel && padre.id !== ccd.id
-    ) || [];
+    const estadosOpciones = opciones?.estados || [
+        { value: 'borrador', label: 'Borrador' },
+        { value: 'activo', label: 'Activo' },
+        { value: 'inactivo', label: 'Inactivo' },
+        { value: 'archivado', label: 'Archivado' },
+    ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbItems}>
@@ -135,7 +125,7 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                     <Button
                         type="button"
                         variant="outline"
-                        onClick={() => router.visit('/admin/ccd')}
+                        onClick={() => actions.visit('/admin/ccd')}
                         className="flex items-center gap-2"
                     >
                         <ArrowLeft className="h-4 w-4" />
@@ -147,8 +137,7 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                 <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                        Modificando elemento del Cuadro de Clasificación Documental. Los cambios se aplicarán 
-                        inmediatamente y pueden afectar la estructura jerárquica.
+                        Modificando información del Cuadro de Clasificación Documental. Los cambios se aplicarán inmediatamente.
                     </AlertDescription>
                 </Alert>
 
@@ -167,7 +156,7 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                                         type="text"
                                         value={data.codigo}
                                         onChange={(e) => setData('codigo', e.target.value)}
-                                        placeholder="Ej: F.01, S.01.01"
+                                        placeholder="Ej: CCD-001"
                                         className={errors.codigo ? 'border-red-500' : ''}
                                         required
                                     />
@@ -177,27 +166,18 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="nivel">Nivel Jerárquico *</Label>
-                                    <Select 
-                                        value={data.nivel.toString()} 
-                                        onValueChange={(value) => {
-                                            setData('nivel', parseInt(value));
-                                            setData('padre_id', '');
-                                        }}
-                                    >
-                                        <SelectTrigger id="nivel" className={errors.nivel ? 'border-red-500' : ''}>
-                                            <SelectValue placeholder="Seleccionar nivel" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {opciones.niveles.map((nivel) => (
-                                                <SelectItem key={nivel.value} value={nivel.value}>
-                                                    {nivel.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.nivel && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.nivel}</p>
+                                    <Label htmlFor="version">Versión *</Label>
+                                    <Input
+                                        id="version"
+                                        type="text"
+                                        value={data.version}
+                                        onChange={(e) => setData('version', e.target.value)}
+                                        placeholder="Ej: 1.0"
+                                        className={errors.version ? 'border-red-500' : ''}
+                                        required
+                                    />
+                                    {errors.version && (
+                                        <p className="text-sm text-red-600 mt-1">{errors.version}</p>
                                     )}
                                 </div>
                             </div>
@@ -209,7 +189,7 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                                     type="text"
                                     value={data.nombre}
                                     onChange={(e) => setData('nombre', e.target.value)}
-                                    placeholder="Nombre descriptivo del CCD"
+                                    placeholder="Nombre del CCD"
                                     className={errors.nombre ? 'border-red-500' : ''}
                                     required
                                 />
@@ -224,116 +204,16 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                                     id="descripcion"
                                     value={data.descripcion}
                                     onChange={(e) => setData('descripcion', e.target.value)}
-                                    placeholder="Descripción detallada del elemento"
-                                    rows={3}
+                                    placeholder="Descripción del CCD"
                                     className={errors.descripcion ? 'border-red-500' : ''}
+                                    rows={3}
                                 />
                                 {errors.descripcion && (
                                     <p className="text-sm text-red-600 mt-1">{errors.descripcion}</p>
                                 )}
                             </div>
-                        </CardContent>
-                    </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Información Organizacional</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="entidad">Entidad *</Label>
-                                    <Input
-                                        id="entidad"
-                                        type="text"
-                                        value={data.entidad}
-                                        onChange={(e) => setData('entidad', e.target.value)}
-                                        placeholder="Nombre de la entidad"
-                                        className={errors.entidad ? 'border-red-500' : ''}
-                                        required
-                                    />
-                                    {errors.entidad && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.entidad}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="dependencia">Dependencia</Label>
-                                    <Input
-                                        id="dependencia"
-                                        type="text"
-                                        value={data.dependencia}
-                                        onChange={(e) => setData('dependencia', e.target.value)}
-                                        placeholder="Dependencia responsable"
-                                        className={errors.dependencia ? 'border-red-500' : ''}
-                                    />
-                                    {errors.dependencia && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.dependencia}</p>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Estructura Jerárquica</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="padre_id">Elemento Padre</Label>
-                                    <Select 
-                                        value={data.padre_id} 
-                                        onValueChange={(value) => setData('padre_id', value)}
-                                    >
-                                        <SelectTrigger id="padre_id" className={errors.padre_id ? 'border-red-500' : ''}>
-                                            <SelectValue placeholder="Sin elemento padre (raíz)" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="null">Sin elemento padre (raíz)</SelectItem>
-                                            {padresDisponibles.map((padre) => (
-                                                <SelectItem key={padre.id} value={padre.id.toString()}>
-                                                    {padre.codigo} - {padre.nombre}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.padre_id && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.padre_id}</p>
-                                    )}
-                                    {data.nivel > 1 && padresDisponibles.length === 0 && (
-                                        <p className="text-sm text-amber-600 mt-1">
-                                            <AlertTriangle className="h-4 w-4 inline mr-1" />
-                                            No hay elementos padre disponibles para este nivel
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="orden_jerarquico">Orden Jerárquico</Label>
-                                    <Input
-                                        id="orden_jerarquico"
-                                        type="number"
-                                        min="1"
-                                        value={data.orden_jerarquico}
-                                        onChange={(e) => setData('orden_jerarquico', parseInt(e.target.value) || 1)}
-                                        className={errors.orden_jerarquico ? 'border-red-500' : ''}
-                                    />
-                                    {errors.orden_jerarquico && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.orden_jerarquico}</p>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Configuración y Notas</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <Label htmlFor="estado">Estado *</Label>
                                     <Select 
@@ -341,10 +221,10 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                                         onValueChange={(value) => setData('estado', value)}
                                     >
                                         <SelectTrigger id="estado" className={errors.estado ? 'border-red-500' : ''}>
-                                            <SelectValue />
+                                            <SelectValue placeholder="Seleccionar estado" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {opciones.estados.map((estado) => (
+                                            {estadosOpciones.map((estado) => (
                                                 <SelectItem key={estado.value} value={estado.value}>
                                                     {estado.label}
                                                 </SelectItem>
@@ -356,86 +236,55 @@ export default function EditCCD({ ccd, opciones }: EditCCDProps) {
                                     )}
                                 </div>
 
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        id="activo"
-                                        type="checkbox"
-                                        checked={data.activo}
-                                        onChange={(e) => setData('activo', e.target.checked)}
-                                        className="rounded border-gray-300"
+                                <div>
+                                    <Label htmlFor="fecha_vigencia_inicio">Fecha Vigencia Inicio</Label>
+                                    <Input
+                                        id="fecha_vigencia_inicio"
+                                        type="date"
+                                        value={data.fecha_vigencia_inicio}
+                                        onChange={(e) => setData('fecha_vigencia_inicio', e.target.value)}
+                                        className={errors.fecha_vigencia_inicio ? 'border-red-500' : ''}
                                     />
-                                    <Label htmlFor="activo">Elemento Activo</Label>
+                                    {errors.fecha_vigencia_inicio && (
+                                        <p className="text-sm text-red-600 mt-1">{errors.fecha_vigencia_inicio}</p>
+                                    )}
                                 </div>
-                            </div>
 
-                            <div>
-                                <Label htmlFor="alcance">Alcance</Label>
-                                <Textarea
-                                    id="alcance"
-                                    value={data.alcance}
-                                    onChange={(e) => setData('alcance', e.target.value)}
-                                    placeholder="Alcance y cobertura del elemento"
-                                    rows={2}
-                                    className={errors.alcance ? 'border-red-500' : ''}
-                                />
-                                {errors.alcance && (
-                                    <p className="text-sm text-red-600 mt-1">{errors.alcance}</p>
-                                )}
-                            </div>
-
-                            <div>
-                                <Label htmlFor="notas">Notas</Label>
-                                <Textarea
-                                    id="notas"
-                                    value={data.notas}
-                                    onChange={(e) => setData('notas', e.target.value)}
-                                    placeholder="Notas adicionales y observaciones"
-                                    rows={3}
-                                    className={errors.notas ? 'border-red-500' : ''}
-                                />
-                                {errors.notas && (
-                                    <p className="text-sm text-red-600 mt-1">{errors.notas}</p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Información de auditoría */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Información de Auditoría</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                                 <div>
-                                    <Label className="text-gray-500">Fecha de Creación</Label>
-                                    <p>{new Date(ccd.created_at).toLocaleString('es-ES')}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-gray-500">Última Modificación</Label>
-                                    <p>{new Date(ccd.updated_at).toLocaleString('es-ES')}</p>
+                                    <Label htmlFor="fecha_vigencia_fin">Fecha Vigencia Fin</Label>
+                                    <Input
+                                        id="fecha_vigencia_fin"
+                                        type="date"
+                                        value={data.fecha_vigencia_fin}
+                                        onChange={(e) => setData('fecha_vigencia_fin', e.target.value)}
+                                        className={errors.fecha_vigencia_fin ? 'border-red-500' : ''}
+                                    />
+                                    {errors.fecha_vigencia_fin && (
+                                        <p className="text-sm text-red-600 mt-1">{errors.fecha_vigencia_fin}</p>
+                                    )}
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Botones de acción */}
-                    <div className="flex justify-end gap-3 pt-6">
+                    {/* Actions */}
+                    <div className="flex items-center justify-between">
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => router.visit('/admin/ccd')}
-                            disabled={processing || isSubmitting}
+                            onClick={() => actions.visit('/admin/ccd')}
                         >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
                             Cancelar
                         </Button>
+
                         <Button
                             type="submit"
                             disabled={processing || isSubmitting}
-                            className="bg-[#2a3d83] hover:bg-[#1e2b5f] flex items-center gap-2"
+                            className="flex items-center gap-2"
                         >
                             <Save className="h-4 w-4" />
-                            {processing || isSubmitting ? 'Guardando...' : 'Actualizar CCD'}
+                            {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
                         </Button>
                     </div>
                 </form>

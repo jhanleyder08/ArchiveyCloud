@@ -27,6 +27,7 @@ import {
     GitBranch
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useInertiaActions } from '@/hooks/useInertiaActions';
 
 interface CCDNivel {
     id: number;
@@ -209,6 +210,11 @@ const TreeNode = ({
 };
 
 export default function CCDShow({ ccd, estructura, estadisticas, errores_validacion }: Props) {
+    // Hook para acciones sin recarga de página
+    const actions = useInertiaActions({
+        only: ['ccd', 'estructura', 'estadisticas', 'errores_validacion'],
+    });
+    
     const [showAddNivelModal, setShowAddNivelModal] = useState(false);
     const [showEditNivelModal, setShowEditNivelModal] = useState(false);
     const [selectedParent, setSelectedParent] = useState<CCDNivel | null>(null);
@@ -271,30 +277,30 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
             return;
         }
 
-        if (confirm(`¿Está seguro de eliminar el nivel "${nivel.nombre}"?`)) {
-            router.delete(`/admin/ccd/nivel/${nivel.id}`, {
-                onSuccess: () => {
-                    toast.success('Nivel eliminado exitosamente');
-                },
-                onError: () => {
-                    toast.error('Error al eliminar el nivel');
-                }
-            });
-        }
+        actions.destroy(`/admin/ccd/nivel/${nivel.id}`, {
+            confirmMessage: `¿Está seguro de eliminar el nivel "${nivel.nombre}"?`,
+            successMessage: 'Nivel eliminado exitosamente',
+            errorMessage: 'Error al eliminar el nivel',
+        });
     };
 
     const submitAddNivel = () => {
-        router.post(`/admin/ccd/${ccd.id}/nivel`, {
+        actions.create(`/admin/ccd/${ccd.id}/nivel`, {
             ...nivelForm,
             parent_id: selectedParent?.id || null,
         }, {
+            successMessage: 'Nivel agregado exitosamente',
+            errorMessage: 'Error al agregar nivel',
             onSuccess: () => {
                 setShowAddNivelModal(false);
-                toast.success('Nivel agregado exitosamente');
-            },
-            onError: (errors) => {
-                const errorMsg = Object.values(errors)[0] as string;
-                toast.error(errorMsg || 'Error al agregar nivel');
+                setNivelForm({
+                    codigo: '',
+                    nombre: '',
+                    descripcion: '',
+                    tipo_nivel: 'fondo',
+                    orden: 0,
+                    activo: true,
+                });
             }
         });
     };
@@ -302,14 +308,11 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
     const submitEditNivel = () => {
         if (!selectedNivel) return;
 
-        router.put(`/admin/ccd/nivel/${selectedNivel.id}`, nivelForm, {
+        actions.update(`/admin/ccd/nivel/${selectedNivel.id}`, nivelForm, {
+            successMessage: 'Nivel actualizado exitosamente',
+            errorMessage: 'Error al actualizar nivel',
             onSuccess: () => {
                 setShowEditNivelModal(false);
-                toast.success('Nivel actualizado exitosamente');
-            },
-            onError: (errors) => {
-                const errorMsg = Object.values(errors)[0] as string;
-                toast.error(errorMsg || 'Error al actualizar nivel');
             }
         });
     };
@@ -320,10 +323,9 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
             return;
         }
 
-        router.post(`/admin/ccd/${ccd.id}/aprobar`, {}, {
-            onSuccess: () => {
-                toast.success('CCD aprobado exitosamente');
-            }
+        actions.create(`/admin/ccd/${ccd.id}/aprobar`, {}, {
+            successMessage: 'CCD aprobado exitosamente',
+            errorMessage: 'Error al aprobar el CCD',
         });
     };
 
@@ -563,7 +565,7 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
                                 <Input
                                     type="number"
                                     value={nivelForm.orden}
-                                    onChange={(e) => setNivelForm({...nivelForm, orden: parseInt(e.target.value)})}
+                                    onChange={(e) => setNivelForm({...nivelForm, orden: parseInt(e.target.value) || 0})}
                                 />
                             </div>
                         </div>

@@ -107,7 +107,7 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
 
     // Filtrar subseries cuando cambia la serie
     useEffect(() => {
-        if (data.serie_id) {
+        if (data.serie_id && opciones?.subseries) {
             const subseries = opciones.subseries.filter(
                 subserie => subserie.serie_id === parseInt(data.serie_id)
             );
@@ -116,7 +116,7 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
             setSubseriesFiltradas([]);
             setData('subserie_id', '');
         }
-    }, [data.serie_id]);
+    }, [data.serie_id, opciones]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -154,7 +154,7 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
     };
 
     // Obtener la serie seleccionada para mostrar información
-    const serieSeleccionada = opciones.series.find(s => s.id === parseInt(data.serie_id));
+    const serieSeleccionada = opciones?.series?.find(s => s.id === parseInt(data.serie_id));
     const subserieSeleccionada = subseriesFiltradas.find(s => s.id === parseInt(data.subserie_id));
 
     return (

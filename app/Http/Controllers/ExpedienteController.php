@@ -134,8 +134,31 @@ class ExpedienteController extends Controller
     public function create(): Response
     {
         return Inertia::render('admin/expedientes/create', [
-            'series' => \App\Models\SerieDocumental::where('activa', true)->get(),
-            'dependencias' => \App\Models\Dependencia::all(),
+            'opciones' => [
+                'series' => \App\Models\SerieDocumental::where('activa', true)->get(),
+                'subseries' => \App\Models\SubserieDocumental::where('activa', true)->get(),
+                'trds' => \App\Models\TRD::where('estado', 'vigente')->get(['id', 'codigo', 'version', 'nombre']),
+                'usuarios' => \App\Models\User::all(['id', 'name', 'email']),
+                'tipos_expediente' => [
+                    ['value' => 'electronico', 'label' => 'Electrónico'],
+                    ['value' => 'fisico', 'label' => 'Físico'],
+                    ['value' => 'hibrido', 'label' => 'Híbrido'],
+                ],
+                'confidencialidad' => [
+                    ['value' => 'publica', 'label' => 'Pública'],
+                    ['value' => 'interna', 'label' => 'Interna'],
+                    ['value' => 'confidencial', 'label' => 'Confidencial'],
+                    ['value' => 'reservada', 'label' => 'Reservada'],
+                    ['value' => 'clasificada', 'label' => 'Clasificada'],
+                ],
+                'areas_disponibles' => [
+                    ['value' => 'administracion', 'label' => 'Administración'],
+                    ['value' => 'recursos_humanos', 'label' => 'Recursos Humanos'],
+                    ['value' => 'financiera', 'label' => 'Financiera'],
+                    ['value' => 'juridica', 'label' => 'Jurídica'],
+                    ['value' => 'tecnologia', 'label' => 'Tecnología'],
+                ],
+            ],
         ]);
     }
 

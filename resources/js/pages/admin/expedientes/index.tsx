@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { useInertiaActions } from '@/hooks/useInertiaActions';
 import { 
     Search, 
     Eye, 
@@ -117,6 +118,9 @@ interface Props {
 }
 
 export default function Index({ expedientes, estadisticas, opciones, filtros }: Props) {
+    // Hook para acciones sin recarga de página
+    const actions = useInertiaActions();
+    
     const { flash: pageFlash } = usePage<{flash: {success?: string, error?: string}}>().props;
     const [searchQuery, setSearchQuery] = useState(filtros?.search || '');
     const [showFilters, setShowFilters] = useState(false);
@@ -226,12 +230,13 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                             Gestión de Expedientes
                         </h1>
                     </div>
-                    <Link href="/admin/expedientes/create">
-                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
-                            <Plus className="h-4 w-4" />
-                            Crear Expediente
-                        </Button>
-                    </Link>
+                    <Button 
+                        onClick={() => actions.visit('/admin/expedientes/create')}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors"
+                    >
+                        <Plus className="h-4 w-4" />
+                        Crear Expediente
+                    </Button>
                 </div>
 
                 {/* Estadísticas */}
