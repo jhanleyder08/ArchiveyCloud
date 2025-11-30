@@ -24,6 +24,8 @@ interface Documento {
     tamaño?: number;
     version: string;
     created_at: string;
+    url_descarga?: string;
+    url_directa?: string;
     expediente?: {
         codigo: string;
         nombre: string;
@@ -78,7 +80,18 @@ const DocumentoShow = ({ documento, puedeVisualizar }: Props) => {
     };
 
     const handleDescargar = () => {
-        window.open(`/admin/documentos/${documento.id}/descargar`, '_blank');
+        const url = documento.url_directa || documento.url_descarga;
+        if (url) {
+            // Para descarga, crear un enlace temporal
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = documento.nombre || 'documento';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            alert('No se pudo generar la URL de descarga');
+        }
     };
 
     const handlePreview = () => {
@@ -218,6 +231,61 @@ const DocumentoShow = ({ documento, puedeVisualizar }: Props) => {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+
+                            {/* Visor de Documento */}
+                            <div className="bg-white rounded-lg border p-6">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                                    Vista Previa del Documento
+                                </h2>
+                                <div className="border rounded-lg overflow-hidden bg-gray-50 p-6">
+                                    <div className="text-center space-y-4">
+                                        <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <DocumentTextIcon className="h-12 w-12 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                {documento.nombre}
+                                            </h3>
+                                            <p className="text-sm text-gray-600 mb-1">
+                                                Formato: <span className="font-medium uppercase">{documento.formato}</span>
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                                Tamaño: <span className="font-medium">{formatFileSize(documento.tamaño)}</span>
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                            <Button
+                                                onClick={() => {
+                                                    const url = documento.url_directa || documento.url_descarga;
+                                                    console.log('URL directa:', documento.url_directa);
+                                                    console.log('URL descarga:', documento.url_descarga);
+                                                    console.log('URL final:', url);
+                                                    if (url) {
+                                                        window.open(url, '_blank');
+                                                    } else {
+                                                        alert('No se pudo generar la URL del documento');
+                                                    }
+                                                }}
+                                                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+                                            >
+                                                <EyeIcon className="h-4 w-4" />
+                                                <span>Ver Documento</span>
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleDescargar}
+                                                className="flex items-center space-x-2"
+                                            >
+                                                <CloudArrowDownIcon className="h-4 w-4" />
+                                                <span>Descargar</span>
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-gray-500">
+                                            Haz clic en "Ver Documento" para abrir el archivo en una nueva pestaña
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 

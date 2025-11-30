@@ -37,27 +37,29 @@ const breadcrumbItems = [
 interface Expediente {
     id: number;
     codigo: string;
-    nombre: string;
+    titulo: string;
     descripcion?: string;
     estado: string;
     tipo_expediente: string;
-    confidencialidad: string;
+    nivel_acceso: string;
     fecha_apertura: string;
     fecha_cierre?: string;
-    fecha_vencimiento_disposicion?: string;
-    volumen_actual: number;
-    volumen_maximo: number;
-    numero_folios: number;
-    area_responsable: string;
-    usuario_responsable?: {
+    fecha_eliminacion?: string;
+    tamano_total_bytes: number;
+    numero_documentos: number;
+    ubicacion_fisica?: string;
+    responsable?: {
+        id: number;
         name: string;
         email: string;
     };
     serie?: {
+        id: number;
         codigo: string;
         nombre: string;
     };
     subserie?: {
+        id: number;
         codigo: string;
         nombre: string;
     };
@@ -374,10 +376,9 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                         <p className="font-medium text-gray-900">
                                                             {expediente.codigo}
                                                         </p>
-                                                        {getConfidencialidadBadge(expediente.confidencialidad)}
                                                     </div>
                                                     <p className="text-sm text-gray-600">
-                                                        {expediente.nombre}
+                                                        {expediente.titulo}
                                                     </p>
                                                     {expediente.descripcion && (
                                                         <p className="text-xs text-gray-500 line-clamp-2">
@@ -398,9 +399,6 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                             {expediente.subserie.codigo} - {expediente.subserie.nombre}
                                                         </p>
                                                     )}
-                                                    <p className="text-xs text-gray-500">
-                                                        {expediente.area_responsable}
-                                                    </p>
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6">
@@ -411,38 +409,27 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                             </td>
                                             <td className="py-4 px-6">
                                                 <div className="space-y-1">
-                                                    {expediente.usuario_responsable && (
+                                                    {expediente.responsable ? (
                                                         <>
                                                             <p className="text-sm font-medium text-gray-900">
-                                                                {expediente.usuario_responsable.name}
+                                                                {expediente.responsable.name}
                                                             </p>
                                                             <p className="text-xs text-gray-500">
-                                                                {expediente.usuario_responsable.email}
+                                                                {expediente.responsable.email}
                                                             </p>
                                                         </>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-400">Sin asignar</p>
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                                                            <div 
-                                                                className="bg-blue-600 h-2 rounded-full"
-                                                                style={{ 
-                                                                    width: `${calcularPorcentajeOcupacion(expediente.volumen_actual, expediente.volumen_maximo)}%` 
-                                                                }}
-                                                            />
-                                                        </div>
-                                                        <span className="text-xs text-gray-500">
-                                                            {calcularPorcentajeOcupacion(expediente.volumen_actual, expediente.volumen_maximo)}%
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs text-gray-600">
-                                                        {formatearTamaño(expediente.volumen_actual)} / {formatearTamaño(expediente.volumen_maximo)}
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        {expediente.numero_documentos || 0} documentos
                                                     </p>
                                                     <p className="text-xs text-gray-500">
-                                                        {expediente.numero_folios} folios
+                                                        {formatearTamaño(expediente.tamano_total_bytes || 0)}
                                                     </p>
                                                 </div>
                                             </td>
@@ -458,10 +445,10 @@ export default function Index({ expedientes, estadisticas, opciones, filtros }: 
                                                             {formatearFecha(expediente.fecha_cierre)}
                                                         </p>
                                                     )}
-                                                    {expediente.fecha_vencimiento_disposicion && (
+                                                    {expediente.fecha_eliminacion && (
                                                         <p className="text-xs text-orange-600">
-                                                            <strong>Vence:</strong><br />
-                                                            {formatearFecha(expediente.fecha_vencimiento_disposicion)}
+                                                            <strong>Disposicion:</strong><br />
+                                                            {formatearFecha(expediente.fecha_eliminacion)}
                                                         </p>
                                                     )}
                                                 </div>

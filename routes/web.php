@@ -207,11 +207,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
         
         // Gestión de Documentos - Protegido con permisos
-        Route::middleware('permission:documentos.ver')->group(function () {
-            Route::get('documentos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'index'])->name('documentos.index');
-            Route::get('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'show'])->name('documentos.show');
-        });
-        
+        // IMPORTANTE: Rutas específicas ANTES que rutas con parámetros
         Route::middleware('permission:documentos.crear')->group(function () {
             Route::get('documentos/create', [App\Http\Controllers\Admin\AdminDocumentController::class, 'create'])->name('documentos.create');
             Route::post('documentos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'store'])->name('documentos.store');
@@ -219,23 +215,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('documentos/upload/masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'procesarSubidaMasiva'])->name('documentos.procesar-masivo');
         });
         
+        // REQ-CP-007: Rutas de validación (sin parámetros)
+        Route::post('documentos/validar-archivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'validarArchivoApi'])->name('documentos.validar-archivo');
+        Route::get('documentos/configuracion-formatos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'getConfiguracionFormatos'])->name('documentos.configuracion-formatos');
+        
+        Route::middleware('permission:documentos.ver')->group(function () {
+            Route::get('documentos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'index'])->name('documentos.index');
+            Route::get('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'show'])->name('documentos.show');
+            Route::get('documentos/{documento}/preview', [App\Http\Controllers\Admin\AdminDocumentController::class, 'preview'])->name('documentos.preview');
+            Route::get('documentos/{documento}/descargar', [App\Http\Controllers\Admin\AdminDocumentController::class, 'descargar'])->name('documentos.descargar');
+        });
+        
         Route::middleware('permission:documentos.editar')->group(function () {
             Route::get('documentos/{documento}/edit', [App\Http\Controllers\Admin\AdminDocumentController::class, 'edit'])->name('documentos.edit');
             Route::put('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'update'])->name('documentos.update');
             Route::patch('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'update']);
+            Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
         });
         
         Route::middleware('permission:documentos.eliminar')->group(function () {
             Route::delete('documentos/{documento}', [App\Http\Controllers\Admin\AdminDocumentController::class, 'destroy'])->name('documentos.destroy');
         });
-        
-        Route::middleware('permission:documentos.editar')->group(function () {
-            Route::post('documentos/{documento}/version', [App\Http\Controllers\Admin\AdminDocumentController::class, 'crearVersion'])->name('documentos.crear-version');
-        });
-        
-        // REQ-CP-007: Nuevas rutas para validación avanzada de documentos
-        Route::post('documentos/validar-archivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'validarArchivoApi'])->name('documentos.validar-archivo');
-        Route::get('documentos/configuracion-formatos', [App\Http\Controllers\Admin\AdminDocumentController::class, 'getConfiguracionFormatos'])->name('documentos.configuracion-formatos');
         
         // REQ-CP-012: Nuevas rutas para procesamiento masivo avanzado
         Route::post('documentos/estado-procesamiento-masivo', [App\Http\Controllers\Admin\AdminDocumentController::class, 'estadoProcesamientoMasivo'])->name('documentos.estado-procesamiento-masivo');

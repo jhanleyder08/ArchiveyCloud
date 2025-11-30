@@ -139,11 +139,49 @@ class CCDController extends Controller
             'aprobador'
         ]);
 
+        // Obtener TRDs relacionadas a través del campo ccd_id
+        $trdsRelacionadas = \App\Models\TRD::where('ccd_id', $ccd->id)
+            ->withCount('series')
+            ->get()
+            ->map(function($trd) {
+                return [
+                    'id' => $trd->id,
+                    'codigo' => $trd->codigo,
+                    'nombre' => $trd->nombre,
+                    'version' => $trd->version,
+                    'estado' => $trd->estado,
+                    'series_count' => $trd->series_count,
+                ];
+            });
+
+        // Obtener Series relacionadas (series de las TRDs que pertenecen a este CCD)
+        // Usamos la tabla trds directamente ya que tiene el campo ccd_id
+        $trdIds = \App\Models\TRD::where('ccd_id', $ccd->id)->pluck('id');
+        
+        $seriesRelacionadas = collect();
+        if ($trdIds->isNotEmpty()) {
+            $seriesRelacionadas = \App\Models\SerieDocumental::whereIn('trd_id', $trdIds)
+                ->with('trd:id,nombre')
+                ->withCount('subseries')
+                ->get()
+                ->map(function($serie) {
+                    return [
+                        'id' => $serie->id,
+                        'codigo' => $serie->codigo,
+                        'nombre' => $serie->nombre,
+                        'trd_nombre' => $serie->trd->nombre ?? 'Sin TRD',
+                        'subseries_count' => $serie->subseries_count,
+                    ];
+                });
+        }
+
         return Inertia::render('admin/ccd/show', [
             'ccd' => $ccd,
             'estructura' => $this->ccdService->obtenerEstructuraJerarquica($ccd),
             'estadisticas' => $ccd->getEstadisticas(),
             'errores_validacion' => $ccd->validar(),
+            'trds_relacionadas' => $trdsRelacionadas,
+            'series_relacionadas' => $seriesRelacionadas,
         ]);
     }
 
@@ -221,7 +259,7 @@ class CCDController extends Controller
 
             return redirect()
                 ->route('admin.ccd.show', $ccd->id)
-                ->with('success', 'CCD aprobado exitosamente');
+                ->with('success', 'CCD aprobado exitosamente. Se ha generado automáticamente la TRD con sus Series y Subseries.');
         } catch (\Exception $e) {
             Log::error('Error al aprobar CCD', ['error' => $e->getMessage()]);
             return back()->with('error', 'Error al aprobar CCD: ' . $e->getMessage());

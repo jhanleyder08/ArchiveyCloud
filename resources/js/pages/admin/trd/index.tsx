@@ -13,6 +13,13 @@ import { toast } from '@/components/ui/toast';
 import { FileText, Plus, Search, Eye, Edit, Copy, ToggleLeft, ToggleRight, Trash2, CheckCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
+interface CCD {
+    id: number;
+    codigo: string;
+    nombre: string;
+    version: string;
+}
+
 interface TRD {
     id: number;
     codigo: string;
@@ -37,6 +44,8 @@ interface TRD {
     created_at: string;
     updated_at: string;
     series_count?: number;
+    ccd_id?: number;
+    cuadro_clasificacion?: CCD;
 }
 
 interface PaginatedTRDs {
@@ -64,13 +73,14 @@ interface Stats {
 interface Props {
     trds?: PaginatedTRDs;
     stats?: Stats;
+    ccds?: CCD[];
     flash?: {
         success?: string;
         error?: string;
     };
 }
 
-export default function AdminTRDIndex({ trds, stats, flash }: Props) {
+export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) {
     // Valores por defecto para evitar errores
     const safeStats = stats || {
         total: 0,
@@ -108,6 +118,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
     }, [flash]);
     const [createForm, setCreateForm] = useState({
         codigo: '',
+        ccd_id: '',
         nombre: '',
         descripcion: '',
         entidad: '',
@@ -310,6 +321,10 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                 e.preventDefault();
                                 
                                 // Validación básica del frontend
+                                if (!createForm.ccd_id) {
+                                    toast.error('Debe seleccionar un CCD');
+                                    return;
+                                }
                                 if (!createForm.codigo || !createForm.nombre || !createForm.descripcion || !createForm.entidad || !createForm.fecha_aprobacion || !createForm.fecha_vigencia_inicio) {
                                     toast.error('Por favor complete todos los campos requeridos');
                                     return;
@@ -318,6 +333,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                 // Preparar datos para enviar, asegurando tipos correctos
                                 const formData = {
                                     codigo: createForm.codigo.trim(),
+                                    ccd_id: parseInt(createForm.ccd_id),
                                     nombre: createForm.nombre.trim(),
                                     descripcion: createForm.descripcion.trim(),
                                     entidad: createForm.entidad.trim(),
@@ -338,6 +354,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                         setShowCreateModal(false);
                                         setCreateForm({
                                             codigo: '',
+                                            ccd_id: '',
                                             nombre: '',
                                             descripcion: '',
                                             entidad: '',
@@ -363,6 +380,39 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                     }
                                 });
                             }} className="space-y-4">
+                                {/* Selector de CCD - OBLIGATORIO */}
+                                <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <Label htmlFor="create-ccd" className="text-[#2a3d83] font-semibold">
+                                        Cuadro de Clasificación Documental (CCD) *
+                                    </Label>
+                                    <Select 
+                                        value={createForm.ccd_id} 
+                                        onValueChange={(value) => setCreateForm({...createForm, ccd_id: value})}
+                                    >
+                                        <SelectTrigger className="bg-white">
+                                            <SelectValue placeholder="Seleccione un CCD..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {ccds.length === 0 ? (
+                                                <SelectItem value="none" disabled>
+                                                    No hay CCDs disponibles
+                                                </SelectItem>
+                                            ) : (
+                                                ccds.map((ccd) => (
+                                                    <SelectItem key={ccd.id} value={ccd.id.toString()}>
+                                                        {ccd.codigo} - {ccd.nombre}
+                                                    </SelectItem>
+                                                ))
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                    {ccds.length === 0 && (
+                                        <p className="text-xs text-amber-600">
+                                            ⚠️ Debe crear un CCD primero
+                                        </p>
+                                    )}
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="create-codigo">Código *</Label>
@@ -622,6 +672,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                             <thead className="bg-gray-50 border-b">
                                 <tr>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">TRD</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">CCD Asociado</th>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Estado</th>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Vigencia</th>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Series</th>
@@ -632,7 +683,7 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                             <tbody className="divide-y divide-gray-200">
                                 {safeTrds.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="py-8 px-6 text-center text-gray-500">
+                                        <td colSpan={7} className="py-8 px-6 text-center text-gray-500">
                                             No se encontraron TRDs.
                                         </td>
                                     </tr>
@@ -649,6 +700,23 @@ export default function AdminTRDIndex({ trds, stats, flash }: Props) {
                                                         {trd.identificador_unico}
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                {trd.cuadro_clasificacion ? (
+                                                    <Link 
+                                                        href={`/admin/ccd/${trd.cuadro_clasificacion.id}`}
+                                                        className="block hover:bg-blue-50 rounded p-1 -m-1 transition-colors"
+                                                    >
+                                                        <div className="text-sm text-[#2a3d83] font-medium hover:underline">
+                                                            {trd.cuadro_clasificacion.codigo}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 line-clamp-1">
+                                                            {trd.cuadro_clasificacion.nombre}
+                                                        </div>
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-sm text-gray-400 italic">Sin CCD</span>
+                                                )}
                                             </td>
                                             <td className="py-4 px-6">
                                                 {getEstadoBadge(trd.estado)}

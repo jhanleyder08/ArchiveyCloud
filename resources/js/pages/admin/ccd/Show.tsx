@@ -68,6 +68,23 @@ interface CCD {
     };
 }
 
+interface TRDRelacionada {
+    id: number;
+    codigo: string;
+    nombre: string;
+    version: string;
+    estado: string;
+    series_count: number;
+}
+
+interface SerieRelacionada {
+    id: number;
+    codigo: string;
+    nombre: string;
+    trd_nombre: string;
+    subseries_count: number;
+}
+
 interface Props {
     ccd: CCD;
     estructura: CCDNivel[];
@@ -80,6 +97,8 @@ interface Props {
         profundidad_maxima: number;
     };
     errores_validacion: string[];
+    trds_relacionadas?: TRDRelacionada[];
+    series_relacionadas?: SerieRelacionada[];
 }
 
 // Componente para renderizar un nodo del árbol
@@ -209,10 +228,10 @@ const TreeNode = ({
     );
 };
 
-export default function CCDShow({ ccd, estructura, estadisticas, errores_validacion }: Props) {
+export default function CCDShow({ ccd, estructura, estadisticas, errores_validacion, trds_relacionadas = [], series_relacionadas = [] }: Props) {
     // Hook para acciones sin recarga de página
     const actions = useInertiaActions({
-        only: ['ccd', 'estructura', 'estadisticas', 'errores_validacion'],
+        only: ['ccd', 'estructura', 'estadisticas', 'errores_validacion', 'trds_relacionadas', 'series_relacionadas'],
     });
     
     const [showAddNivelModal, setShowAddNivelModal] = useState(false);
@@ -432,6 +451,102 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
                             <div className="text-2xl font-bold text-orange-600">
                                 {estadisticas.total_vocabularios}
                             </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Relaciones con TRD y Series */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* TRDs Relacionadas */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-[#2a3d83]" />
+                                    TRDs Relacionadas
+                                </CardTitle>
+                                <CardDescription>
+                                    Tablas de Retención vinculadas a este CCD ({trds_relacionadas.length})
+                                </CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {trds_relacionadas.length > 0 ? (
+                                <div className="space-y-2">
+                                    {trds_relacionadas.map((trd) => (
+                                        <a 
+                                            key={trd.id}
+                                            href={`/admin/trd/${trd.id}`}
+                                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 hover:border-[#2a3d83] transition-all"
+                                        >
+                                            <div>
+                                                <div className="font-medium text-gray-900">{trd.nombre}</div>
+                                                <div className="text-sm text-gray-500">{trd.codigo} • v{trd.version}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="secondary" className="text-xs">
+                                                    {trd.series_count} series
+                                                </Badge>
+                                                <Badge className={trd.estado === 'vigente' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                                    {trd.estado}
+                                                </Badge>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6 text-gray-500">
+                                    <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                                    <p className="text-sm">No hay TRDs relacionadas</p>
+                                    <a href="/admin/trd" className="text-[#2a3d83] text-sm hover:underline mt-1 inline-block">
+                                        Ver todas las TRDs
+                                    </a>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Series Relacionadas */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Folder className="h-5 w-5 text-purple-600" />
+                                    Series Relacionadas
+                                </CardTitle>
+                                <CardDescription>
+                                    Series documentales vinculadas a este CCD ({series_relacionadas.length})
+                                </CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {series_relacionadas.length > 0 ? (
+                                <div className="space-y-2 max-h-80 overflow-y-auto">
+                                    {series_relacionadas.map((serie) => (
+                                        <a 
+                                            key={serie.id}
+                                            href={`/admin/series/${serie.id}`}
+                                            className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 hover:border-purple-300 transition-all"
+                                        >
+                                            <div>
+                                                <div className="font-medium text-gray-900">{serie.nombre}</div>
+                                                <div className="text-sm text-gray-500">{serie.codigo} • {serie.trd_nombre}</div>
+                                            </div>
+                                            <Badge variant="secondary" className="text-xs">
+                                                {serie.subseries_count} subseries
+                                            </Badge>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6 text-gray-500">
+                                    <Folder className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                                    <p className="text-sm">No hay series relacionadas</p>
+                                    <a href="/admin/series" className="text-purple-600 text-sm hover:underline mt-1 inline-block">
+                                        Ver todas las series
+                                    </a>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TRD;
+use App\Models\CCD;
 use App\Services\TRDService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,7 @@ class TRDController extends Controller
      */
     public function index(Request $request): Response
     {
-        $query = TRD::with(['creador', 'series'])
+        $query = TRD::with(['creador', 'series', 'cuadroClasificacion'])
             ->withCount('series');
 
         // Filtros
@@ -41,8 +42,13 @@ class TRDController extends Controller
         $trds = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
+        // Obtener TODOS los CCDs disponibles (sin filtro de estado)
+        $ccds = CCD::orderBy('nombre')
+            ->get(['id', 'codigo', 'nombre', 'version', 'estado']);
+
         return Inertia::render('admin/trd/index', [
             'trds' => $trds,
+            'ccds' => $ccds,
             'filters' => $request->only(['estado', 'search']),
             'estadisticas' => $this->trdService->obtenerEstadisticasGenerales(),
         ]);
@@ -53,7 +59,13 @@ class TRDController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('admin/trd/create');
+        // Obtener TODOS los CCDs disponibles (sin filtro de estado)
+        $ccds = CCD::orderBy('nombre')
+            ->get(['id', 'codigo', 'nombre', 'version', 'estado']);
+
+        return Inertia::render('admin/trd/create', [
+            'ccds' => $ccds,
+        ]);
     }
 
     /**
@@ -63,12 +75,16 @@ class TRDController extends Controller
     {
         $validated = $request->validate([
             'codigo' => 'required|string|max:50|unique:trds,codigo',
+            'ccd_id' => 'required|exists:cuadros_clasificacion,id',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'version' => 'nullable|string|max:20',
             'fecha_vigencia_inicio' => 'nullable|date',
             'fecha_vigencia_fin' => 'nullable|date|after:fecha_vigencia_inicio',
             'metadata' => 'nullable|array',
+        ], [
+            'ccd_id.required' => 'Debe seleccionar un Cuadro de Clasificación Documental (CCD)',
+            'ccd_id.exists' => 'El CCD seleccionado no existe',
         ]);
 
         try {

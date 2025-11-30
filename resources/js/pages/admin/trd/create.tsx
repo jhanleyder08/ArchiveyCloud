@@ -16,13 +16,23 @@ const breadcrumbItems = [
     { title: 'Crear TRD', href: '/admin/trd/create' },
 ];
 
-interface Props {
-    estados: Record<string, string>;
+interface CCD {
+    id: number;
+    codigo: string;
+    nombre: string;
+    version: string;
+    estado: string;
 }
 
-export default function AdminTRDCreate({ estados }: Props) {
+interface Props {
+    estados?: Record<string, string>;
+    ccds: CCD[];
+}
+
+export default function AdminTRDCreate({ estados, ccds = [] }: Props) {
     const [form, setForm] = useState({
         codigo: '',
+        ccd_id: '',
         nombre: '',
         descripcion: '',
         justificacion: '',
@@ -77,7 +87,7 @@ export default function AdminTRDCreate({ estados }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbItems={breadcrumbItems}>
+        <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title="Crear TRD - Tablas de Retención Documental" />
             
             <div className="space-y-6">
@@ -110,6 +120,45 @@ export default function AdminTRDCreate({ estados }: Props) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
+                            {/* Selector de CCD - OBLIGATORIO */}
+                            <div className="space-y-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <Label htmlFor="ccd_id" className="text-[#2a3d83] font-semibold">
+                                    Cuadro de Clasificación Documental (CCD) *
+                                </Label>
+                                <p className="text-sm text-gray-600 mb-2">
+                                    Seleccione el CCD al cual estará asociada esta TRD
+                                </p>
+                                <Select 
+                                    value={form.ccd_id} 
+                                    onValueChange={(value) => handleInputChange('ccd_id', value)}
+                                >
+                                    <SelectTrigger className={`bg-white ${errors.ccd_id ? 'border-red-500' : ''}`}>
+                                        <SelectValue placeholder="Seleccione un CCD..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {ccds.length === 0 ? (
+                                            <SelectItem value="none" disabled>
+                                                No hay CCDs disponibles
+                                            </SelectItem>
+                                        ) : (
+                                            ccds.map((ccd) => (
+                                                <SelectItem key={ccd.id} value={ccd.id.toString()}>
+                                                    {ccd.codigo} - {ccd.nombre} (v{ccd.version})
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                {errors.ccd_id && (
+                                    <p className="text-sm text-red-600">{errors.ccd_id}</p>
+                                )}
+                                {ccds.length === 0 && (
+                                    <p className="text-sm text-amber-600">
+                                        ⚠️ Debe crear un CCD primero. <a href="/admin/ccd/create" className="underline text-[#2a3d83]">Crear CCD</a>
+                                    </p>
+                                )}
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="codigo">Código *</Label>
@@ -208,11 +257,10 @@ export default function AdminTRDCreate({ estados }: Props) {
                                             <SelectValue placeholder="Selecciona un estado" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {Object.entries(estados).map(([key, value]) => (
-                                                <SelectItem key={key} value={key}>
-                                                    {value}
-                                                </SelectItem>
-                                            ))}
+                                            <SelectItem value="borrador">Borrador</SelectItem>
+                                            <SelectItem value="activa">Activa</SelectItem>
+                                            <SelectItem value="inactiva">Inactiva</SelectItem>
+                                            <SelectItem value="archivada">Archivada</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     {errors.estado && (

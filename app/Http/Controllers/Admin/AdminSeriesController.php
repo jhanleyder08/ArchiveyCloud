@@ -273,10 +273,46 @@ class AdminSeriesController extends Controller
     public function destroy(SerieDocumental $serie)
     {
         try {
+            $user = Auth::user();
+            $isSuperAdmin = $user->hasRole('Super Administrador') || $user->id === 1;
+            
             // Verificar si puede ser eliminada
             if (!$serie->puedeSerEliminada()) {
-                return redirect()->back()
-                               ->with('error', 'No se puede eliminar la serie porque tiene expedientes o subseries asociadas.');
+                // Solo super admin puede eliminar series con subseries/expedientes
+                if (!$isSuperAdmin) {
+                    return redirect()->back()
+                                   ->with('error', 'No se puede eliminar la serie porque tiene expedientes o subseries asociadas. Solo un Super Administrador puede realizar esta acción.');
+                }
+                
+                // Super Admin: Eliminación en cascada
+                \DB::beginTransaction();
+                
+                $subseriesCount = $serie->subseries()->count();
+                $expedientesCount = $serie->expedientes()->count();
+                
+                // Eliminar subseries asociadas
+                $serie->subseries()->delete();
+                
+                // Eliminar expedientes asociados (soft delete si está habilitado)
+                $serie->expedientes()->delete();
+                
+                // Eliminar retención si existe
+                if ($serie->retencion) {
+                    $serie->retencion()->delete();
+                }
+                
+                $nombreSerie = $serie->nombre;
+                $serie->delete();
+                
+                \DB::commit();
+                
+                $mensaje = "Serie documental '{$nombreSerie}' eliminada exitosamente";
+                if ($subseriesCount > 0 || $expedientesCount > 0) {
+                    $mensaje .= " (incluyendo {$subseriesCount} subserie(s) y {$expedientesCount} expediente(s))";
+                }
+                
+                return redirect()->route('admin.series.index')
+                               ->with('success', $mensaje);
             }
 
             $nombreSerie = $serie->nombre;
@@ -286,6 +322,7 @@ class AdminSeriesController extends Controller
                            ->with('success', "Serie documental '{$nombreSerie}' eliminada exitosamente.");
 
         } catch (\Exception $e) {
+            \DB::rollBack();
             return redirect()->back()
                            ->with('error', 'Error al eliminar la serie documental: ' . $e->getMessage());
         }

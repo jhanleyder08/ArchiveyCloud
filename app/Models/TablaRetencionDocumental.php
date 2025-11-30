@@ -30,6 +30,7 @@ class TablaRetencionDocumental extends Model
         'fecha_vigencia_fin',
         'estado',
         'vigente',
+        'ccd_id',
         'observaciones_generales',
         'metadatos_adicionales',
         'created_by',
@@ -126,6 +127,14 @@ class TablaRetencionDocumental extends Model
     public function aprobador()
     {
         return $this->belongsTo(User::class, 'aprobado_por');
+    }
+
+    /**
+     * Relación con el Cuadro de Clasificación Documental (CCD)
+     */
+    public function cuadroClasificacion()
+    {
+        return $this->belongsTo(CCD::class, 'ccd_id');
     }
 
     /**

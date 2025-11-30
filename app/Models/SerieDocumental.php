@@ -88,6 +88,14 @@ class SerieDocumental extends Model
     }
 
     /**
+     * Relación con TRD (modelo alternativo)
+     */
+    public function trd()
+    {
+        return $this->belongsTo(TRD::class, 'trd_id');
+    }
+
+    /**
      * Relación con Cuadro de Clasificación Documental
      */
     public function cuadroClasificacion()

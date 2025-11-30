@@ -133,7 +133,7 @@ export default function AdminTRDShow({ trd, versiones, estadisticas, tieneDocume
     };
 
     return (
-        <AppLayout breadcrumbItems={breadcrumbItems}>
+        <AppLayout breadcrumbs={breadcrumbItems}>
             <Head title={`${trd.nombre} - Detalle TRD`} />
             
             <div className="space-y-6">
@@ -362,42 +362,74 @@ export default function AdminTRDShow({ trd, versiones, estadisticas, tieneDocume
                         </Card>
 
                         {/* Series Documentales */}
-                        {trd.series && trd.series.length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Series Documentales</CardTitle>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <FolderOpen className="h-5 w-5 text-[#2a3d83]" />
+                                        Series Documentales
+                                    </CardTitle>
                                     <CardDescription>
-                                        Series asociadas a esta TRD ({trd.series.length})
+                                        Series asociadas a esta TRD ({trd.series?.length || 0})
                                     </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
+                                </div>
+                                <Link href={`/admin/series?trd=${trd.id}`}>
+                                    <Button variant="outline" size="sm">
+                                        Ver todas
+                                    </Button>
+                                </Link>
+                            </CardHeader>
+                            <CardContent>
+                                {trd.series && trd.series.length > 0 ? (
+                                    <div className="space-y-3">
                                         {trd.series.map((serie) => (
-                                            <div key={serie.id} className="border rounded-lg p-4">
+                                            <Link 
+                                                key={serie.id} 
+                                                href={`/admin/series/${serie.id}`}
+                                                className="block border rounded-lg p-4 hover:bg-gray-50 hover:border-[#2a3d83] transition-all cursor-pointer"
+                                            >
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <h4 className="font-medium text-gray-900">{serie.nombre}</h4>
-                                                    <Badge variant="outline">{serie.codigo}</Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <FileText className="h-4 w-4 text-purple-600" />
+                                                        <h4 className="font-medium text-gray-900 hover:text-[#2a3d83]">{serie.nombre}</h4>
+                                                    </div>
+                                                    <Badge variant="outline" className="bg-purple-50">{serie.codigo}</Badge>
                                                 </div>
                                                 {serie.subseries && serie.subseries.length > 0 && (
-                                                    <div className="ml-4 mt-2">
+                                                    <div className="ml-6 mt-2">
                                                         <p className="text-sm text-gray-600 mb-1">
                                                             Subseries ({serie.subseries.length}):
                                                         </p>
                                                         <div className="flex flex-wrap gap-1">
-                                                            {serie.subseries.map((subserie) => (
+                                                            {serie.subseries.slice(0, 5).map((subserie) => (
                                                                 <Badge key={subserie.id} variant="secondary" className="text-xs">
-                                                                    {subserie.codigo}
+                                                                    {subserie.codigo} - {subserie.nombre}
                                                                 </Badge>
                                                             ))}
+                                                            {serie.subseries.length > 5 && (
+                                                                <Badge variant="secondary" className="text-xs">
+                                                                    +{serie.subseries.length - 5} más
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
-                                            </div>
+                                            </Link>
                                         ))}
                                     </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                                ) : (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <FolderOpen className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                                        <p>No hay series asociadas a esta TRD</p>
+                                        <Link href="/admin/series/create">
+                                            <Button variant="outline" size="sm" className="mt-3">
+                                                Crear Serie
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
 
                     {/* Panel Lateral */}

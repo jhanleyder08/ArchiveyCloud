@@ -16,6 +16,7 @@ class TRD extends Model
 
     protected $fillable = [
         'codigo',
+        'ccd_id',
         'nombre',
         'descripcion',
         'version',
@@ -58,6 +59,14 @@ class TRD extends Model
         }
 
         return true;
+    }
+
+    /**
+     * Cuadro de Clasificación Documental asociado
+     */
+    public function cuadroClasificacion(): BelongsTo
+    {
+        return $this->belongsTo(CCD::class, 'ccd_id');
     }
 
     /**

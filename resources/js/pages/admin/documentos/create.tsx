@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 interface Expediente {
     id: number;
     codigo: string;
-    nombre: string;
+    titulo: string;
     serie_id?: number;
     subserie_id?: number;
 }
@@ -40,14 +40,13 @@ interface Tipologia {
     id: number;
     nombre: string;
     categoria: string;
-    formato_archivo?: string[];
+    formatos_aceptados?: string[];
 }
 
 interface CreateDocumentProps {
     opciones: {
         expedientes: Expediente[];
         tipologias: Tipologia[];
-        estados: { value: string; label: string; }[];
         tipos_soporte: { value: string; label: string; }[];
         confidencialidad: { value: string; label: string; }[];
         formatos_permitidos: Record<string, string[]>;
@@ -67,7 +66,7 @@ interface FormData {
     tipologia_id: string;
     tipo_documental: string;
     tipo_soporte: string;
-    estado: string;
+    activo: boolean;
     confidencialidad: string;
     numero_folios: number | null;
     palabras_clave: string[];
@@ -83,6 +82,17 @@ interface FormData {
 }
 
 export default function CreateDocument({ opciones }: CreateDocumentProps) {
+    // Valores por defecto para evitar errores
+    const opcionesSeguras = {
+        expedientes: opciones?.expedientes || [],
+        tipologias: opciones?.tipologias || [],
+        tipos_soporte: opciones?.tipos_soporte || [],
+        confidencialidad: opciones?.confidencialidad || [],
+        formatos_permitidos: opciones?.formatos_permitidos || {},
+        tamaños_maximos: opciones?.tamaños_maximos || {},
+        configuracion_multimedia: opciones?.configuracion_multimedia || {}
+    };
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
@@ -97,7 +107,7 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
         tipologia_id: '',
         tipo_documental: '',
         tipo_soporte: 'electronico',
-        estado: 'borrador',
+        activo: true,
         confidencialidad: 'interna',
         numero_folios: null,
         palabras_clave: [],
@@ -124,15 +134,39 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
 
         // Crear FormData para subida de archivos
         const formData = new FormData();
-        Object.entries(data).forEach(([key, value]) => {
-            if (key === 'palabras_clave') {
-                palabrasClave.forEach((palabra, index) => {
-                    formData.append(`palabras_clave[${index}]`, palabra);
-                });
-            } else if (value !== null && value !== undefined) {
-                formData.append(key, value);
-            }
+        
+        // Campos simples
+        formData.append('nombre', data.nombre);
+        formData.append('descripcion', data.descripcion || '');
+        formData.append('expediente_id', data.expediente_id);
+        formData.append('tipo_documental', data.tipo_documental || '');
+        formData.append('tipo_soporte', data.tipo_soporte);
+        formData.append('activo', data.activo ? '1' : '0');
+        formData.append('confidencialidad', data.confidencialidad);
+        formData.append('ubicacion_fisica', data.ubicacion_fisica || '');
+        formData.append('observaciones', data.observaciones || '');
+        
+        if (data.tipologia_id) {
+            formData.append('tipologia_id', data.tipologia_id);
+        }
+        if (data.numero_folios) {
+            formData.append('numero_folios', data.numero_folios.toString());
+        }
+        
+        // Palabras clave
+        palabrasClave.forEach((palabra, index) => {
+            formData.append(`palabras_clave[${index}]`, palabra);
         });
+        
+        // Archivo
+        if (data.archivo) {
+            formData.append('archivo', data.archivo);
+        }
+        
+        // Procesamiento
+        formData.append('procesamiento[ocr]', data.procesamiento.ocr ? '1' : '0');
+        formData.append('procesamiento[convertir]', data.procesamiento.convertir ? '1' : '0');
+        formData.append('procesamiento[generar_miniatura]', data.procesamiento.generar_miniatura ? '1' : '0');
 
         // Simular progreso de subida
         const interval = setInterval(() => {
@@ -191,6 +225,82 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
         if (!data.nombre) {
             setData('nombre', file.name);
         }
+        
+        // Detectar tipo de archivo automáticamente
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        const tipoDetectado = detectarTipoArchivo(extension || '');
+        
+        // Mostrar información del archivo detectado
+        toast.success(`Archivo detectado: ${tipoDetectado} (${extension?.toUpperCase()}) - ${formatFileSize(file.size)}`);
+    };
+
+    // Función para detectar tipo de archivo
+    const detectarTipoArchivo = (extension: string): string => {
+        const tipos: Record<string, string> = {
+            // Documentos
+            'pdf': 'Documento PDF',
+            'doc': 'Documento Word',
+            'docx': 'Documento Word',
+            'txt': 'Archivo de Texto',
+            'rtf': 'Texto Enriquecido',
+            'odt': 'Documento OpenOffice',
+            
+            // Imágenes
+            'jpg': 'Imagen JPEG',
+            'jpeg': 'Imagen JPEG',
+            'png': 'Imagen PNG',
+            'gif': 'Imagen GIF',
+            'bmp': 'Imagen BMP',
+            'tiff': 'Imagen TIFF',
+            'svg': 'Imagen Vectorial',
+            'webp': 'Imagen WebP',
+            
+            // Hojas de cálculo
+            'xls': 'Hoja de Cálculo Excel',
+            'xlsx': 'Hoja de Cálculo Excel',
+            'csv': 'Archivo CSV',
+            'ods': 'Hoja de Cálculo OpenOffice',
+            
+            // Presentaciones
+            'ppt': 'Presentación PowerPoint',
+            'pptx': 'Presentación PowerPoint',
+            'odp': 'Presentación OpenOffice',
+            
+            // Audio
+            'mp3': 'Audio MP3',
+            'wav': 'Audio WAV',
+            'ogg': 'Audio OGG',
+            'flac': 'Audio FLAC',
+            'm4a': 'Audio M4A',
+            'aac': 'Audio AAC',
+            
+            // Video
+            'mp4': 'Video MP4',
+            'avi': 'Video AVI',
+            'mov': 'Video MOV',
+            'wmv': 'Video WMV',
+            'flv': 'Video FLV',
+            'webm': 'Video WebM',
+            'mkv': 'Video MKV',
+            
+            // Comprimidos
+            'zip': 'Archivo ZIP',
+            'rar': 'Archivo RAR',
+            '7z': 'Archivo 7-Zip',
+            'tar': 'Archivo TAR',
+            'gz': 'Archivo GZIP'
+        };
+        
+        return tipos[extension] || 'Archivo Desconocido';
+    };
+
+    // Función para formatear tamaño de archivo
+    const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
     const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,16 +351,6 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
         return <FileText className="h-8 w-8 text-gray-500" />;
     };
 
-    // Formatear tamaño de archivo
-    const formatFileSize = (bytes: number) => {
-        if (bytes === 0) return '0 Bytes';
-        
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
 
     // Obtener opciones de procesamiento disponibles según el tipo de archivo
     const getAvailableProcessing = (fileName: string) => {
@@ -353,8 +453,11 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                                         <div className="flex items-center justify-center">
                                             {getFormatIcon(data.archivo.name)}
                                         </div>
-                                        <div>
+                                        <div className="text-center">
                                             <p className="font-medium">{data.archivo.name}</p>
+                                            <p className="text-sm text-blue-600 font-medium">
+                                                {detectarTipoArchivo(data.archivo.name.split('.').pop()?.toLowerCase() || '')}
+                                            </p>
                                             <p className="text-sm text-gray-500">
                                                 {formatFileSize(data.archivo.size)}
                                             </p>
@@ -437,9 +540,9 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                                             <SelectValue placeholder="Seleccionar expediente" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {opciones.expedientes.map((expediente) => (
+                                            {opcionesSeguras.expedientes.map((expediente) => (
                                                 <SelectItem key={expediente.id} value={expediente.id.toString()}>
-                                                    {expediente.codigo} - {expediente.nombre}
+                                                    {expediente.codigo} - {expediente.titulo}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -485,7 +588,7 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="null">Sin tipología</SelectItem>
-                                            {opciones.tipologias.map((tipologia) => (
+                                            {opcionesSeguras.tipologias.map((tipologia) => (
                                                 <SelectItem key={tipologia.id} value={tipologia.id.toString()}>
                                                     {tipologia.nombre} ({tipologia.categoria})
                                                 </SelectItem>
@@ -517,7 +620,7 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {opciones.tipos_soporte.map((tipo) => (
+                                            {opcionesSeguras.tipos_soporte.map((tipo) => (
                                                 <SelectItem key={tipo.value} value={tipo.value}>
                                                     {tipo.label}
                                                 </SelectItem>
@@ -547,23 +650,15 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="estado">Estado *</Label>
-                                    <Select 
-                                        value={data.estado} 
-                                        onValueChange={(value) => setData('estado', value)}
-                                    >
-                                        <SelectTrigger id="estado">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {opciones.estados.map((estado) => (
-                                                <SelectItem key={estado.value} value={estado.value}>
-                                                    {estado.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="activo"
+                                        checked={data.activo}
+                                        onCheckedChange={(checked) => setData('activo', checked)}
+                                    />
+                                    <Label htmlFor="activo" className="cursor-pointer">
+                                        Documento Activo
+                                    </Label>
                                 </div>
 
                                 <div>
@@ -576,7 +671,7 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {opciones.confidencialidad.map((conf) => (
+                                            {opcionesSeguras.confidencialidad.map((conf) => (
                                                 <SelectItem key={conf.value} value={conf.value}>
                                                     {conf.label}
                                                 </SelectItem>

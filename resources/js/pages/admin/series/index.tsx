@@ -70,6 +70,7 @@ interface Props {
     trds: TRD[];
     areas: string[];
     flash?: {
+        success?: string;
         message?: string;
         error?: string;
     };
@@ -87,6 +88,9 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
 
     // Interceptar flash messages y mostrarlos como toasts
     useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
         if (flash?.message) {
             toast.success(flash.message);
         }
@@ -668,14 +672,17 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                             </td>
                                             <td className="px-6 py-4">
                                                 {serie.tabla_retencion ? (
-                                                    <>
-                                                        <div className="text-sm text-gray-900">
+                                                    <Link 
+                                                        href={`/admin/trd/${serie.trd_id}`}
+                                                        className="block hover:bg-blue-50 rounded p-1 -m-1 transition-colors"
+                                                    >
+                                                        <div className="text-sm text-[#2a3d83] font-medium hover:underline">
                                                             {serie.tabla_retencion.codigo}
                                                         </div>
                                                         <div className="text-xs text-gray-500 line-clamp-1">
                                                             {serie.tabla_retencion.nombre}
                                                         </div>
-                                                    </>
+                                                    </Link>
                                                 ) : (
                                                     <span className="text-sm text-gray-400">Sin TRD asociada</span>
                                                 )}

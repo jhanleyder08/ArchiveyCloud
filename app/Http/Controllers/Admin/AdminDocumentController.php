@@ -68,14 +68,14 @@ class AdminDocumentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Documento::query()->orderBy('created_at', 'desc');
+        $query = Documento::with(['expediente', 'tipologia', 'usuarioCreador'])->orderBy('created_at', 'desc');
 
-        // Filtros
+        // Filtros - usando campos correctos de la BD
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('codigo', 'LIKE', "%{$search}%")
-                  ->orWhere('nombre', 'LIKE', "%{$search}%")
+                $q->where('codigo_documento', 'LIKE', "%{$search}%")
+                  ->orWhere('titulo', 'LIKE', "%{$search}%")
                   ->orWhere('descripcion', 'LIKE', "%{$search}%");
             });
         }
@@ -84,16 +84,12 @@ class AdminDocumentController extends Controller
             $query->where('expediente_id', $request->expediente_id);
         }
 
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
         if ($request->filled('formato')) {
             $query->where('formato', $request->formato);
         }
 
-        if ($request->filled('tipo_soporte')) {
-            $query->where('tipo_soporte', $request->tipo_soporte);
+        if ($request->filled('activo')) {
+            $query->where('activo', $request->activo === 'true' || $request->activo === '1');
         }
 
         // Paginación
@@ -101,36 +97,22 @@ class AdminDocumentController extends Controller
 
         // Estadísticas
         $estadisticas = [
-            'total' => 0, // Documento::count(),
-            'activos' => 0, // Simplificado por ahora
-            'borradores' => 0, // Simplificado por ahora
-            'archivados' => 0, // Simplificado por ahora
+            'total' => Documento::count(),
+            'activos' => Documento::where('activo', true)->count(),
+            'borradores' => Documento::where('activo', false)->count(),
+            'procesados' => Documento::where('estado_procesamiento', 'completado')->count(),
         ];
 
-        // Opciones para filtros
-        $opciones = [
-            'estados' => [
-                ['value' => 'borrador', 'label' => 'Borrador'],
-                ['value' => 'pendiente', 'label' => 'Pendiente'],
-                ['value' => 'aprobado', 'label' => 'Aprobado'],
-                ['value' => 'activo', 'label' => 'Activo'],
-                ['value' => 'archivado', 'label' => 'Archivado'],
-            ],
-            'soportes' => [
-                ['value' => 'electronico', 'label' => 'Electrónico'],
-                ['value' => 'fisico', 'label' => 'Físico'],
-                ['value' => 'hibrido', 'label' => 'Híbrido'],
-            ],
-            'formatos_disponibles' => ['pdf', 'doc', 'docx', 'jpg', 'png'],
-            'expedientes_disponibles' => [], // Expediente::select('id', 'numero_expediente', 'titulo')->get(),
-        ];
+        // Obtener expedientes y tipologías para filtros
+        $expedientes = Expediente::select('id', 'codigo', 'titulo')->get();
+        $tipologias = TipologiaDocumental::where('activa', true)->select('id', 'nombre', 'categoria')->get();
 
         return Inertia::render('admin/documentos/index', [
             'documentos' => $documentos,
             'stats' => $estadisticas,
-            'expedientes' => $opciones['expedientes_disponibles'],
-            'tipologias' => [],
-            'filtros' => $request->only(['search', 'expediente_id', 'estado', 'formato', 'tipo_soporte'])
+            'expedientes' => $expedientes,
+            'tipologias' => $tipologias,
+            'filtros' => $request->only(['search', 'expediente_id', 'formato', 'activo'])
         ]);
     }
 
@@ -141,17 +123,12 @@ class AdminDocumentController extends Controller
     {
         $opciones = [
             'expedientes' => Expediente::with(['serie', 'subserie'])
-                                     ->where('estado', '!=', 'cerrado')
-                                     ->select('id', 'codigo', 'nombre', 'serie_id', 'subserie_id')
+                                     ->where('cerrado', false)
+                                     ->select('id', 'codigo', 'titulo', 'serie_id', 'subserie_id')
                                      ->get(),
-            'tipologias' => TipologiaDocumental::where('activo', true)
-                                              ->select('id', 'nombre', 'categoria', 'formato_archivo')
+            'tipologias' => TipologiaDocumental::where('activa', true)
+                                              ->select('id', 'nombre', 'categoria', 'formatos_aceptados')
                                               ->get(),
-            'estados' => [
-                ['value' => Documento::ESTADO_BORRADOR, 'label' => 'Borrador'],
-                ['value' => Documento::ESTADO_PENDIENTE, 'label' => 'Pendiente'],
-                ['value' => Documento::ESTADO_ACTIVO, 'label' => 'Activo'],
-            ],
             'tipos_soporte' => [
                 ['value' => Documento::SOPORTE_ELECTRONICO, 'label' => 'Electrónico'],
                 ['value' => Documento::SOPORTE_FISICO, 'label' => 'Físico'],
@@ -184,144 +161,68 @@ class AdminDocumentController extends Controller
             'descripcion' => 'nullable|string',
             'expediente_id' => 'required|exists:expedientes,id',
             'tipologia_id' => 'nullable|exists:tipologias_documentales,id',
-            'tipo_documental' => 'nullable|string|max:100',
-            'tipo_soporte' => 'required|in:' . implode(',', [
-                Documento::SOPORTE_ELECTRONICO,
-                Documento::SOPORTE_FISICO,
-                Documento::SOPORTE_HIBRIDO
-            ]),
-            'estado' => 'required|in:' . implode(',', [
-                Documento::ESTADO_BORRADOR,
-                Documento::ESTADO_PENDIENTE,
-                Documento::ESTADO_ACTIVO
-            ]),
-            'confidencialidad' => 'required|in:' . implode(',', [
-                Documento::CONFIDENCIALIDAD_PUBLICA,
-                Documento::CONFIDENCIALIDAD_INTERNA,
-                Documento::CONFIDENCIALIDAD_CONFIDENCIAL,
-                Documento::CONFIDENCIALIDAD_RESERVADA,
-                Documento::CONFIDENCIALIDAD_CLASIFICADA
-            ]),
-            'numero_folios' => 'nullable|integer|min:1',
-            'palabras_clave' => 'nullable|array',
-            'palabras_clave.*' => 'string|max:50',
-            'ubicacion_fisica' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string',
-            'archivo' => 'nullable|file|max:' . (2048 * 1024), // 2GB máximo
-            // Opciones de procesamiento
+            'tipo_soporte' => 'nullable|string',
+            'activo' => 'nullable|boolean',
+            'confidencialidad' => 'nullable|string',
+            'archivo' => 'required|file|max:' . (2048 * 1024), // 2GB máximo - REQUERIDO
             'procesamiento' => 'nullable|array',
-            'procesamiento.ocr' => 'nullable|boolean',
-            'procesamiento.convertir' => 'nullable|boolean',
-            'procesamiento.generar_miniatura' => 'nullable|boolean'
         ]);
 
         DB::beginTransaction();
         
         try {
-            // REQ-VN-001: Validar estructura TRD/CCD antes de crear
-            $expediente = null;
-            if ($request->expediente_id) {
-                $expediente = Expediente::with('serie')->find($request->expediente_id);
-            }
-
-            $validacionEstructura = $this->businessRules->validarEstructuraTRD([
-                'serie_id' => $expediente ? $expediente->serie_id : null,
-                'subserie_id' => $expediente ? $expediente->subserie_id : null,
-                'tipologia_id' => $request->tipologia_id,
-            ]);
-
-            if (!$validacionEstructura['valido']) {
-                throw new \Exception('Errores en estructura TRD: ' . implode(', ', $validacionEstructura['errores']));
-            }
-
-            // Mostrar advertencias de estructura si las hay
-            if (!empty($validacionEstructura['advertencias'])) {
-                session()->flash('trd_warnings', $validacionEstructura['advertencias']);
+            // Validar que se haya subido un archivo
+            if (!$request->hasFile('archivo')) {
+                return redirect()->back()
+                               ->withInput()
+                               ->withErrors(['archivo' => 'El archivo es requerido.']);
             }
 
             $documento = new Documento();
-            $documento->fill($request->except(['archivo', 'procesamiento']));
-            $documento->usuario_creador_id = auth()->id();
+            // Generar código único
+            $year = date('Y');
+            $lastDoc = Documento::whereYear('created_at', $year)->orderBy('id', 'desc')->first();
+            $nextNum = $lastDoc ? (intval(substr($lastDoc->codigo_documento ?? '0000', -4)) + 1) : 1;
+            $documento->codigo_documento = 'DOC-' . $year . '-' . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
             
-            // REQ-CP-007: Validación y procesamiento avanzado de archivo
-            if ($request->hasFile('archivo')) {
-                $archivo = $request->file('archivo');
-                
-                // 1. Validación avanzada con el nuevo servicio
-                $validacion = $this->documentProcessor->validarArchivo(
-                    $archivo, 
-                    $request->tipologia_id
-                );
-                
-                if (!$validacion['valido']) {
-                    throw new \Exception('Errores de validación: ' . implode(', ', $validacion['errores']));
-                }
-                
-                // Mostrar advertencias si las hay
-                if (!empty($validacion['advertencias'])) {
-                    session()->flash('warnings', $validacion['advertencias']);
-                }
-                
-                // 2. Procesar archivo con el servicio avanzado
-                $procesamiento = $this->documentProcessor->procesarArchivo(
-                    $archivo, 
-                    $documento, 
-                    $request->input('procesamiento', [])
-                );
-                
-                if (!$procesamiento['success']) {
-                    throw new \Exception('Error procesando el archivo');
-                }
-                
-                // 3. Asignar datos del archivo procesado
-                $documento->formato = strtolower($archivo->getClientOriginalExtension());
-                $documento->tamaño = $archivo->getSize();
-                $documento->ruta_archivo = $procesamiento['archivo_procesado'];
-                $documento->hash_sha256 = $procesamiento['metadatos']['hash_sha256'] ?? null;
-                
-                // 4. Datos adicionales del procesamiento
-                if ($procesamiento['ocr_texto']) {
-                    $documento->contenido_ocr = $procesamiento['ocr_texto'];
-                }
-                
-                if ($procesamiento['miniatura']) {
-                    $documento->ruta_miniatura = $procesamiento['miniatura'];
-                }
-                
-                // 5. Metadatos adicionales
-                $documento->metadatos_archivo = json_encode([
-                    'validacion' => $validacion,
-                    'procesamiento' => $procesamiento['metadatos'],
-                    'conversiones' => $procesamiento['conversiones'] ?? []
-                ]);
-            }
+            // Mapear campos del formulario a campos de la BD
+            $documento->titulo = $request->nombre;
+            $documento->descripcion = $request->descripcion ?? '';
+            $documento->expediente_id = $request->expediente_id;
+            $documento->tipologia_documental_id = $request->tipologia_id ?: 1; // Usar tipología por defecto
+            $documento->productor_id = auth()->id(); // CAMPO REQUERIDO
+            $documento->created_by = auth()->id();
+            $documento->activo = $request->activo ?? true;
+            $documento->version_mayor = 1;
+            $documento->version_menor = 0;
+            $documento->fecha_documento = now();
+            $documento->fecha_captura = now();
+            
+            // Procesar archivo (REQUERIDO)
+            $archivo = $request->file('archivo');
+            $documento->formato = strtolower($archivo->getClientOriginalExtension());
+            $documento->tamano_bytes = $archivo->getSize();
+            $documento->nombre_archivo = $archivo->getClientOriginalName();
+            
+            // Guardar archivo
+            $path = $archivo->store('documentos/' . date('Y/m'), 'public');
+            // El path se guarda en metadatos por ahora ya que no hay columna ruta_archivo
+            $documento->metadatos_archivo = json_encode(['ruta' => $path]);
+            $documento->hash_sha256 = hash_file('sha256', $archivo->getRealPath());
             
             $documento->save();
-
-            // REQ-VN-003: Validar metadatos obligatorios
-            $validacionMetadatos = $this->businessRules->validarMetadatosObligatorios($documento, 'documento');
-            if (!empty($validacionMetadatos['advertencias'])) {
-                session()->flash('metadata_warnings', $validacionMetadatos['advertencias']);
-            }
-
-            // REQ-VN-004: Validar integridad referencial
-            $validacionIntegridad = $this->businessRules->validarIntegridadReferencial($documento, 'create');
-            if (!$validacionIntegridad['valido']) {
-                throw new \Exception('Errores de integridad: ' . implode(', ', $validacionIntegridad['errores']));
-            }
             
             DB::commit();
             
-            $mensaje = 'Documento creado exitosamente.';
-            if (!empty($validacion['advertencias'] ?? [])) {
-                $mensaje .= ' Nota: ' . implode(', ', $validacion['advertencias']);
-            }
-            
             return redirect()->route('admin.documentos.index')
-                           ->with('success', $mensaje);
+                           ->with('success', 'Documento creado exitosamente.');
                            
         } catch (\Exception $e) {
             DB::rollback();
+            \Log::error('Error creando documento: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
             return redirect()->back()
                            ->withInput()
                            ->withErrors(['error' => 'Error al crear documento: ' . $e->getMessage()]);
@@ -338,10 +239,28 @@ class AdminDocumentController extends Controller
             'expediente.subserie', 
             'tipologia',
             'usuarioCreador',
-            'usuarioModificador',
-            'versiones',
-            'firmas.usuario'
+            'usuarioModificador'
         ]);
+
+        // Generar URL directa del archivo
+        $urlDirecta = null;
+        if ($documento->metadatos_archivo) {
+            $metadatos = json_decode($documento->metadatos_archivo, true);
+            $ruta = $metadatos['ruta'] ?? null;
+            if ($ruta) {
+                // Intentar primero con storage público
+                $urlDirecta = asset('storage/' . $ruta);
+                
+                // Si no funciona, usar URL directa al public
+                $publicPath = str_replace('storage/app/public/', '', $ruta);
+                $urlAlternativa = asset($publicPath);
+                
+                // Verificar si el archivo existe en public
+                if (file_exists(public_path($publicPath))) {
+                    $urlDirecta = $urlAlternativa;
+                }
+            }
+        }
 
         return Inertia::render('admin/documentos/show', [
             'documento' => [
@@ -350,10 +269,90 @@ class AdminDocumentController extends Controller
                 'puede_editar' => $this->puedeEditar($documento),
                 'puede_eliminar' => $this->puedeEliminar($documento),
                 'archivo_existe' => $documento->existe(),
-                'url_descarga' => $documento->getUrlDescarga(),
+                'url_descarga' => $urlDirecta ?: $documento->getUrlDescarga(),
+                'url_directa' => $urlDirecta,
                 'integridad_verificada' => $documento->verificarIntegridad(),
             ]
         ]);
+    }
+
+    /**
+     * Preview del documento
+     */
+    public function preview(Documento $documento)
+    {
+        if (!$documento->existe()) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        $metadatos = json_decode($documento->metadatos_archivo, true);
+        $ruta = $metadatos['ruta'] ?? null;
+        
+        if (!$ruta) {
+            abort(404, 'Ruta de archivo no encontrada');
+        }
+
+        $path = storage_path('app/public/' . $ruta);
+        
+        if (!file_exists($path)) {
+            abort(404, 'Archivo no encontrado en el sistema');
+        }
+
+        $mimeType = $this->getMimeType($documento->formato);
+        
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $documento->nombre_archivo . '"',
+            'X-Frame-Options' => 'SAMEORIGIN'
+        ]);
+    }
+
+    /**
+     * Descargar documento
+     */
+    public function descargar(Documento $documento)
+    {
+        if (!$documento->existe()) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        $path = storage_path('app/public/' . json_decode($documento->metadatos_archivo, true)['ruta']);
+        
+        if (!file_exists($path)) {
+            abort(404, 'Archivo no encontrado en el sistema');
+        }
+
+        return response()->download($path, $documento->nombre_archivo);
+    }
+
+    /**
+     * Obtener MIME type por extensión
+     */
+    private function getMimeType($extension)
+    {
+        $mimeTypes = [
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt' => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'txt' => 'text/plain',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'bmp' => 'image/bmp',
+            'svg' => 'image/svg+xml',
+            'mp4' => 'video/mp4',
+            'avi' => 'video/x-msvideo',
+            'mov' => 'video/quicktime',
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+        ];
+
+        return $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
     }
 
     /**
@@ -367,16 +366,9 @@ class AdminDocumentController extends Controller
             'expedientes' => Expediente::with(['serie', 'subserie'])
                                      ->select('id', 'codigo', 'nombre', 'serie_id', 'subserie_id')
                                      ->get(),
-            'tipologias' => TipologiaDocumental::where('activo', true)
-                                              ->select('id', 'nombre', 'categoria', 'formato_archivo')
+            'tipologias' => TipologiaDocumental::where('activa', true)
+                                              ->select('id', 'nombre', 'categoria', 'formatos_aceptados')
                                               ->get(),
-            'estados' => [
-                ['value' => Documento::ESTADO_BORRADOR, 'label' => 'Borrador'],
-                ['value' => Documento::ESTADO_PENDIENTE, 'label' => 'Pendiente'],
-                ['value' => Documento::ESTADO_APROBADO, 'label' => 'Aprobado'],
-                ['value' => Documento::ESTADO_ACTIVO, 'label' => 'Activo'],
-                ['value' => Documento::ESTADO_ARCHIVADO, 'label' => 'Archivado'],
-            ],
             'tipos_soporte' => [
                 ['value' => Documento::SOPORTE_ELECTRONICO, 'label' => 'Electrónico'],
                 ['value' => Documento::SOPORTE_FISICO, 'label' => 'Físico'],
@@ -413,13 +405,7 @@ class AdminDocumentController extends Controller
                 Documento::SOPORTE_FISICO,
                 Documento::SOPORTE_HIBRIDO
             ]),
-            'estado' => 'required|in:' . implode(',', [
-                Documento::ESTADO_BORRADOR,
-                Documento::ESTADO_PENDIENTE,
-                Documento::ESTADO_APROBADO,
-                Documento::ESTADO_ACTIVO,
-                Documento::ESTADO_ARCHIVADO
-            ]),
+            'activo' => 'nullable|boolean',
             'confidencialidad' => 'required|in:' . implode(',', [
                 Documento::CONFIDENCIALIDAD_PUBLICA,
                 Documento::CONFIDENCIALIDAD_INTERNA,
@@ -748,13 +734,13 @@ class AdminDocumentController extends Controller
     {
         $user = auth()->user();
         
-        // No se puede eliminar si tiene versiones
-        if ($documento->versiones()->count() > 0) {
-            return false;
-        }
+        // Por ahora permitir eliminar (versiones no implementadas)
+        // if ($documento->versiones()->count() > 0) {
+        //     return false;
+        // }
         
         return $user->isAdmin() || 
-               ($documento->usuario_creador_id === $user->id && $documento->estado === Documento::ESTADO_BORRADOR) ||
+               ($documento->usuario_creador_id === $user->id && !$documento->activo) ||
                $user->hasPermission('documentos.eliminar');
     }
 
@@ -784,7 +770,7 @@ class AdminDocumentController extends Controller
         $documento->nombre = $archivo->getClientOriginalName();
         $documento->expediente_id = $configuracion['expediente_id'];
         $documento->tipo_soporte = Documento::SOPORTE_ELECTRONICO;
-        $documento->estado = $configuracion['configuracion']['estado_default'] ?? Documento::ESTADO_BORRADOR;
+        $documento->activo = $configuracion['configuracion']['activo_default'] ?? false;
         $documento->confidencialidad = $configuracion['configuracion']['confidencialidad_default'] ?? Documento::CONFIDENCIALIDAD_INTERNA;
         $documento->usuario_creador_id = auth()->id();
         
@@ -811,7 +797,7 @@ class AdminDocumentController extends Controller
         $documento->expediente_id = $data['expediente_id'];
         $documento->tipologia_id = $data['configuracion']['tipologia_id'] ?? null;
         $documento->tipo_soporte = Documento::SOPORTE_ELECTRONICO;
-        $documento->estado = $data['configuracion']['estado_default'] ?? Documento::ESTADO_BORRADOR;
+        $documento->activo = $data['configuracion']['activo_default'] ?? false;
         $documento->confidencialidad = $data['configuracion']['confidencialidad_default'] ?? Documento::CONFIDENCIALIDAD_INTERNA;
         $documento->usuario_creador_id = auth()->id();
         

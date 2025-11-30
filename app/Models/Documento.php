@@ -143,31 +143,19 @@ class Documento extends Model
     {
         parent::boot();
         
-        // Generar código automático y validaciones
+        // Generar código automático usando campo correcto de la BD
         static::creating(function ($documento) {
-            if (empty($documento->codigo)) {
-                $documento->codigo = $documento->generarCodigo();
-            }
-            
-            // Heredar metadatos del expediente
-            if ($documento->expediente) {
-                $documento->heredarMetadatos();
-            }
-            
-            // Establecer fecha de creación si no existe
-            if (!$documento->fecha_creacion) {
-                $documento->fecha_creacion = now();
-            }
-            
-            // Calcular hash de integridad si hay archivo
-            if ($documento->ruta_archivo) {
-                $documento->calcularHashIntegridad();
-            }
-            
-            // Establecer como versión principal si es el primer documento
-            if (!$documento->documento_padre_id) {
-                $documento->es_version_principal = true;
-                $documento->version = '1.0';
+            if (empty($documento->codigo_documento)) {
+                $year = date('Y');
+                $expedienteCodigo = $documento->expediente->codigo ?? 'GEN';
+                $lastDoc = self::where('codigo_documento', 'LIKE', $expedienteCodigo . '-DOC' . $year . '%')
+                    ->orderBy('codigo_documento', 'desc')
+                    ->first();
+                $nextNum = 1;
+                if ($lastDoc && preg_match('/(\d{4})$/', $lastDoc->codigo_documento, $matches)) {
+                    $nextNum = intval($matches[1]) + 1;
+                }
+                $documento->codigo_documento = $expedienteCodigo . '-DOC' . $year . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
             }
         });
         
@@ -185,29 +173,32 @@ class Documento extends Model
         
         // Registrar en auditoría
         static::created(function ($documento) {
-            PistaAuditoria::registrar($documento, PistaAuditoria::ACCION_CREAR, [
-                'descripcion' => 'Documento creado: ' . $documento->codigo,
-                'expediente' => $documento->expediente->codigo ?? null,
-                'tipo_documental' => $documento->tipo_documental,
-                'formato' => $documento->formato,
-                'tamaño' => $documento->tamaño
-            ]);
+            if (class_exists(PistaAuditoria::class)) {
+                PistaAuditoria::registrar($documento, PistaAuditoria::ACCION_CREAR, [
+                    'descripcion' => 'Documento creado: ' . $documento->codigo_documento,
+                    'expediente' => $documento->expediente->codigo ?? null,
+                    'formato' => $documento->formato,
+                    'tamano' => $documento->tamano_bytes
+                ]);
+            }
         });
         
         static::updated(function ($documento) {
+            if (!class_exists(PistaAuditoria::class)) return;
+            
             $cambios = $documento->getDirty();
             
             // Registrar cambio de estado específicamente
-            if (isset($cambios['estado'])) {
+            if (isset($cambios['activo'])) {
                 PistaAuditoria::registrar($documento, 'cambio_estado', [
-                    'descripcion' => 'Estado del documento cambiado: ' . $documento->codigo,
-                    'estado_anterior' => $documento->getOriginal('estado'),
-                    'estado_nuevo' => $documento->estado
+                    'descripcion' => 'Estado del documento cambiado: ' . $documento->codigo_documento,
+                    'estado_anterior' => $documento->getOriginal('activo') ? 'activo' : 'inactivo',
+                    'estado_nuevo' => $documento->activo ? 'activo' : 'inactivo'
                 ]);
             }
             
             PistaAuditoria::registrar($documento, PistaAuditoria::ACCION_ACTUALIZAR, [
-                'descripcion' => 'Documento actualizado: ' . $documento->codigo,
+                'descripcion' => 'Documento actualizado: ' . $documento->codigo_documento,
                 'valores_anteriores' => $documento->getOriginal(),
                 'valores_nuevos' => $documento->getAttributes()
             ]);
@@ -227,7 +218,7 @@ class Documento extends Model
      */
     public function tipologia(): BelongsTo
     {
-        return $this->belongsTo(TipologiaDocumental::class, 'tipologia_id');
+        return $this->belongsTo(TipologiaDocumental::class, 'tipologia_documental_id');
     }
 
     /**
@@ -307,7 +298,7 @@ class Documento extends Model
      */
     public function scopeActivos($query)
     {
-        return $query->where('estado', self::ESTADO_ACTIVO);
+        return $query->where('activo', true);
     }
 
     /**
@@ -364,12 +355,12 @@ class Documento extends Model
         }
         
         // Obtener último número del documento en el año
-        $ultimoDocumento = static::where('codigo', 'LIKE', $prefijo . $year . '%')
-                                ->orderBy('codigo', 'desc')
+        $ultimoDocumento = static::where('codigo_documento', 'LIKE', $prefijo . $year . '%')
+                                ->orderBy('codigo_documento', 'desc')
                                 ->first();
         
         if ($ultimoDocumento) {
-            $ultimoNumero = intval(substr($ultimoDocumento->codigo, -6));
+            $ultimoNumero = intval(substr($ultimoDocumento->codigo_documento, -6));
             $nuevoNumero = $ultimoNumero + 1;
         } else {
             $nuevoNumero = 1;
@@ -390,8 +381,8 @@ class Documento extends Model
         $metadatos = $this->expediente->metadatos_expediente ?? [];
         
         // Agregar metadatos específicos del documento
-        $metadatos['documento_codigo'] = $this->codigo ?? 'EN_GENERACION';
-        $metadatos['tipo_documental'] = $this->tipo_documental;
+        $metadatos['documento_codigo'] = $this->codigo_documento ?? 'EN_GENERACION';
+        $metadatos['titulo'] = $this->titulo;
         $metadatos['fecha_creacion_documento'] = $this->fecha_creacion ?? now();
         
         $this->metadatos_documento = array_merge($this->metadatos_documento ?? [], $metadatos);
@@ -522,11 +513,18 @@ class Documento extends Model
      */
     public function existe()
     {
-        if (!$this->ruta_archivo) {
+        if (!$this->metadatos_archivo) {
             return false;
         }
         
-        return Storage::exists($this->ruta_archivo);
+        $metadatos = json_decode($this->metadatos_archivo, true);
+        $ruta = $metadatos['ruta'] ?? null;
+        
+        if (!$ruta) {
+            return false;
+        }
+        
+        return Storage::exists($ruta);
     }
 
     /**
@@ -538,7 +536,10 @@ class Documento extends Model
             return null;
         }
         
-        return Storage::url($this->ruta_archivo);
+        $metadatos = json_decode($this->metadatos_archivo, true);
+        $ruta = $metadatos['ruta'] ?? null;
+        
+        return $ruta ? Storage::url($ruta) : null;
     }
 
     /**
@@ -643,20 +644,21 @@ class Documento extends Model
     public function getEstadisticas()
     {
         return [
-            'codigo' => $this->codigo,
-            'nombre' => $this->nombre,
+            'codigo' => $this->codigo_documento,
+            'nombre' => $this->titulo,
             'tipo_documental' => $this->tipo_documental,
             'formato' => $this->formato,
-            'tamaño_mb' => round($this->tamaño / 1024 / 1024, 2),
+            'tamaño_mb' => $this->tamano_bytes ? round($this->tamano_bytes / 1024 / 1024, 2) : 0,
             'numero_folios' => $this->numero_folios,
             'version' => $this->version,
             'es_version_principal' => $this->es_version_principal,
-            'total_versiones' => $this->es_version_principal ? $this->versiones()->count() + 1 : 0,
-            'estado' => $this->estado,
+            'total_versiones' => 1, // Por ahora solo versión principal
+            'activo' => $this->activo,
+            'estado_procesamiento' => $this->estado_procesamiento,
             'confidencialidad' => $this->confidencialidad,
             'tiene_firma_digital' => !empty($this->firma_digital),
-            'total_firmas' => $this->firmas()->count(),
-            'fecha_creacion' => $this->fecha_creacion->format('Y-m-d H:i:s'),
+            'total_firmas' => $this->total_firmas ?? 0,
+            'fecha_creacion' => $this->fecha_creacion?->format('Y-m-d H:i:s'),
             'fecha_modificacion' => $this->fecha_modificacion?->format('Y-m-d H:i:s'),
             'usuario_creador' => $this->usuarioCreador->name ?? null,
             'expediente' => $this->expediente->codigo ?? null,
@@ -672,25 +674,26 @@ class Documento extends Model
     {
         $data = [
             'documento' => [
-                'codigo' => $this->codigo,
-                'nombre' => $this->nombre,
+                'codigo' => $this->codigo_documento,
+                'nombre' => $this->titulo,
                 'descripcion' => $this->descripcion,
                 'tipo_documental' => $this->tipo_documental,
                 'tipo_soporte' => $this->tipo_soporte,
                 'formato' => $this->formato,
-                'tamaño' => $this->tamaño,
+                'tamano_bytes' => $this->tamano_bytes,
                 'numero_folios' => $this->numero_folios,
                 'version' => $this->version,
-                'estado' => $this->estado,
+                'activo' => $this->activo,
+                'estado_procesamiento' => $this->estado_procesamiento,
                 'confidencialidad' => $this->confidencialidad,
                 'fecha_creacion' => $this->fecha_creacion?->format('Y-m-d H:i:s'),
                 'fecha_modificacion' => $this->fecha_modificacion?->format('Y-m-d H:i:s'),
-                'hash_integridad' => $this->hash_integridad,
+                'hash_integridad' => $this->hash_sha256,
                 'tiene_firma_digital' => !empty($this->firma_digital)
             ],
             'expediente' => [
                 'codigo' => $this->expediente->codigo ?? null,
-                'nombre' => $this->expediente->nombre ?? null
+                'titulo' => $this->expediente->titulo ?? null
             ],
             'tipologia' => [
                 'nombre' => $this->tipologia->nombre ?? null,
@@ -705,12 +708,12 @@ class Documento extends Model
         if ($incluirVersiones && $this->es_version_principal) {
             $data['versiones'] = $this->versiones->map(function ($version) {
                 return [
-                    'codigo' => $version->codigo,
+                    'codigo' => $version->codigo_documento,
                     'version' => $version->version,
                     'fecha_modificacion' => $version->fecha_modificacion?->format('Y-m-d H:i:s'),
                     'observaciones' => $version->observaciones,
-                    'tamaño' => $version->tamaño,
-                    'hash_integridad' => $version->hash_integridad
+                    'tamano_bytes' => $version->tamano_bytes,
+                    'hash_integridad' => $version->hash_sha256
                 ];
             });
         }

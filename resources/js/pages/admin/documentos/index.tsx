@@ -32,15 +32,15 @@ interface Documento {
     codigo_documento: string;
     titulo: string;
     descripcion?: string;
-    estado: string;
+    activo: boolean;
     tipo_soporte: string;
     formato: string;
-    tamaño?: number;
+    tamano_bytes?: number;
     fecha_creacion: string;
     fecha_modificacion?: string;
-    activo: boolean;
     expediente?: {
-        numero_expediente: string;
+        id: number;
+        codigo: string;
         titulo: string;
     };
     tipologia?: {
@@ -49,6 +49,7 @@ interface Documento {
         categoria: string;
     };
     usuario_creador?: {
+        id: number;
         name: string;
     };
     observaciones?: string;
@@ -104,7 +105,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
         search: '',
-        estado: 'all',
+        activo: 'all',
         tipo_soporte: 'all',
         expediente_id: 'all'
     });
@@ -154,7 +155,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
         const timeoutId = setTimeout(() => {
             router.get('/admin/documentos', {
                 search: searchQuery || undefined,
-                estado: estadoFilter === 'all' ? undefined : estadoFilter,
+                activo: estadoFilter === 'all' ? undefined : estadoFilter,
                 formato: formatoFilter === 'all' ? undefined : formatoFilter
             }, {
                 preserveState: true,
@@ -189,7 +190,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
             [key]: value
         }));
         // Aplicar filtros, tratando 'all' como sin filtro
-        if (key === 'estado') {
+        if (key === 'activo') {
             setEstadoFilter(value);
         } else if (key === 'tipo_soporte') {
             // Aquí puedes manejar otros filtros si es necesario
@@ -237,13 +238,12 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                             Gestión de Documentos
                         </h1>
                     </div>
-                    <Button 
-                        onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Nuevo Documento
-                    </Button>
+                    <Link href="/admin/documentos/create">
+                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
+                            <Plus className="h-4 w-4" />
+                            Nuevo Documento
+                        </Button>
+                    </Link>
                 </div>
 
                 {/* Stats Cards */}
@@ -309,10 +309,9 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                                     <SelectValue placeholder="Filtro por estado" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Todos los estados</SelectItem>
-                                    <SelectItem value="activo">Activo</SelectItem>
-                                    <SelectItem value="borrador">Borrador</SelectItem>
-                                    <SelectItem value="archivado">Archivado</SelectItem>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    <SelectItem value="true">Activos</SelectItem>
+                                    <SelectItem value="false">Inactivos</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Button
@@ -415,7 +414,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                                                             {documento.expediente.titulo}
                                                         </div>
                                                         <div className="text-sm text-gray-500">
-                                                            {documento.expediente.numero_expediente}
+                                                            {documento.expediente.codigo}
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -423,8 +422,12 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                                                 )}
                                             </td>
                                             <td className="py-4 px-6">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEstadoBadgeColor(documento.estado)}`}>
-                                                    {estados[documento.estado] || documento.estado}
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                    documento.activo 
+                                                        ? 'bg-green-100 text-green-800' 
+                                                        : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                    {documento.activo ? 'Activo' : 'Inactivo'}
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6">
@@ -438,7 +441,7 @@ export default function AdminDocumentosIndex({ documentos, stats, flash, expedie
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 text-sm text-gray-900">
-                                                {formatFileSize(documento.tamaño)}
+                                                {formatFileSize(documento.tamano_bytes)}
                                             </td>
                                             <td className="py-4 px-6 text-sm text-gray-600">
                                                 {new Date(documento.created_at).toLocaleDateString('es-ES')}

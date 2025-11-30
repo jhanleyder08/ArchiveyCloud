@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TablaRetencionDocumental;
+use App\Models\CCD;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -55,9 +56,13 @@ class AdminTRDController extends Controller
             'aprobadas' => TablaRetencionDocumental::where('estado', 'aprobada')->count(),
         ];
 
+        // Obtener TODOS los CCDs disponibles para el formulario de creación
+        $ccds = CCD::orderBy('nombre')->get(['id', 'codigo', 'nombre', 'version', 'estado']);
+
         return Inertia::render('admin/trd/index', [
             'trds' => $trds,
             'stats' => $stats,
+            'ccds' => $ccds,
             'filters' => $request->only(['search', 'estado', 'vigente']),
             'estados' => [
                 TablaRetencionDocumental::ESTADO_BORRADOR => 'Borrador',
@@ -105,6 +110,7 @@ class AdminTRDController extends Controller
             'descripcion' => 'required|string',
             'entidad' => 'required|string|max:255',
             'dependencia' => 'nullable|string|max:255',
+            'ccd_id' => 'required|exists:cuadros_clasificacion,id',
             'version' => ['required', function ($attribute, $value, $fail) {
                 if (!is_numeric($value)) {
                     $fail('El campo versión debe ser un número.');

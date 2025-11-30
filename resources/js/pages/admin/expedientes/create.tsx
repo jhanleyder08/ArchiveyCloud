@@ -31,12 +31,6 @@ interface Subserie {
     nombre: string;
 }
 
-interface TRD {
-    id: number;
-    codigo: string;
-    version: string;
-    nombre: string;
-}
 
 interface Usuario {
     id: number;
@@ -48,30 +42,23 @@ interface CreateExpedienteProps {
     opciones: {
         series: Serie[];
         subseries: Subserie[];
-        trds: TRD[];
         usuarios: Usuario[];
         tipos_expediente: { value: string; label: string; }[];
-        confidencialidad: { value: string; label: string; }[];
-        areas_disponibles: { value: string; label: string; }[];
+        niveles_acceso: { value: string; label: string; }[];
     };
 }
 
 interface FormData {
-    nombre: string;
+    titulo: string;
     descripcion: string;
     serie_id: string;
     subserie_id: string;
-    trd_id: string;
     tipo_expediente: string;
-    confidencialidad: string;
-    usuario_responsable_id: string;
-    area_responsable: string;
-    volumen_maximo: number | null;
+    nivel_acceso: string;
+    responsable_id: string;
     ubicacion_fisica: string;
-    ubicacion_digital: string;
     palabras_clave: string[];
-    acceso_publico: boolean;
-    observaciones: string;
+    notas: string;
 }
 
 export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
@@ -81,21 +68,16 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
     const [subseriesFiltradas, setSubseriesFiltradas] = useState<Subserie[]>([]);
     
     const { data, setData, post, processing, errors, reset } = useForm<FormData>({
-        nombre: '',
+        titulo: '',
         descripcion: '',
         serie_id: '',
         subserie_id: '',
-        trd_id: '',
-        tipo_expediente: 'electronico',
-        confidencialidad: 'interna',
-        usuario_responsable_id: '',
-        area_responsable: '',
-        volumen_maximo: 1024,
+        tipo_expediente: 'administrativo',
+        nivel_acceso: 'restringido',
+        responsable_id: '',
         ubicacion_fisica: '',
-        ubicacion_digital: '',
         palabras_clave: [],
-        acceso_publico: false,
-        observaciones: '',
+        notas: '',
     });
 
     const breadcrumbItems = [
@@ -122,13 +104,21 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
         e.preventDefault();
         setIsSubmitting(true);
 
-        post('/admin/expedientes', {
+        // Preparar datos convirtiendo IDs a números
+        const formData = {
+            ...data,
+            serie_id: parseInt(data.serie_id) || null,
+            subserie_id: data.subserie_id ? parseInt(data.subserie_id) : null,
+            responsable_id: parseInt(data.responsable_id) || null,
+        };
+
+        router.post('/admin/expedientes', formData, {
             onSuccess: () => {
                 toast.success('Expediente creado exitosamente');
-                router.visit('/admin/expedientes');
             },
             onError: (errors) => {
                 toast.error('Error al crear el expediente. Revisa los campos marcados.');
+                console.error('Errores:', errors);
             },
             onFinish: () => {
                 setIsSubmitting(false);
@@ -199,18 +189,18 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <Label htmlFor="nombre">Nombre del Expediente *</Label>
+                                <Label htmlFor="titulo">Título del Expediente *</Label>
                                 <Input
-                                    id="nombre"
+                                    id="titulo"
                                     type="text"
-                                    value={data.nombre}
-                                    onChange={(e) => setData('nombre', e.target.value)}
-                                    placeholder="Nombre descriptivo del expediente"
-                                    className={errors.nombre ? 'border-red-500' : ''}
+                                    value={data.titulo}
+                                    onChange={(e) => setData('titulo', e.target.value)}
+                                    placeholder="Título descriptivo del expediente"
+                                    className={errors.titulo ? 'border-red-500' : ''}
                                     required
                                 />
-                                {errors.nombre && (
-                                    <p className="text-sm text-red-600 mt-1">{errors.nombre}</p>
+                                {errors.titulo && (
+                                    <p className="text-sm text-red-600 mt-1">{errors.titulo}</p>
                                 )}
                             </div>
 
@@ -306,25 +296,6 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
                                 </div>
                             )}
 
-                            <div>
-                                <Label htmlFor="trd_id">Tabla de Retención Documental</Label>
-                                <Select 
-                                    value={data.trd_id} 
-                                    onValueChange={(value) => setData('trd_id', value)}
-                                >
-                                    <SelectTrigger id="trd_id">
-                                        <SelectValue placeholder="Seleccionar TRD (opcional)" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="null">Sin TRD específica</SelectItem>
-                                        {opciones.trds.map((trd) => (
-                                            <SelectItem key={trd.id} value={trd.id.toString()}>
-                                                {trd.codigo} v{trd.version} - {trd.nombre}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
                         </CardContent>
                     </Card>
 
@@ -358,53 +329,28 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="confidencialidad">Confidencialidad *</Label>
+                                    <Label htmlFor="nivel_acceso">Nivel de Acceso *</Label>
                                     <Select 
-                                        value={data.confidencialidad} 
-                                        onValueChange={(value) => setData('confidencialidad', value)}
+                                        value={data.nivel_acceso} 
+                                        onValueChange={(value) => setData('nivel_acceso', value)}
                                     >
-                                        <SelectTrigger id="confidencialidad" className={errors.confidencialidad ? 'border-red-500' : ''}>
+                                        <SelectTrigger id="nivel_acceso" className={errors.nivel_acceso ? 'border-red-500' : ''}>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {opciones.confidencialidad.map((conf) => (
-                                                <SelectItem key={conf.value} value={conf.value}>
-                                                    {conf.label}
+                                            {opciones.niveles_acceso?.map((nivel: { value: string; label: string }) => (
+                                                <SelectItem key={nivel.value} value={nivel.value}>
+                                                    {nivel.label}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    {errors.confidencialidad && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.confidencialidad}</p>
+                                    {errors.nivel_acceso && (
+                                        <p className="text-sm text-red-600 mt-1">{errors.nivel_acceso}</p>
                                     )}
                                 </div>
                             </div>
 
-                            <div>
-                                <Label htmlFor="volumen_maximo">Volumen Máximo (MB)</Label>
-                                <Input
-                                    id="volumen_maximo"
-                                    type="number"
-                                    min="1"
-                                    value={data.volumen_maximo || ''}
-                                    onChange={(e) => setData('volumen_maximo', parseInt(e.target.value) || null)}
-                                    placeholder="1024"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Límite de almacenamiento para todos los documentos del expediente
-                                </p>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    id="acceso_publico"
-                                    type="checkbox"
-                                    checked={data.acceso_publico}
-                                    onChange={(e) => setData('acceso_publico', e.target.checked)}
-                                    className="rounded border-gray-300"
-                                />
-                                <Label htmlFor="acceso_publico">Permitir acceso público</Label>
-                            </div>
                         </CardContent>
                     </Card>
 
@@ -414,44 +360,26 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
                             <CardTitle>Responsabilidad</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="usuario_responsable_id">Usuario Responsable *</Label>
-                                    <Select 
-                                        value={data.usuario_responsable_id} 
-                                        onValueChange={(value) => setData('usuario_responsable_id', value)}
-                                    >
-                                        <SelectTrigger id="usuario_responsable_id" className={errors.usuario_responsable_id ? 'border-red-500' : ''}>
-                                            <SelectValue placeholder="Seleccionar responsable" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {opciones.usuarios.map((usuario) => (
-                                                <SelectItem key={usuario.id} value={usuario.id.toString()}>
-                                                    {usuario.name} ({usuario.email})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.usuario_responsable_id && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.usuario_responsable_id}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="area_responsable">Área Responsable *</Label>
-                                    <Input
-                                        id="area_responsable"
-                                        type="text"
-                                        value={data.area_responsable}
-                                        onChange={(e) => setData('area_responsable', e.target.value)}
-                                        placeholder="Ej: Secretaría General, Recursos Humanos"
-                                        className={errors.area_responsable ? 'border-red-500' : ''}
-                                        required
-                                    />
-                                    {errors.area_responsable && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.area_responsable}</p>
-                                    )}
-                                </div>
+                            <div>
+                                <Label htmlFor="responsable_id">Usuario Responsable *</Label>
+                                <Select 
+                                    value={data.responsable_id} 
+                                    onValueChange={(value) => setData('responsable_id', value)}
+                                >
+                                    <SelectTrigger id="responsable_id" className={errors.responsable_id ? 'border-red-500' : ''}>
+                                        <SelectValue placeholder="Seleccionar responsable" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {opciones.usuarios?.map((usuario) => (
+                                            <SelectItem key={usuario.id} value={usuario.id.toString()}>
+                                                {usuario.name} ({usuario.email})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.responsable_id && (
+                                    <p className="text-sm text-red-600 mt-1">{errors.responsable_id}</p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -461,29 +389,16 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
                         <CardHeader>
                             <CardTitle>Ubicación</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="ubicacion_fisica">Ubicación Física</Label>
-                                    <Input
-                                        id="ubicacion_fisica"
-                                        type="text"
-                                        value={data.ubicacion_fisica}
-                                        onChange={(e) => setData('ubicacion_fisica', e.target.value)}
-                                        placeholder="Ej: Archivo Central, Estante A-1"
-                                    />
-                                </div>
-
-                                <div>
-                                    <Label htmlFor="ubicacion_digital">Ubicación Digital</Label>
-                                    <Input
-                                        id="ubicacion_digital"
-                                        type="text"
-                                        value={data.ubicacion_digital}
-                                        onChange={(e) => setData('ubicacion_digital', e.target.value)}
-                                        placeholder="Ej: Servidor/carpeta/ruta"
-                                    />
-                                </div>
+                        <CardContent>
+                            <div>
+                                <Label htmlFor="ubicacion_fisica">Ubicación Física</Label>
+                                <Input
+                                    id="ubicacion_fisica"
+                                    type="text"
+                                    value={data.ubicacion_fisica}
+                                    onChange={(e) => setData('ubicacion_fisica', e.target.value)}
+                                    placeholder="Ej: Archivo Central, Estante A-1, Caja 5"
+                                />
                             </div>
                         </CardContent>
                     </Card>
@@ -532,16 +447,16 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
                         </CardContent>
                     </Card>
 
-                    {/* Observaciones */}
+                    {/* Notas */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Observaciones</CardTitle>
+                            <CardTitle>Notas</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <Textarea
-                                value={data.observaciones}
-                                onChange={(e) => setData('observaciones', e.target.value)}
-                                placeholder="Observaciones adicionales sobre el expediente"
+                                value={data.notas}
+                                onChange={(e) => setData('notas', e.target.value)}
+                                placeholder="Notas adicionales sobre el expediente"
                                 rows={3}
                             />
                         </CardContent>

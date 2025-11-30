@@ -29,56 +29,81 @@ class Expediente extends Model
 
     protected $fillable = [
         'codigo',
-        'nombre',
+        'titulo',
         'descripcion',
         'serie_id',
         'subserie_id',
-        'trd_id',
+        'ccd_nivel_id',
         'tipo_expediente',
         'estado',
+        'nivel_acceso',
         'fecha_apertura',
         'fecha_cierre',
-        'fecha_vencimiento_disposicion',
+        'fecha_transferencia_archivo_gestion',
+        'fecha_transferencia_archivo_central',
+        'fecha_transferencia_archivo_historico',
+        'fecha_eliminacion',
+        'anos_archivo_gestion',
+        'anos_archivo_central',
+        'disposicion_final',
         'ubicacion_fisica',
+        'estante',
+        'caja',
+        'carpeta',
         'ubicacion_digital',
-        'volumen_actual',
-        'volumen_maximo',
-        'numero_folios',
-        'metadatos_expediente',
+        'responsable_id',
+        'dependencia_id',
+        'unidad_administrativa_id',
+        'hash_integridad',
         'palabras_clave',
-        'usuario_responsable_id',
-        'area_responsable',
-        'confidencialidad',
-        'acceso_publico',
-        'observaciones',
-        'firma_digital',
-        'hash_integridad'
+        'metadata',
+        'notas',
+        'version',
+        'cerrado',
+        'bloqueado',
+        'created_by',
+        'updated_by'
     ];
 
     protected $casts = [
         'fecha_apertura' => 'datetime',
         'fecha_cierre' => 'datetime',
-        'fecha_vencimiento_disposicion' => 'datetime',
-        'metadatos_expediente' => 'array',
+        'fecha_transferencia_archivo_gestion' => 'datetime',
+        'fecha_transferencia_archivo_central' => 'datetime',
+        'fecha_transferencia_archivo_historico' => 'datetime',
+        'fecha_eliminacion' => 'datetime',
+        'fecha_ultima_verificacion' => 'datetime',
+        'fecha_bloqueo' => 'datetime',
         'palabras_clave' => 'array',
-        'acceso_publico' => 'boolean',
+        'metadata' => 'array',
+        'cerrado' => 'boolean',
+        'bloqueado' => 'boolean',
+        'verificado' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime'
     ];
 
     // Estados del expediente
-    const ESTADO_ABIERTO = 'abierto';
-    const ESTADO_CERRADO = 'cerrado';
+    const ESTADO_EN_TRAMITE = 'en_tramite';
+    const ESTADO_ACTIVO = 'activo';
+    const ESTADO_SEMIACTIVO = 'semiactivo';
+    const ESTADO_INACTIVO = 'inactivo';
+    const ESTADO_HISTORICO = 'historico';
+    const ESTADO_EN_TRANSFERENCIA = 'en_transferencia';
     const ESTADO_TRANSFERIDO = 'transferido';
-    const ESTADO_ARCHIVADO = 'archivado';
-    const ESTADO_EN_DISPOSICION = 'en_disposicion';
+    const ESTADO_EN_VALORACION = 'en_valoracion';
+    const ESTADO_SELECCIONADO_ELIMINACION = 'seleccionado_eliminacion';
     const ESTADO_ELIMINADO = 'eliminado';
+    const ESTADO_CONSERVACION_PERMANENTE = 'conservacion_permanente';
 
     // Tipos de expediente
-    const TIPO_ELECTRONICO = 'electronico';
-    const TIPO_FISICO = 'fisico';
-    const TIPO_HIBRIDO = 'hibrido';
+    const TIPO_ADMINISTRATIVO = 'administrativo';
+    const TIPO_CONTABLE = 'contable';
+    const TIPO_JURIDICO = 'juridico';
+    const TIPO_TECNICO = 'tecnico';
+    const TIPO_HISTORICO = 'historico';
+    const TIPO_PERSONAL = 'personal';
 
     // Niveles de confidencialidad
     const CONFIDENCIALIDAD_PUBLICA = 'publica';
@@ -108,15 +133,15 @@ class Expediente extends Model
                 $expediente->fecha_apertura = now();
             }
             
-            // Calcular fecha de vencimiento de disposición
-            if (!$expediente->fecha_vencimiento_disposicion) {
-                $expediente->calcularFechaVencimientoDisposicion();
+            // Calcular fecha de eliminación basada en retención
+            if (!$expediente->fecha_eliminacion) {
+                $expediente->calcularFechaEliminacion();
             }
         });
         
         // Validar antes de cerrar
         static::updating(function ($expediente) {
-            if ($expediente->isDirty('estado') && $expediente->estado === self::ESTADO_CERRADO) {
+            if ($expediente->isDirty('estado') && $expediente->estado === self::ESTADO_INACTIVO) {
                 $expediente->validarCierre();
             }
             
@@ -204,9 +229,9 @@ class Expediente extends Model
     /**
      * Relación con usuario responsable
      */
-    public function usuarioResponsable(): BelongsTo
+    public function responsable(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'usuario_responsable_id');
+        return $this->belongsTo(User::class, 'responsable_id');
     }
 
     /**
@@ -326,21 +351,19 @@ class Expediente extends Model
      */
     public function heredarMetadatos()
     {
-        $metadatos = [];
+        $metadatos = $this->metadata ?? [];
         
-        // Heredar de subserie si existe
-        if ($this->subserie) {
-            $metadatos = array_merge($metadatos, $this->subserie->getMetadatosHeredables());
+        // Heredar tiempos de retención de subserie si existe
+        if ($this->subserie_id && $this->subserie) {
+            $this->anos_archivo_gestion = $this->subserie->tiempo_archivo_gestion ?? 2;
+            $this->anos_archivo_central = $this->subserie->tiempo_archivo_central ?? 8;
+            $this->disposicion_final = $this->subserie->disposicion_final ?? 'seleccion';
         }
-        // Si no hay subserie, heredar de serie
-        elseif ($this->serie) {
-            $metadatos = array_merge($metadatos, $this->serie->getMetadatosHeredables());
-        }
-        
-        // Heredar de TRD si existe
-        if ($this->trd) {
-            $metadatos['trd_codigo'] = $this->trd->codigo;
-            $metadatos['trd_version'] = $this->trd->version;
+        // Si no hay subserie, usar valores por defecto
+        else {
+            $this->anos_archivo_gestion = $this->anos_archivo_gestion ?? 2;
+            $this->anos_archivo_central = $this->anos_archivo_central ?? 8;
+            $this->disposicion_final = $this->disposicion_final ?? 'seleccion';
         }
         
         // Agregar metadatos específicos del expediente
@@ -348,29 +371,20 @@ class Expediente extends Model
         $metadatos['fecha_apertura'] = $this->fecha_apertura ?? now();
         $metadatos['tipo_expediente'] = $this->tipo_expediente;
         
-        $this->metadatos_expediente = array_merge($this->metadatos_expediente ?? [], $metadatos);
+        $this->metadata = $metadatos;
     }
 
     /**
-     * Calcular fecha de vencimiento de disposición
+     * Calcular fecha de eliminación basada en tiempos de retención
      */
-    public function calcularFechaVencimientoDisposicion()
+    public function calcularFechaEliminacion()
     {
         $fechaBase = $this->fecha_cierre ?? $this->fecha_apertura ?? now();
         
-        $tiempoTotal = 0;
-        
-        // Obtener tiempos de la subserie o serie
-        if ($this->subserie) {
-            $tiempoTotal = ($this->subserie->tiempo_archivo_gestion ?? 0) + 
-                          ($this->subserie->tiempo_archivo_central ?? 0);
-        } elseif ($this->serie) {
-            $tiempoTotal = ($this->serie->tiempo_archivo_gestion ?? 0) + 
-                          ($this->serie->tiempo_archivo_central ?? 0);
-        }
+        $tiempoTotal = ($this->anos_archivo_gestion ?? 0) + ($this->anos_archivo_central ?? 0);
         
         if ($tiempoTotal > 0) {
-            $this->fecha_vencimiento_disposicion = $fechaBase->copy()->addYears($tiempoTotal);
+            $this->fecha_eliminacion = $fechaBase->copy()->addYears($tiempoTotal);
         }
     }
 

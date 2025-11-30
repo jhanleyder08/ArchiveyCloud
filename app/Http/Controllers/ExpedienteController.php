@@ -74,11 +74,10 @@ class ExpedienteController extends Controller
         // Estadísticas
         $estadisticas = [
             'total' => Expediente::count(),
-            'abiertos' => Expediente::where('estado', '!=', 'cerrado')->where('cerrado', false)->count(),
-            'cerrados' => Expediente::where('cerrado', true)->orWhere('estado', 'cerrado')->count(),
-            'electronicos' => Expediente::where('tipo_expediente', 'electronico')->count(),
-            'fisicos' => Expediente::where('tipo_expediente', 'fisico')->count(),
-            'hibridos' => Expediente::where('tipo_expediente', 'hibrido')->count(),
+            'en_tramite' => Expediente::where('estado', 'en_tramite')->count(),
+            'activos' => Expediente::where('estado', 'activo')->count(),
+            'inactivos' => Expediente::where('estado', 'inactivo')->count(),
+            'transferidos' => Expediente::where('estado', 'transferido')->count(),
             'proximos_vencer' => Expediente::whereNotNull('fecha_eliminacion')
                 ->whereDate('fecha_eliminacion', '>=', now())
                 ->whereDate('fecha_eliminacion', '<=', now()->addDays(30))
@@ -91,16 +90,21 @@ class ExpedienteController extends Controller
         // Opciones para los filtros
         $opciones = [
             'estados' => [
-                ['value' => 'abierto', 'label' => 'Abierto'],
-                ['value' => 'cerrado', 'label' => 'Cerrado'],
+                ['value' => 'en_tramite', 'label' => 'En Trámite'],
+                ['value' => 'activo', 'label' => 'Activo'],
+                ['value' => 'semiactivo', 'label' => 'Semiactivo'],
+                ['value' => 'inactivo', 'label' => 'Inactivo'],
+                ['value' => 'historico', 'label' => 'Histórico'],
                 ['value' => 'transferido', 'label' => 'Transferido'],
-                ['value' => 'archivado', 'label' => 'Archivado'],
-                ['value' => 'en_disposicion', 'label' => 'En Disposición'],
+                ['value' => 'eliminado', 'label' => 'Eliminado'],
             ],
             'tipos' => [
-                ['value' => 'electronico', 'label' => 'Electrónico'],
-                ['value' => 'fisico', 'label' => 'Físico'],
-                ['value' => 'hibrido', 'label' => 'Híbrido'],
+                ['value' => 'administrativo', 'label' => 'Administrativo'],
+                ['value' => 'contable', 'label' => 'Contable'],
+                ['value' => 'juridico', 'label' => 'Jurídico'],
+                ['value' => 'tecnico', 'label' => 'Técnico'],
+                ['value' => 'historico', 'label' => 'Histórico'],
+                ['value' => 'personal', 'label' => 'Personal'],
             ],
             'proximidad_vencimiento' => [
                 ['value' => 'vencidos', 'label' => 'Vencidos'],
@@ -133,30 +137,38 @@ class ExpedienteController extends Controller
      */
     public function create(): Response
     {
+        // Obtener series con sus subseries para el filtrado en frontend
+        $series = \App\Models\SerieDocumental::where('activa', true)
+            ->get(['id', 'codigo', 'nombre', 'trd_id']);
+        
+        $subseries = \App\Models\SubserieDocumental::where('activa', true)
+            ->get(['id', 'serie_documental_id', 'codigo', 'nombre']);
+
         return Inertia::render('admin/expedientes/create', [
             'opciones' => [
-                'series' => \App\Models\SerieDocumental::where('activa', true)->get(),
-                'subseries' => \App\Models\SubserieDocumental::where('activa', true)->get(),
-                'trds' => \App\Models\TRD::where('estado', 'vigente')->get(['id', 'codigo', 'version', 'nombre']),
+                'series' => $series,
+                'subseries' => $subseries->map(function($s) {
+                    return [
+                        'id' => $s->id,
+                        'serie_id' => $s->serie_documental_id,
+                        'codigo' => $s->codigo,
+                        'nombre' => $s->nombre,
+                    ];
+                }),
                 'usuarios' => \App\Models\User::all(['id', 'name', 'email']),
                 'tipos_expediente' => [
-                    ['value' => 'electronico', 'label' => 'Electrónico'],
-                    ['value' => 'fisico', 'label' => 'Físico'],
-                    ['value' => 'hibrido', 'label' => 'Híbrido'],
+                    ['value' => 'administrativo', 'label' => 'Administrativo'],
+                    ['value' => 'contable', 'label' => 'Contable'],
+                    ['value' => 'juridico', 'label' => 'Jurídico'],
+                    ['value' => 'tecnico', 'label' => 'Técnico'],
+                    ['value' => 'historico', 'label' => 'Histórico'],
+                    ['value' => 'personal', 'label' => 'Personal'],
                 ],
-                'confidencialidad' => [
-                    ['value' => 'publica', 'label' => 'Pública'],
-                    ['value' => 'interna', 'label' => 'Interna'],
+                'niveles_acceso' => [
+                    ['value' => 'publico', 'label' => 'Público'],
+                    ['value' => 'restringido', 'label' => 'Restringido'],
                     ['value' => 'confidencial', 'label' => 'Confidencial'],
-                    ['value' => 'reservada', 'label' => 'Reservada'],
-                    ['value' => 'clasificada', 'label' => 'Clasificada'],
-                ],
-                'areas_disponibles' => [
-                    ['value' => 'administracion', 'label' => 'Administración'],
-                    ['value' => 'recursos_humanos', 'label' => 'Recursos Humanos'],
-                    ['value' => 'financiera', 'label' => 'Financiera'],
-                    ['value' => 'juridica', 'label' => 'Jurídica'],
-                    ['value' => 'tecnologia', 'label' => 'Tecnología'],
+                    ['value' => 'reservado', 'label' => 'Reservado'],
                 ],
             ],
         ]);
@@ -168,29 +180,36 @@ class ExpedienteController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'codigo' => 'nullable|string|max:100|unique:expedientes,codigo',
             'titulo' => 'required|string|max:500',
             'descripcion' => 'nullable|string',
             'serie_id' => 'required|exists:series_documentales,id',
             'subserie_id' => 'nullable|exists:subseries_documentales,id',
             'tipo_expediente' => 'required|in:administrativo,contable,juridico,tecnico,historico,personal',
             'nivel_acceso' => 'required|in:publico,restringido,confidencial,reservado',
-            'fecha_apertura' => 'nullable|date',
             'responsable_id' => 'required|exists:users,id',
-            'dependencia_id' => 'nullable|exists:dependencias,id',
             'ubicacion_fisica' => 'nullable|string|max:500',
             'palabras_clave' => 'nullable|array',
-            'metadata' => 'nullable|array',
+            'notas' => 'nullable|string',
         ]);
 
         try {
-            $expediente = $this->expedienteService->crear($validated, $request->user());
+            // Agregar campos adicionales
+            $validated['estado'] = 'en_tramite';
+            $validated['fecha_apertura'] = now();
+            $validated['created_by'] = $request->user()->id;
+            
+            // Generar código automático
+            $year = now()->format('Y');
+            $count = Expediente::whereYear('created_at', $year)->count() + 1;
+            $validated['codigo'] = 'EXP-' . $year . '-' . str_pad($count, 6, '0', STR_PAD_LEFT);
+
+            $expediente = Expediente::create($validated);
 
             return redirect()
                 ->route('admin.expedientes.show', $expediente->id)
-                ->with('success', 'Expediente creado exitosamente');
+                ->with('success', 'Expediente creado exitosamente. Código: ' . $expediente->codigo);
         } catch (\Exception $e) {
-            Log::error('Error al crear expediente', ['error' => $e->getMessage()]);
+            Log::error('Error al crear expediente', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return back()
                 ->withInput()
                 ->with('error', 'Error al crear expediente: ' . $e->getMessage());
@@ -206,20 +225,10 @@ class ExpedienteController extends Controller
             'serie',
             'subserie',
             'responsable',
-            'dependencia',
-            'documentos',
-            'creador',
         ]);
 
         return Inertia::render('admin/expedientes/show', [
             'expediente' => $expediente,
-            'estadisticas' => $this->expedienteService->getEstadisticas($expediente),
-            'integridad' => $this->expedienteService->verificarIntegridad($expediente),
-            'historial' => \DB::table('expediente_historial')
-                ->where('expediente_id', $expediente->id)
-                ->orderBy('fecha_cambio', 'desc')
-                ->limit(10)
-                ->get(),
         ]);
     }
 
@@ -234,10 +243,40 @@ class ExpedienteController extends Controller
                 ->with('error', 'No se puede editar un expediente cerrado');
         }
 
+        $series = \App\Models\SerieDocumental::where('activa', true)
+            ->get(['id', 'codigo', 'nombre']);
+        
+        $subseries = \App\Models\SubserieDocumental::where('activa', true)
+            ->get(['id', 'serie_documental_id', 'codigo', 'nombre']);
+
         return Inertia::render('admin/expedientes/edit', [
-            'expediente' => $expediente,
-            'series' => \App\Models\SerieDocumental::where('activa', true)->get(),
-            'dependencias' => \App\Models\Dependencia::all(),
+            'expediente' => $expediente->load(['serie', 'subserie', 'responsable']),
+            'opciones' => [
+                'series' => $series,
+                'subseries' => $subseries->map(function($s) {
+                    return [
+                        'id' => $s->id,
+                        'serie_id' => $s->serie_documental_id,
+                        'codigo' => $s->codigo,
+                        'nombre' => $s->nombre,
+                    ];
+                }),
+                'usuarios' => \App\Models\User::all(['id', 'name', 'email']),
+                'tipos_expediente' => [
+                    ['value' => 'administrativo', 'label' => 'Administrativo'],
+                    ['value' => 'contable', 'label' => 'Contable'],
+                    ['value' => 'juridico', 'label' => 'Jurídico'],
+                    ['value' => 'tecnico', 'label' => 'Técnico'],
+                    ['value' => 'historico', 'label' => 'Histórico'],
+                    ['value' => 'personal', 'label' => 'Personal'],
+                ],
+                'niveles_acceso' => [
+                    ['value' => 'publico', 'label' => 'Público'],
+                    ['value' => 'restringido', 'label' => 'Restringido'],
+                    ['value' => 'confidencial', 'label' => 'Confidencial'],
+                    ['value' => 'reservado', 'label' => 'Reservado'],
+                ],
+            ],
         ]);
     }
 
