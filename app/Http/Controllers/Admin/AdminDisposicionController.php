@@ -54,6 +54,14 @@ class AdminDisposicionController extends Controller
 
         $disposiciones = $query->paginate(20)->withQueryString();
 
+        // Agregar atributos computados a cada disposición
+        $disposiciones->getCollection()->transform(function ($disposicion) {
+            $disposicion->append(['tipo_disposicion_label', 'estado_label', 'item_afectado']);
+            $disposicion->dias_para_vencimiento = $disposicion->diasParaVencimiento();
+            $disposicion->esta_vencida = $disposicion->estaVencida();
+            return $disposicion;
+        });
+
         // Estadísticas
         $estadisticas = [
             'total_disposiciones' => DisposicionFinal::count(),
@@ -69,7 +77,13 @@ class AdminDisposicionController extends Controller
             ->where('estado', '!=', DisposicionFinal::ESTADO_EJECUTADO)
             ->orderBy('fecha_vencimiento_retencion')
             ->limit(10)
-            ->get();
+            ->get()
+            ->map(function ($disposicion) {
+                $disposicion->append(['tipo_disposicion_label', 'estado_label', 'item_afectado']);
+                $disposicion->dias_para_vencimiento = $disposicion->diasParaVencimiento();
+                $disposicion->esta_vencida = $disposicion->estaVencida();
+                return $disposicion;
+            });
 
         return Inertia::render('admin/disposiciones/index', [
             'disposiciones' => $disposiciones,
@@ -115,10 +129,13 @@ class AdminDisposicionController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        try {
+            \Log::info('Disposicion store - Request data:', $request->all());
+            
+            $validated = $request->validate([
             'tipo_item' => 'required|in:expediente,documento',
-            'expediente_id' => 'required_if:tipo_item,expediente|exists:expedientes,id',
-            'documento_id' => 'required_if:tipo_item,documento|exists:documentos,id',
+            'expediente_id' => 'required_if:tipo_item,expediente|nullable|exists:expedientes,id',
+            'documento_id' => 'required_if:tipo_item,documento|nullable|exists:documentos,id',
             'tipo_disposicion' => 'required|in:conservacion_permanente,eliminacion_controlada,transferencia_historica,digitalizacion,microfilmacion',
             'fecha_propuesta' => 'required|date',
             'justificacion' => 'required|string|min:10|max:2000',
@@ -162,17 +179,25 @@ class AdminDisposicionController extends Controller
             // Registrar en auditoría
             PistaAuditoria::create([
                 'usuario_id' => auth()->id(),
-                'accion' => 'crear_disposicion_final',
+                'evento' => 'crear_disposicion_final',
+                'accion' => 'crear',
                 'tabla_afectada' => 'disposicion_finals',
                 'registro_id' => $disposicion->id,
                 'descripcion' => "Nueva disposición final propuesta: {$disposicion->tipo_disposicion}",
-                'datos_nuevos' => $disposicion->toJson(),
+                'valores_nuevos' => $disposicion->toJson(),
             ]);
         });
 
         return redirect()
             ->route('admin.disposiciones.index')
             ->with('success', 'Disposición final creada exitosamente.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Disposicion store - Validation errors:', $e->errors());
+            throw $e;
+        } catch (\Exception $e) {
+            \Log::error('Disposicion store - Error:', ['message' => $e->getMessage()]);
+            return back()->withErrors(['error' => 'Error al crear la disposición: ' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -182,10 +207,21 @@ class AdminDisposicionController extends Controller
     {
         $disposicion->load(['expediente', 'documento.expediente', 'responsable', 'aprobadoPor']);
 
+        // Agregar atributos computados
+        $disposicion->append([
+            'tipo_disposicion_label',
+            'estado_label',
+            'item_afectado',
+        ]);
+
+        // Agregar atributos adicionales
+        $disposicion->dias_para_vencimiento = $disposicion->diasParaVencimiento();
+        $disposicion->esta_vencida = $disposicion->estaVencida();
+
         // Historial de cambios
         $historial = PistaAuditoria::where('tabla_afectada', 'disposicion_finals')
             ->where('registro_id', $disposicion->id)
-            ->with('user')
+            ->with('usuario')
             ->orderBy('created_at', 'desc')
             ->get();
 

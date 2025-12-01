@@ -125,7 +125,21 @@ export default function DisposicionesCreate({ expedientesVencimiento, documentos
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('admin.disposiciones.store'));
+        console.log('=== SUBMIT DISPOSICION ===');
+        console.log('Datos del formulario:', data);
+        console.log('Route:', route('admin.disposiciones.store'));
+        
+        post(route('admin.disposiciones.store'), {
+            onSuccess: (response) => {
+                console.log('✅ SUCCESS:', response);
+            },
+            onError: (errors) => {
+                console.error('❌ ERRORES DE VALIDACIÓN:', errors);
+            },
+            onFinish: () => {
+                console.log('⏹️ PETICIÓN FINALIZADA');
+            }
+        });
     };
 
     const fechaMinima = new Date().toISOString().split('T')[0];

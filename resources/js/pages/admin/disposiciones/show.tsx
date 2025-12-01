@@ -26,7 +26,7 @@ interface DisposicionFinal {
     id: number;
     tipo_disposicion: string;
     estado: string;
-    fecha_vencimiento_retencion: string;
+    fecha_vencimiento_retencion?: string | null;
     fecha_propuesta: string;
     fecha_aprobacion?: string;
     fecha_ejecucion?: string;
@@ -59,21 +59,21 @@ interface DisposicionFinal {
             serie_documental: string;
         };
     };
-    responsable: {
+    responsable?: {
         id: number;
         name: string;
         email: string;
-    };
+    } | null;
     aprobado_por?: {
         id: number;
         name: string;
         email: string;
-    };
+    } | null;
     rechazado_por?: {
         id: number;
         name: string;
         email: string;
-    };
+    } | null;
     dias_para_vencimiento: number;
     esta_vencida: boolean;
     created_at: string;
@@ -256,13 +256,15 @@ export default function DisposicionShow({ disposicion }: Props) {
                                                     {disposicion.expediente.ubicacion_fisica}
                                                 </p>
                                             </div>
-                                            <div>
-                                                <span className="font-medium text-gray-500">Vencimiento de Retención:</span>
-                                                <p className={`flex items-center ${disposicion.esta_vencida ? 'text-red-600 font-medium' : ''}`}>
-                                                    <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-                                                    {formatearFechaCorta(disposicion.fecha_vencimiento_retencion)}
-                                                </p>
-                                            </div>
+                                            {disposicion.fecha_vencimiento_retencion && (
+                                                <div>
+                                                    <span className="font-medium text-gray-500">Vencimiento de Retención:</span>
+                                                    <p className={`flex items-center ${disposicion.esta_vencida ? 'text-red-600 font-medium' : ''}`}>
+                                                        <Calendar className="h-4 w-4 mr-1 text-gray-400" />
+                                                        {formatearFechaCorta(disposicion.fecha_vencimiento_retencion)}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-lg">
@@ -306,13 +308,15 @@ export default function DisposicionShow({ disposicion }: Props) {
                                                     {disposicion.documento?.ubicacion_fisica}
                                                 </p>
                                             </div>
-                                            <div className="col-span-2">
-                                                <span className="font-medium text-gray-500">Vencimiento de Retención:</span>
-                                                <p className={`flex items-center ${disposicion.esta_vencida ? 'text-red-600 font-medium' : ''}`}>
-                                                    <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-                                                    {formatearFechaCorta(disposicion.fecha_vencimiento_retencion)}
-                                                </p>
-                                            </div>
+                                            {disposicion.fecha_vencimiento_retencion && (
+                                                <div className="col-span-2">
+                                                    <span className="font-medium text-gray-500">Vencimiento de Retención:</span>
+                                                    <p className={`flex items-center ${disposicion.esta_vencida ? 'text-red-600 font-medium' : ''}`}>
+                                                        <Calendar className="h-4 w-4 mr-1 text-gray-400" />
+                                                        {formatearFechaCorta(disposicion.fecha_vencimiento_retencion)}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex justify-end space-x-2">
@@ -414,22 +418,24 @@ export default function DisposicionShow({ disposicion }: Props) {
                                     </div>
                                 )}
 
-                                <div>
-                                    <span className="font-medium text-gray-500">Vencimiento de Retención:</span>
-                                    <p className={`text-sm ${disposicion.esta_vencida ? 'text-red-600 font-medium' : ''}`}>
-                                        {formatearFechaCorta(disposicion.fecha_vencimiento_retencion)}
-                                    </p>
-                                    {disposicion.dias_para_vencimiento <= 30 && disposicion.dias_para_vencimiento > 0 && (
-                                        <p className="text-xs text-orange-600 mt-1">
-                                            Vence en {disposicion.dias_para_vencimiento} días
+                                {disposicion.fecha_vencimiento_retencion && (
+                                    <div>
+                                        <span className="font-medium text-gray-500">Vencimiento de Retención:</span>
+                                        <p className={`text-sm ${disposicion.esta_vencida ? 'text-red-600 font-medium' : ''}`}>
+                                            {formatearFechaCorta(disposicion.fecha_vencimiento_retencion)}
                                         </p>
-                                    )}
-                                    {disposicion.esta_vencida && (
-                                        <p className="text-xs text-red-600 font-medium mt-1">
-                                            ¡Esta disposición está vencida!
-                                        </p>
-                                    )}
-                                </div>
+                                        {disposicion.dias_para_vencimiento <= 30 && disposicion.dias_para_vencimiento > 0 && (
+                                            <p className="text-xs text-orange-600 mt-1">
+                                                Vence en {disposicion.dias_para_vencimiento} días
+                                            </p>
+                                        )}
+                                        {disposicion.esta_vencida && (
+                                            <p className="text-xs text-red-600 font-medium mt-1">
+                                                ¡Esta disposición está vencida!
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 

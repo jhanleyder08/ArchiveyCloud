@@ -98,11 +98,17 @@ class DisposicionFinal extends Model
 
     public function estaVencida(): bool
     {
+        if (!$this->fecha_vencimiento_retencion) {
+            return false;
+        }
         return $this->fecha_vencimiento_retencion < Carbon::now();
     }
 
     public function diasParaVencimiento(): int
     {
+        if (!$this->fecha_vencimiento_retencion) {
+            return 0;
+        }
         return Carbon::now()->diffInDays($this->fecha_vencimiento_retencion, false);
     }
 
