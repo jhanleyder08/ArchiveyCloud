@@ -378,9 +378,8 @@ class CertificateManagementService
     public function obtenerCertificadosValidosUsuario(User $usuario): array
     {
         return CertificadoDigital::where('usuario_id', $usuario->id)
-            ->where('es_valido', true)
             ->where('fecha_vencimiento', '>', now())
-            ->where('estado', self::ESTADO_VALIDO)
+            ->where('estado', CertificadoDigital::ESTADO_ACTIVO)
             ->orderBy('fecha_vencimiento', 'desc')
             ->get()
             ->map(function ($cert) {

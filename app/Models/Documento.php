@@ -164,11 +164,6 @@ class Documento extends Model
             if ($documento->isDirty('ruta_archivo')) {
                 $documento->calcularHashIntegridad();
             }
-            
-            // Actualizar fecha de modificación
-            if ($documento->isDirty() && !$documento->isDirty('updated_at')) {
-                $documento->fecha_modificacion = now();
-            }
         });
         
         // Registrar en auditoría
@@ -521,18 +516,31 @@ class Documento extends Model
      */
     public function existe()
     {
-        if (!$this->metadatos_archivo) {
+        if (empty($this->metadatos_archivo)) {
+            // Intentar usar ruta_archivo directa si existe
+            if ($this->ruta_archivo) {
+                return Storage::disk('public')->exists($this->ruta_archivo);
+            }
             return false;
         }
         
-        $metadatos = json_decode($this->metadatos_archivo, true);
+        $metadatos = $this->metadatos_archivo;
+        if (is_string($metadatos)) {
+            $metadatos = json_decode($metadatos, true);
+        }
+        
         $ruta = $metadatos['ruta'] ?? null;
+        
+        // Si no hay ruta en metadatos, usar la directa
+        if (!$ruta && $this->ruta_archivo) {
+            $ruta = $this->ruta_archivo;
+        }
         
         if (!$ruta) {
             return false;
         }
         
-        return Storage::exists($ruta);
+        return Storage::disk('public')->exists($ruta);
     }
 
     /**
@@ -664,7 +672,7 @@ class Documento extends Model
             'activo' => $this->activo,
             'estado_procesamiento' => $this->estado_procesamiento,
             'confidencialidad' => $this->confidencialidad,
-            'tiene_firma_digital' => !empty($this->firma_digital),
+            'tiene_firma_digital' => $this->firmado_digitalmente || !empty($this->firma_digital),
             'total_firmas' => $this->total_firmas ?? 0,
             'fecha_creacion' => $this->fecha_creacion?->format('Y-m-d H:i:s'),
             'fecha_modificacion' => $this->fecha_modificacion?->format('Y-m-d H:i:s'),

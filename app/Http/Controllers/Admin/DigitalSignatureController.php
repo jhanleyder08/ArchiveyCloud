@@ -157,26 +157,24 @@ class DigitalSignatureController extends Controller
                 $opciones
             );
             
+            // Actualizar estado del documento
+            $documento->update([
+                'firmado_digitalmente' => true,
+                'fecha_ultima_firma' => now(),
+                'estado_firma' => 'firmado',
+                'total_firmas' => ($documento->total_firmas ?? 0) + 1
+            ]);
+            
             DB::commit();
             
-            return response()->json([
-                'success' => true,
-                'message' => 'Documento firmado exitosamente',
-                'firma' => [
-                    'id' => $firma->id,
-                    'tipo_firma' => $firma->tipo_firma,
-                    'fecha_firma' => $firma->fecha_firma,
-                    'estado' => $firma->estado
-                ]
-            ]);
+            return redirect()->route('admin.documentos.show', $documento->id)
+                ->with('success', 'Documento firmado exitosamente');
             
         } catch (\Exception $e) {
             DB::rollback();
             
-            return response()->json([
-                'success' => false,
-                'message' => "Error al firmar documento: {$e->getMessage()}"
-            ], 500);
+            return redirect()->back()
+                ->withErrors(['firma' => "Error al firmar documento: {$e->getMessage()}"]);
         }
     }
 

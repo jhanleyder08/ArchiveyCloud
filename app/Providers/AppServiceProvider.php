@@ -33,6 +33,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Super Administrador tiene acceso a todo
+        Gate::before(function ($user, $ability) {
+            if ($user->role && $user->role->name === 'Super Administrador') {
+                return true;
+            }
+        });
+
         // Registrar eventos de validación
         $this->registerValidationEvents();
 
@@ -45,6 +52,12 @@ class AppServiceProvider extends ServiceProvider
         // Gate para gestión de roles (solo Super Administrador)
         Gate::define('manage-roles', function ($user) {
             return $user->role && $user->role->name === 'Super Administrador';
+        });
+
+        // Gate para firmar documentos
+        Gate::define('firmar_documento', function ($user, $documento) {
+            // Verificar si el usuario tiene permiso de firmar
+            return $user->hasPermission('firmas.gestionar');
         });
     }
 

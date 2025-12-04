@@ -38,23 +38,26 @@ class PermissionMiddleware
         }
 
         if (!$hasPermission) {
-            if ($request->expectsJson()) {
+            $roleName = $user->role->name ?? 'Sin rol';
+            $isConsulta = $roleName === 'Consulta';
+            $message = $isConsulta 
+                ? 'Tu rol de Consulta solo permite ver información, no modificarla.'
+                : 'No tienes permisos para acceder a esta sección.';
+
+            // Para peticiones AJAX/JSON o peticiones Inertia parciales
+            if ($request->expectsJson() || $request->header('X-Inertia')) {
                 return response()->json([
-                    'message' => 'No tiene permisos para acceder a este recurso.',
+                    'message' => $message,
                     'required_permissions' => $permissions,
-                    'user_role' => $user->role->name ?? 'Sin rol'
+                    'user_role' => $roleName,
+                    'is_consulta' => $isConsulta,
                 ], 403);
             }
 
-            // Renderizar página de acceso denegado con Inertia
-            $roleName = $user->role->name ?? 'Sin rol';
-            $isConsulta = $roleName === 'Consulta';
-            
+            // Para navegación normal, renderizar página de acceso denegado
             return Inertia::render('errors/access-denied', [
                 'title' => 'Acceso Denegado',
-                'message' => $isConsulta 
-                    ? 'Tu rol de Consulta solo permite ver información, no modificarla.'
-                    : 'No tienes permisos para acceder a esta sección.',
+                'message' => $message,
                 'requiredPermissions' => $permissions,
                 'userRole' => $roleName,
                 'isConsulta' => $isConsulta,
