@@ -183,6 +183,8 @@ class Role extends Model
 
     /**
      * REQ-CS-007: Verificar si el rol tiene un permiso específico
+     * NOTA: Los permisos NO se heredan del rol padre automáticamente.
+     * Cada rol debe tener sus propios permisos asignados explícitamente.
      */
     public function hasPermission(string $permisoNombre): bool
     {
@@ -191,21 +193,10 @@ class Role extends Model
             return true;
         }
         
-        // Verificar permisos directos
-        $permisoDirecto = $this->permisos()
+        // Verificar SOLO permisos directos del rol (sin herencia)
+        return $this->permisos()
             ->where('nombre', $permisoNombre)
             ->exists();
-            
-        if ($permisoDirecto) {
-            return true;
-        }
-        
-        // Verificar permisos heredados del rol padre
-        if ($this->padre) {
-            return $this->padre->hasPermission($permisoNombre);
-        }
-        
-        return false;
     }
 
     /**

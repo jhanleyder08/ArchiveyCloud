@@ -173,11 +173,6 @@ class NotificacionController extends Controller
      */
     public function admin(Request $request)
     {
-        // Verificar permisos de administrador
-        if (!Auth::user()->hasRole('admin')) {
-            abort(403, 'No tienes permisos para acceder a esta sección.');
-        }
-
         $query = Notificacion::with(['usuario', 'creadoPor', 'relacionado'])
             ->orderBy('created_at', 'desc');
 
@@ -231,10 +226,6 @@ class NotificacionController extends Controller
      */
     public function crear()
     {
-        if (!Auth::user()->hasRole('admin')) {
-            abort(403);
-        }
-
         $usuarios = User::select('id', 'name', 'email')
             ->orderBy('name')
             ->get();
@@ -249,12 +240,47 @@ class NotificacionController extends Controller
      */
     public function limpiarAntiguas()
     {
-        if (!Auth::user()->hasRole('admin')) {
-            abort(403);
-        }
-
         $eliminadas = Notificacion::limpiarAntiguas(30);
 
         return back()->with('success', "Se eliminaron {$eliminadas} notificaciones antiguas.");
+    }
+
+    /**
+     * Enviar notificación masiva a todos los usuarios
+     */
+    public function enviarMasiva(Request $request)
+    {
+        $request->validate([
+            'titulo' => 'required|string|max:255',
+            'mensaje' => 'required|string',
+            'tipo' => 'required|string|max:50',
+            'prioridad' => 'in:baja,media,alta,critica',
+        ]);
+
+        $usuarios = User::pluck('id')->toArray();
+        
+        $datos = [
+            'titulo' => $request->titulo,
+            'mensaje' => $request->mensaje,
+            'tipo' => $request->tipo,
+            'prioridad' => $request->prioridad ?? 'media',
+            'accion_url' => $request->accion_url,
+            'es_automatica' => false,
+            'creado_por' => Auth::id(),
+        ];
+
+        $creadas = Notificacion::crearParaUsuarios($usuarios, $datos);
+
+        return back()->with('success', "Se enviaron {$creadas} notificaciones a todos los usuarios.");
+    }
+
+    /**
+     * Obtener conteo de notificaciones no leídas para el header
+     */
+    public function conteoNoLeidas()
+    {
+        $count = Notificacion::paraUsuario(Auth::id())->pendientes()->count();
+        
+        return response()->json(['count' => $count]);
     }
 }

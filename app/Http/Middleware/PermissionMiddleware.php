@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Inertia\Inertia;
 
 class PermissionMiddleware
 {
@@ -45,9 +46,19 @@ class PermissionMiddleware
                 ], 403);
             }
 
-            return redirect()->route('dashboard')->with('error', 
-                'No tiene permisos para acceder a esta sección. Permiso requerido: ' . implode(' o ', $permissions)
-            );
+            // Renderizar página de acceso denegado con Inertia
+            $roleName = $user->role->name ?? 'Sin rol';
+            $isConsulta = $roleName === 'Consulta';
+            
+            return Inertia::render('errors/access-denied', [
+                'title' => 'Acceso Denegado',
+                'message' => $isConsulta 
+                    ? 'Tu rol de Consulta solo permite ver información, no modificarla.'
+                    : 'No tienes permisos para acceder a esta sección.',
+                'requiredPermissions' => $permissions,
+                'userRole' => $roleName,
+                'isConsulta' => $isConsulta,
+            ])->toResponse($request)->setStatusCode(403);
         }
 
         return $next($request);

@@ -10,9 +10,17 @@ interface UseInertiaActionsOptions {
 interface ActionOptions extends UseInertiaActionsOptions {
     onSuccess?: (data?: any) => void;
     onError?: (errors?: any) => void;
+    onForbidden?: () => void;
     successMessage?: string;
     errorMessage?: string;
     confirmMessage?: string;
+}
+
+// Función global para mostrar modal de acceso denegado
+let showAccessDeniedModal: ((message?: string) => void) | null = null;
+
+export function setAccessDeniedHandler(handler: (message?: string) => void) {
+    showAccessDeniedModal = handler;
 }
 
 /**
@@ -24,6 +32,19 @@ export function useInertiaActions(defaultOptions: UseInertiaActionsOptions = {})
         preserveState: true,
         preserveScroll: true,
         ...defaultOptions,
+    };
+
+    /**
+     * Manejar error 403 (Forbidden)
+     */
+    const handleForbiddenError = (message?: string) => {
+        if (showAccessDeniedModal) {
+            showAccessDeniedModal(message);
+        } else {
+            // Fallback: mostrar toast y redirigir
+            toast.error(message || 'No tienes permisos para realizar esta acción');
+            router.visit('/dashboard');
+        }
     };
 
     /**
@@ -42,6 +63,13 @@ export function useInertiaActions(defaultOptions: UseInertiaActionsOptions = {})
                 opts.onSuccess?.(page);
             },
             onError: (errors: any) => {
+                // Verificar si es error 403
+                if (errors?.message?.includes('permisos') || errors?.error === 'FORBIDDEN') {
+                    handleForbiddenError(errors.message);
+                    opts.onForbidden?.();
+                    return;
+                }
+                
                 if (opts.errorMessage) {
                     toast.error(opts.errorMessage);
                 } else {
@@ -79,6 +107,13 @@ export function useInertiaActions(defaultOptions: UseInertiaActionsOptions = {})
                 opts.onSuccess?.(page);
             },
             onError: (errors: any) => {
+                // Verificar si es error 403
+                if (errors?.message?.includes('permisos') || errors?.error === 'FORBIDDEN') {
+                    handleForbiddenError(errors.message);
+                    opts.onForbidden?.();
+                    return;
+                }
+                
                 if (opts.errorMessage) {
                     toast.error(opts.errorMessage);
                 } else {
@@ -114,6 +149,13 @@ export function useInertiaActions(defaultOptions: UseInertiaActionsOptions = {})
                 opts.onSuccess?.(page);
             },
             onError: (errors: any) => {
+                // Verificar si es error 403
+                if (errors?.message?.includes('permisos') || errors?.error === 'FORBIDDEN') {
+                    handleForbiddenError(errors.message);
+                    opts.onForbidden?.();
+                    return;
+                }
+                
                 if (opts.errorMessage) {
                     toast.error(opts.errorMessage);
                 } else {
@@ -150,6 +192,13 @@ export function useInertiaActions(defaultOptions: UseInertiaActionsOptions = {})
                     opts.onSuccess?.(page);
                 },
                 onError: (errors: any) => {
+                    // Verificar si es error 403
+                    if (errors?.message?.includes('permisos') || errors?.error === 'FORBIDDEN') {
+                        handleForbiddenError(errors.message);
+                        opts.onForbidden?.();
+                        return;
+                    }
+                    
                     if (opts.errorMessage) {
                         toast.error(opts.errorMessage);
                     } else {

@@ -34,18 +34,23 @@ export default function EditUser({ user, roles }: Props) {
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
     
-    const { data, setData, patch, processing, errors } = useForm({
+    const { data, setData, put, processing, errors } = useForm({
         name: user.name,
         email: user.email,
         password: '',
         password_confirmation: '',
-        role_id: user.role?.id || '',
+        role_id: user.role?.id?.toString() || '',
         active: user.active,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        patch(`/admin/users/${user.id}`);
+        put(`/admin/users/${user.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Redirigir después de guardar exitosamente
+            },
+        });
     };
 
     const getUserStatus = () => {
@@ -238,7 +243,7 @@ export default function EditUser({ user, roles }: Props) {
                                     <select
                                         id="role_id"
                                         value={data.role_id}
-                                        onChange={(e) => setData('role_id', parseInt(e.target.value))}
+                                        onChange={(e) => setData('role_id', e.target.value)}
                                         className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] ${
                                             errors.role_id ? 'border-red-300' : 'border-gray-300'
                                         }`}
@@ -246,7 +251,7 @@ export default function EditUser({ user, roles }: Props) {
                                     >
                                         <option value="">Seleccionar rol...</option>
                                         {roles.map((role) => (
-                                            <option key={role.id} value={role.id}>
+                                            <option key={role.id} value={role.id.toString()}>
                                                 {role.name}
                                             </option>
                                         ))}

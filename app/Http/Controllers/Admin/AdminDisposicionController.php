@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdminDisposicionController extends Controller
 {
@@ -201,11 +202,129 @@ class AdminDisposicionController extends Controller
     }
 
     /**
+     * Editar disposición
+     */
+    public function edit(DisposicionFinal $disposicion)
+    {
+        // Solo se pueden editar disposiciones pendientes
+        if ($disposicion->estado !== DisposicionFinal::ESTADO_PENDIENTE) {
+            return redirect()->route('admin.disposiciones.show', $disposicion)
+                ->withErrors(['error' => 'Solo se pueden editar disposiciones en estado pendiente.']);
+        }
+
+        $disposicion->load(['expediente', 'documento.expediente', 'responsable']);
+
+        // Agregar atributos computados
+        $disposicion->append([
+            'tipo_disposicion_label',
+            'estado_label',
+            'item_afectado',
+        ]);
+
+        $usuarios = User::select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('admin/disposiciones/edit', [
+            'disposicion' => $disposicion,
+            'usuarios' => $usuarios,
+        ]);
+    }
+
+    /**
+     * Actualizar disposición
+     */
+    public function update(DisposicionFinal $disposicion, Request $request)
+    {
+        // Solo se pueden editar disposiciones pendientes
+        if ($disposicion->estado !== DisposicionFinal::ESTADO_PENDIENTE) {
+            return back()->withErrors(['error' => 'Solo se pueden editar disposiciones en estado pendiente.']);
+        }
+
+        $validated = $request->validate([
+            'tipo_disposicion' => 'required|in:conservacion_permanente,eliminacion_controlada,transferencia_historica,digitalizacion,microfilmacion',
+            'fecha_propuesta' => 'required|date',
+            'justificacion' => 'required|string|min:10|max:2000',
+            'observaciones' => 'nullable|string|max:1000',
+            'responsable_id' => 'nullable|exists:users,id',
+        ]);
+
+        DB::transaction(function () use ($disposicion, $validated) {
+            $datosAnteriores = $disposicion->toArray();
+
+            $disposicion->update([
+                'tipo_disposicion' => $validated['tipo_disposicion'],
+                'fecha_propuesta' => $validated['fecha_propuesta'],
+                'justificacion' => $validated['justificacion'],
+                'observaciones' => $validated['observaciones'] ?? null,
+                'responsable_id' => $validated['responsable_id'] ?? $disposicion->responsable_id,
+            ]);
+
+            // Registrar en auditoría
+            PistaAuditoria::create([
+                'usuario_id' => auth()->id(),
+                'evento' => 'actualizar_disposicion_final',
+                'accion' => 'actualizar',
+                'tabla_afectada' => 'disposicion_finals',
+                'registro_id' => $disposicion->id,
+                'descripcion' => "Disposición final actualizada: {$disposicion->tipo_disposicion}",
+                'valores_anteriores' => json_encode($datosAnteriores),
+                'valores_nuevos' => $disposicion->toJson(),
+            ]);
+        });
+
+        return redirect()
+            ->route('admin.disposiciones.show', $disposicion)
+            ->with('success', 'Disposición actualizada exitosamente.');
+    }
+
+    /**
+     * Exportar disposición a PDF
+     */
+    public function exportarPdf(DisposicionFinal $disposicion)
+    {
+        $disposicion->load([
+            'expediente.serie', 
+            'expediente.subserie', 
+            'documento.expediente.serie', 
+            'documento.expediente.subserie',
+            'responsable', 
+            'aprobadoPor'
+        ]);
+
+        // Agregar atributos computados
+        $disposicion->append([
+            'tipo_disposicion_label',
+            'estado_label',
+            'item_afectado',
+        ]);
+
+        $disposicion->dias_para_vencimiento = $disposicion->diasParaVencimiento();
+        $disposicion->esta_vencida = $disposicion->estaVencida();
+
+        $pdf = Pdf::loadView('pdf.disposicion', [
+            'disposicion' => $disposicion,
+            'fecha_generacion' => Carbon::now()->format('d/m/Y H:i'),
+        ]);
+
+        $pdf->setPaper('letter', 'portrait');
+
+        return $pdf->download("disposicion-final-{$disposicion->id}.pdf");
+    }
+
+    /**
      * Ver detalles de disposición
      */
     public function show(DisposicionFinal $disposicion)
     {
-        $disposicion->load(['expediente', 'documento.expediente', 'responsable', 'aprobadoPor']);
+        $disposicion->load([
+            'expediente.serie', 
+            'expediente.subserie', 
+            'documento.expediente.serie', 
+            'documento.expediente.subserie',
+            'responsable', 
+            'aprobadoPor'
+        ]);
 
         // Agregar atributos computados
         $disposicion->append([

@@ -46,4 +46,11 @@ export interface User {
 // Global function declarations
 declare global {
     function route(name?: string, params?: any): string;
+    
+    interface Window {
+        route: typeof route;
+        Ziggy: any;
+        __accessDeniedHandler: ((message?: string) => void) | null;
+        __setAccessDeniedHandler: ((handler: (message?: string) => void) => void) | undefined;
+    }
 }

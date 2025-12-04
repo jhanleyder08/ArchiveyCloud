@@ -27,20 +27,13 @@ export default defineConfig({
         extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
     },
     server: {
-        host: '127.0.0.1', // Usar localhost para desarrollo local
+        host: '127.0.0.1',
         port: 5173,
-        strictPort: false,
+        strictPort: true, // Ensure consistent port
         hmr: {
-            host: '127.0.0.1', // Usar localhost para HMR
-            port: 5173,
-            protocol: 'ws',
+            host: '127.0.0.1',
         },
-        cors: {
-            origin: ['http://127.0.0.1:8000', 'http://localhost:8000'], // Orígenes específicos para desarrollo
-            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-            credentials: true,
-        },
+        cors: true,
     },
     esbuild: {
         jsx: 'automatic',

@@ -1,6 +1,6 @@
 import '../css/app.css';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
@@ -9,12 +9,40 @@ import './wayfinder';
 // Import Ziggy to make route() function available globally
 import { Ziggy } from './ziggy';
 import { route } from 'ziggy-js';
+import axios from 'axios';
+import { setAccessDeniedHandler } from './hooks/useInertiaActions';
 
 // Make route function available globally
 window.route = route;
 window.Ziggy = Ziggy;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+// Configurar interceptor de Axios para errores 403
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 403) {
+            const message = error.response?.data?.message || 'No tienes permisos para realizar esta acción';
+            
+            // Intentar mostrar el modal usando el handler registrado
+            if (window.__accessDeniedHandler) {
+                window.__accessDeniedHandler(message);
+            } else {
+                // Fallback: mostrar alerta
+                alert(message);
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+// Registrar el handler global para useInertiaActions
+setAccessDeniedHandler((message) => {
+    if (window.__accessDeniedHandler) {
+        window.__accessDeniedHandler(message);
+    }
+});
 
 createInertiaApp({
     title: (title) => title ? `${title} - ${appName}` : appName,

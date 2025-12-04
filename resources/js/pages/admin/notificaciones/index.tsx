@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -15,14 +15,6 @@ import {
     SelectValue 
 } from '@/components/ui/select';
 import { 
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { 
     Bell,
     BellRing,
     Search,
@@ -34,11 +26,14 @@ import {
     XCircle,
     Archive,
     Trash2,
-    MarkAsUnread,
     Calendar,
     User,
     BarChart3,
-    Settings
+    Settings,
+    RefreshCw,
+    ChevronLeft,
+    ChevronRight,
+    Loader2
 } from 'lucide-react';
 
 interface Notificacion {
@@ -73,6 +68,11 @@ interface Props {
         last_page: number;
         per_page: number;
         total: number;
+        links?: Array<{
+            url: string | null;
+            label: string;
+            active: boolean;
+        }>;
     };
     estadisticas: Estadisticas;
     filtros: {
@@ -138,7 +138,10 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
         router.visit('/admin/notificaciones');
     };
 
+    const [isLoading, setIsLoading] = useState(false);
+
     const marcarComoLeida = async (id: number) => {
+        setIsLoading(true);
         try {
             await fetch(`/admin/notificaciones/${id}/marcar-leida`, {
                 method: 'PATCH',
@@ -147,13 +150,16 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
-            router.reload({ preserveScroll: true });
+            router.reload();
         } catch (error) {
             console.error('Error al marcar como leída:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const marcarTodasLeidas = async () => {
+        setIsLoading(true);
         try {
             await fetch('/admin/notificaciones/marcar-todas-leidas', {
                 method: 'PATCH',
@@ -165,10 +171,13 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
             router.reload();
         } catch (error) {
             console.error('Error al marcar todas como leídas:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const archivarNotificacion = async (id: number) => {
+        setIsLoading(true);
         try {
             await fetch(`/admin/notificaciones/${id}/archivar`, {
                 method: 'PATCH',
@@ -177,10 +186,19 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
-            router.reload({ preserveScroll: true });
+            router.reload();
         } catch (error) {
             console.error('Error al archivar:', error);
+        } finally {
+            setIsLoading(false);
         }
+    };
+
+    const eliminarNotificacion = (id: number) => {
+        if (!confirm('¿Estás seguro de eliminar esta notificación?')) {
+            return;
+        }
+        router.delete(`/admin/notificaciones/${id}`);
     };
 
     const formatearFecha = (fecha: string) => {
@@ -404,15 +422,26 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
                                                             <button 
                                                                 onClick={() => marcarComoLeida(notificacion.id)}
                                                                 className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                                title="Marcar como leída"
                                                             >
                                                                 <CheckCircle className="h-4 w-4" />
                                                             </button>
                                                         )}
+                                                        {notificacion.estado !== 'archivada' && (
+                                                            <button 
+                                                                onClick={() => archivarNotificacion(notificacion.id)}
+                                                                className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                                title="Archivar"
+                                                            >
+                                                                <Archive className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                         <button 
-                                                            onClick={() => archivarNotificacion(notificacion.id)}
-                                                            className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                            onClick={() => eliminarNotificacion(notificacion.id)}
+                                                            className="p-2 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                                                            title="Eliminar"
                                                         >
-                                                            <Archive className="h-4 w-4" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -435,7 +464,51 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Paginación */}
+                    {notificaciones.last_page > 1 && (
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t px-6 pb-4">
+                            <p className="text-sm text-gray-600">
+                                Mostrando {((notificaciones.current_page - 1) * notificaciones.per_page) + 1} a{' '}
+                                {Math.min(notificaciones.current_page * notificaciones.per_page, notificaciones.total)} de{' '}
+                                {notificaciones.total} notificaciones
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.visit(`/admin/notificaciones?page=${notificaciones.current_page - 1}`)}
+                                    disabled={notificaciones.current_page === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Anterior
+                                </Button>
+                                <span className="text-sm text-gray-600">
+                                    Página {notificaciones.current_page} de {notificaciones.last_page}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.visit(`/admin/notificaciones?page=${notificaciones.current_page + 1}`)}
+                                    disabled={notificaciones.current_page === notificaciones.last_page}
+                                >
+                                    Siguiente
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
+
+                {/* Loading overlay */}
+                {isLoading && (
+                    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+                        <div className="bg-white p-4 rounded-lg shadow-lg flex items-center gap-3">
+                            <Loader2 className="h-5 w-5 animate-spin text-[#2a3d83]" />
+                            <span>Procesando...</span>
+                        </div>
+                    </div>
+                )}
             </div>
         </AppLayout>
     );

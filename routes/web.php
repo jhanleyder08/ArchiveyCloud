@@ -78,28 +78,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Administración
     Route::prefix('admin')->name('admin.')->group(function () {
         // Gestión de Usuarios - Protegido con permisos específicos
+        // IMPORTANTE: Las rutas más específicas deben ir primero
+        
+        // Listado de usuarios
         Route::middleware('permission:usuarios.ver')->group(function () {
             Route::get('users', [App\Http\Controllers\Admin\AdminUserController::class, 'index'])->name('users.index');
-            Route::get('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'show'])->name('users.show');
         });
         
+        // Crear usuario (ruta estática antes de rutas con parámetros)
         Route::middleware('permission:usuarios.crear')->group(function () {
             Route::get('users/create', [App\Http\Controllers\Admin\AdminUserController::class, 'create'])->name('users.create');
             Route::post('users', [App\Http\Controllers\Admin\AdminUserController::class, 'store'])->name('users.store');
         });
         
+        // Editar usuario (rutas con sufijo antes de rutas solo con parámetro)
         Route::middleware('permission:usuarios.editar')->group(function () {
             Route::get('users/{user}/edit', [App\Http\Controllers\Admin\AdminUserController::class, 'edit'])->name('users.edit');
             Route::put('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'update'])->name('users.update');
             Route::patch('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'update']);
         });
         
+        // Toggle status
         Route::middleware('permission:usuarios.activar')->group(function () {
             Route::patch('users/{user}/toggle-status', [App\Http\Controllers\Admin\AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         });
         
+        // Eliminar usuario
         Route::middleware('permission:usuarios.eliminar')->group(function () {
             Route::delete('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'destroy'])->name('users.destroy');
+        });
+        
+        // Ver usuario (ruta con solo parámetro al final)
+        Route::middleware('permission:usuarios.ver')->group(function () {
+            Route::get('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'show'])->name('users.show');
         });
         
         // Gestión de Roles y Permisos - Solo Super Administrador
@@ -301,6 +312,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::group(['prefix' => 'reportes', 'middleware' => 'permission:reportes.ver'], function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminReportController::class, 'index'])->name('reportes.index');
             Route::get('/dashboard', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboard'])->name('reportes.dashboard');
+            Route::get('/dashboard/data', [App\Http\Controllers\Admin\AdminReportController::class, 'dashboardData'])->name('reportes.dashboard.data');
             Route::get('/cumplimiento-normativo', [App\Http\Controllers\Admin\AdminReportController::class, 'cumplimientoNormativo'])->name('reportes.cumplimiento-normativo');
             Route::get('/productividad', [App\Http\Controllers\Admin\AdminReportController::class, 'productividad'])->name('reportes.productividad');
             Route::get('/almacenamiento', [App\Http\Controllers\Admin\AdminReportController::class, 'almacenamiento'])->name('reportes.almacenamiento');
@@ -394,6 +406,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/create', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'create'])->name('create');
             Route::post('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'store'])->name('store');
             Route::get('/{disposicion}', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'show'])->name('show');
+            Route::get('/{disposicion}/edit', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'edit'])->name('edit');
+            Route::put('/{disposicion}', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'update'])->name('update');
+            Route::get('/{disposicion}/exportar-pdf', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'exportarPdf'])->name('exportar-pdf');
             
             // Workflow de disposiciones
             Route::put('/{disposicion}/enviar-revision', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'enviarRevision'])->name('enviar-revision');
@@ -430,6 +445,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Notificaciones del usuario (accesibles para todos)
             Route::get('/', [App\Http\Controllers\Admin\NotificacionController::class, 'index'])->name('index');
             Route::get('/no-leidas', [App\Http\Controllers\Admin\NotificacionController::class, 'noLeidas'])->name('no-leidas');
+            Route::get('/conteo', [App\Http\Controllers\Admin\NotificacionController::class, 'conteoNoLeidas'])->name('conteo');
             Route::patch('/{notificacion}/marcar-leida', [App\Http\Controllers\Admin\NotificacionController::class, 'marcarLeida'])->name('marcar-leida');
             Route::patch('/marcar-todas-leidas', [App\Http\Controllers\Admin\NotificacionController::class, 'marcarTodasLeidas'])->name('marcar-todas-leidas');
             Route::patch('/{notificacion}/archivar', [App\Http\Controllers\Admin\NotificacionController::class, 'archivar'])->name('archivar');
@@ -441,6 +457,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::get('/crear', [App\Http\Controllers\Admin\NotificacionController::class, 'crear'])->name('crear');
                 Route::post('/', [App\Http\Controllers\Admin\NotificacionController::class, 'store'])->name('store');
                 Route::post('/limpiar-antiguas', [App\Http\Controllers\Admin\NotificacionController::class, 'limpiarAntiguas'])->name('limpiar-antiguas');
+                Route::post('/enviar-masiva', [App\Http\Controllers\Admin\NotificacionController::class, 'enviarMasiva'])->name('enviar-masiva');
             });
         });
         

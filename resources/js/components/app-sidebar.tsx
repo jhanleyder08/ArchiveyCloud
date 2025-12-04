@@ -53,7 +53,7 @@ const getMainNavItems = (): NavItem[] => [
         title: 'Administración',
         href: '#', // No es clickeable directamente
         icon: Settings,
-        permission: 'administracion.dashboard.ver', // Al menos ver administración
+        // Sin permiso específico - se mostrará si el usuario tiene acceso a algún sub-item
         items: [
             {
                 title: 'Gestión de usuarios',

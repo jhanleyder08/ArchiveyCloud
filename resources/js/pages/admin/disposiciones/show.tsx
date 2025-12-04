@@ -1,5 +1,5 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,8 +19,22 @@ import {
     MapPin,
     Eye,
     Download,
-    History
+    History,
+    Send,
+    Loader2
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface DisposicionFinal {
     id: number;
@@ -42,21 +56,41 @@ interface DisposicionFinal {
         id: number;
         codigo: string;
         titulo: string;
-        serie_documental: string;
         ubicacion_fisica: string;
+        estado: string;
         estado_ciclo_vida: string;
         anos_retencion_archivo_central: number;
         anos_retencion_archivo_historico: number;
+        serie?: {
+            id: number;
+            codigo: string;
+            nombre: string;
+        };
+        subserie?: {
+            id: number;
+            codigo: string;
+            nombre: string;
+        };
     };
     documento?: {
         id: number;
         nombre: string;
+        titulo?: string;
         ubicacion_fisica: string;
         expediente: {
             id: number;
             codigo: string;
             titulo: string;
-            serie_documental: string;
+            serie?: {
+                id: number;
+                codigo: string;
+                nombre: string;
+            };
+            subserie?: {
+                id: number;
+                codigo: string;
+                nombre: string;
+            };
         };
     };
     responsable?: {
@@ -111,6 +145,15 @@ const estadoIcons: Record<string, React.ReactNode> = {
 };
 
 export default function DisposicionShow({ disposicion }: Props) {
+    const [showRevisionModal, setShowRevisionModal] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
+    const revisionForm = useForm({
+        validacion_legal: '',
+        cumple_normativa: false,
+        documentos_soporte: [] as string[],
+    });
+
     const formatearFecha = (fecha: string) => {
         return new Date(fecha).toLocaleDateString('es-ES', {
             day: '2-digit',
@@ -126,6 +169,24 @@ export default function DisposicionShow({ disposicion }: Props) {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
+        });
+    };
+
+    const handleExportPdf = () => {
+        setIsExporting(true);
+        // Usar window.location para descargar el PDF
+        window.location.href = route('admin.disposiciones.exportar-pdf', disposicion.id);
+        // Reset después de un tiempo
+        setTimeout(() => setIsExporting(false), 2000);
+    };
+
+    const handleEnviarRevision = (e: React.FormEvent) => {
+        e.preventDefault();
+        revisionForm.put(route('admin.disposiciones.enviar-revision', disposicion.id), {
+            onSuccess: () => {
+                setShowRevisionModal(false);
+                revisionForm.reset();
+            },
         });
     };
 
@@ -156,11 +217,18 @@ export default function DisposicionShow({ disposicion }: Props) {
                 <div className="flex items-center space-x-2">
                     {disposicion.estado === 'pendiente' && (
                         <>
-                            <Button variant="outline" size="sm">
-                                <Edit className="h-4 w-4 mr-2" />
-                                Editar
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={route('admin.disposiciones.edit', disposicion.id)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Editar
+                                </Link>
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setShowRevisionModal(true)}
+                            >
+                                <Send className="h-4 w-4 mr-2" />
                                 Enviar a Revisión
                             </Button>
                         </>
@@ -186,8 +254,17 @@ export default function DisposicionShow({ disposicion }: Props) {
                         </Button>
                     )}
 
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
+                    <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleExportPdf}
+                        disabled={isExporting}
+                    >
+                        {isExporting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                            <Download className="h-4 w-4 mr-2" />
+                        )}
                         Exportar PDF
                     </Button>
                 </div>
@@ -243,11 +320,15 @@ export default function DisposicionShow({ disposicion }: Props) {
                                         <div className="grid grid-cols-2 gap-4 text-sm">
                                             <div>
                                                 <span className="font-medium text-gray-500">Serie Documental:</span>
-                                                <p>{disposicion.expediente.serie_documental}</p>
+                                                <p>
+                                                    {disposicion.expediente.serie 
+                                                        ? `${disposicion.expediente.serie.codigo} - ${disposicion.expediente.serie.nombre}`
+                                                        : 'No especificada'}
+                                                </p>
                                             </div>
                                             <div>
                                                 <span className="font-medium text-gray-500">Estado del Expediente:</span>
-                                                <p>{disposicion.expediente.estado_ciclo_vida}</p>
+                                                <p>{disposicion.expediente.estado || disposicion.expediente.estado_ciclo_vida}</p>
                                             </div>
                                             <div>
                                                 <span className="font-medium text-gray-500">Ubicación Física:</span>
@@ -299,7 +380,11 @@ export default function DisposicionShow({ disposicion }: Props) {
                                         <div className="grid grid-cols-2 gap-4 text-sm">
                                             <div>
                                                 <span className="font-medium text-gray-500">Serie Documental:</span>
-                                                <p>{disposicion.documento?.expediente.serie_documental}</p>
+                                                <p>
+                                                    {disposicion.documento?.expediente.serie 
+                                                        ? `${disposicion.documento.expediente.serie.codigo} - ${disposicion.documento.expediente.serie.nombre}`
+                                                        : 'No especificada'}
+                                                </p>
                                             </div>
                                             <div>
                                                 <span className="font-medium text-gray-500">Ubicación Física:</span>
@@ -522,6 +607,76 @@ export default function DisposicionShow({ disposicion }: Props) {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Enviar a Revisión */}
+            <Dialog open={showRevisionModal} onOpenChange={setShowRevisionModal}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Enviar a Revisión</DialogTitle>
+                        <DialogDescription>
+                            Complete la información legal requerida para enviar esta disposición a revisión.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <form onSubmit={handleEnviarRevision} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="validacion_legal">Validación Legal *</Label>
+                            <Textarea
+                                id="validacion_legal"
+                                placeholder="Ingrese la justificación legal para esta disposición (mínimo 20 caracteres)..."
+                                value={revisionForm.data.validacion_legal}
+                                onChange={(e) => revisionForm.setData('validacion_legal', e.target.value)}
+                                className="min-h-[100px]"
+                            />
+                            {revisionForm.errors.validacion_legal && (
+                                <p className="text-sm text-red-500">{revisionForm.errors.validacion_legal}</p>
+                            )}
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="cumple_normativa"
+                                checked={revisionForm.data.cumple_normativa}
+                                onCheckedChange={(checked) => 
+                                    revisionForm.setData('cumple_normativa', checked === true)
+                                }
+                            />
+                            <Label htmlFor="cumple_normativa" className="text-sm font-normal">
+                                Confirmo que esta disposición cumple con la normativa vigente
+                            </Label>
+                        </div>
+                        {revisionForm.errors.cumple_normativa && (
+                            <p className="text-sm text-red-500">{revisionForm.errors.cumple_normativa}</p>
+                        )}
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowRevisionModal(false)}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button 
+                                type="submit" 
+                                disabled={revisionForm.processing}
+                            >
+                                {revisionForm.processing ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Enviando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="h-4 w-4 mr-2" />
+                                        Enviar a Revisión
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

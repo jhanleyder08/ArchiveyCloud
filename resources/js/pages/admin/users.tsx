@@ -325,9 +325,12 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                         <div className="flex items-center gap-2">
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
+                                                                    <Link 
+                                                                        href={`/admin/users/${user.id}/edit`}
+                                                                        className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors inline-flex"
+                                                                    >
                                                                         <Edit className="h-4 w-4" />
-                                                                    </button>
+                                                                    </Link>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
                                                                     <p>Editar usuario</p>

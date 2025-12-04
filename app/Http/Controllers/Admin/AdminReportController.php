@@ -32,16 +32,26 @@ class AdminReportController extends Controller
     /**
      * Dashboard ejecutivo con métricas clave
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
+        // Filtros de fecha
+        $fechaInicio = $request->input('fecha_inicio', Carbon::now()->subMonths(12)->format('Y-m-d'));
+        $fechaFin = $request->input('fecha_fin', Carbon::now()->format('Y-m-d'));
+        $periodo = $request->input('periodo', '12'); // meses
+
         // Métricas principales
+        $totalDocumentos = Documento::count();
+        $documentosMesActual = Documento::whereMonth('created_at', Carbon::now()->month)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->count();
+        
         $metricas = [
             'total_expedientes' => Expediente::count(),
-            'total_documentos' => 0, // Documento::count(), // Simplificado por ahora
+            'total_documentos' => $totalDocumentos,
             'expedientes_abiertos' => Expediente::where('estado', 'en_tramite')->count(),
-            'expedientes_cerrados' => Expediente::where('estado', 'inactivo')->orWhere('estado', 'historico')->count(),
-            'documentos_mes_actual' => 0, // Simplificado por ahora
-            'tamaño_total_gb' => round((Expediente::sum('tamano_total_bytes') ?? 0) / (1024 * 1024 * 1024), 2),
+            'expedientes_cerrados' => Expediente::whereIn('estado', ['inactivo', 'historico'])->count(),
+            'documentos_mes_actual' => $documentosMesActual,
+            'tamaño_total_gb' => round((Documento::sum('tamano_bytes') ?? 0) / (1024 * 1024 * 1024), 2),
         ];
 
         // Expedientes por estado (últimos 12 meses)
@@ -50,31 +60,131 @@ class AdminReportController extends Controller
                 DATE_FORMAT(created_at, "%Y-%m") as mes,
                 COUNT(*) as total
             ')
-            ->where('created_at', '>=', Carbon::now()->subMonths(12))
+            ->where('created_at', '>=', Carbon::parse($fechaInicio))
+            ->where('created_at', '<=', Carbon::parse($fechaFin))
             ->groupBy('estado', 'mes')
             ->orderBy('mes')
             ->get()
             ->groupBy('estado');
 
-        // Documentos por tipo (simplificado)
-        $documentosPorTipo = [];
+        // Documentos por tipo/formato
+        $documentosPorTipo = Documento::selectRaw('
+                COALESCE(formato, "Sin formato") as tipo_documento,
+                COUNT(*) as total,
+                SUM(tamano_bytes) as tamaño_total
+            ')
+            ->groupBy('formato')
+            ->orderBy('total', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'tipo_documento' => strtoupper($item->tipo_documento),
+                    'total' => $item->total,
+                    'tamaño_total' => $item->tamaño_total ?? 0,
+                ];
+            });
 
-        // Series más utilizadas (simplificado)
-        $seriesMasUsadas = [];
+        // Series más utilizadas
+        $seriesMasUsadas = \App\Models\SerieDocumental::withCount('expedientes')
+            ->orderBy('expedientes_count', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($serie) {
+                return [
+                    'id' => $serie->id,
+                    'codigo' => $serie->codigo,
+                    'nombre' => $serie->nombre,
+                    'expedientes_count' => $serie->expedientes_count,
+                ];
+            });
 
-        // Actividad reciente (simplificado)
-        $actividadReciente = [];
+        // Actividad reciente
+        $actividadReciente = PistaAuditoria::with('usuario')
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($actividad) {
+                return [
+                    'id' => $actividad->id,
+                    'usuario' => $actividad->usuario->name ?? 'Sistema',
+                    'accion' => $actividad->accion ?? $actividad->evento,
+                    'tabla_afectada' => $actividad->tabla_afectada,
+                    'descripcion' => $actividad->descripcion ?? $actividad->accion_detalle,
+                    'fecha' => $actividad->created_at->format('Y-m-d H:i:s'),
+                    'fecha_relativa' => $actividad->created_at->diffForHumans(),
+                ];
+            });
 
-        // Cumplimiento TRD (simplificado)
+        // Cumplimiento TRD
+        $totalSeries = \App\Models\SerieDocumental::count();
+        $seriesConExpedientes = \App\Models\SerieDocumental::has('expedientes')->count();
+        $totalSubseries = \App\Models\SubserieDocumental::count();
+        $subseriesConExpedientes = \App\Models\SubserieDocumental::has('expedientes')->count();
+        
         $cumplimientoTrd = [
-            'series_documentadas' => 0,
-            'total_series' => 0,
-            'subseries_documentadas' => 0,
-            'total_subseries' => 0,
+            'series_documentadas' => $seriesConExpedientes,
+            'total_series' => $totalSeries,
+            'subseries_documentadas' => $subseriesConExpedientes,
+            'total_subseries' => $totalSubseries,
         ];
 
-        // Estadísticas de almacenamiento (simplificado)
-        $estadisticasAlmacenamiento = [];
+        // Estadísticas de almacenamiento por mes
+        $estadisticasAlmacenamiento = Documento::selectRaw('
+                DATE_FORMAT(created_at, "%Y-%m") as mes,
+                COUNT(*) as documentos,
+                SUM(tamano_bytes) as tamaño_total
+            ')
+            ->where('created_at', '>=', Carbon::now()->subMonths(12))
+            ->groupBy('mes')
+            ->orderBy('mes')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'mes' => $item->mes,
+                    'documentos' => $item->documentos,
+                    'tamaño_total' => $item->tamaño_total ?? 0,
+                ];
+            });
+
+        // Expedientes por tipo
+        $expedientesPorTipo = Expediente::selectRaw('
+                COALESCE(tipo_expediente, "Sin tipo") as tipo,
+                COUNT(*) as total
+            ')
+            ->groupBy('tipo_expediente')
+            ->orderBy('total', 'desc')
+            ->get();
+
+        // Tendencia de creación de expedientes
+        $tendenciaExpedientes = Expediente::selectRaw('
+                DATE_FORMAT(created_at, "%Y-%m") as mes,
+                COUNT(*) as total
+            ')
+            ->where('created_at', '>=', Carbon::now()->subMonths(12))
+            ->groupBy('mes')
+            ->orderBy('mes')
+            ->get();
+
+        // Usuarios más activos
+        $usuariosMasActivos = PistaAuditoria::selectRaw('
+                usuario_id,
+                COUNT(*) as total_acciones
+            ')
+            ->whereNotNull('usuario_id')
+            ->where('created_at', '>=', Carbon::now()->subDays(30))
+            ->groupBy('usuario_id')
+            ->orderBy('total_acciones', 'desc')
+            ->limit(10)
+            ->with('usuario:id,name,email')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'usuario' => $item->usuario->name ?? 'Desconocido',
+                    'email' => $item->usuario->email ?? '',
+                    'total_acciones' => $item->total_acciones,
+                ];
+            });
 
         return Inertia::render('admin/reportes/dashboard', [
             'metricas' => $metricas,
@@ -84,6 +194,87 @@ class AdminReportController extends Controller
             'actividadReciente' => $actividadReciente,
             'cumplimientoTrd' => $cumplimientoTrd,
             'estadisticasAlmacenamiento' => $estadisticasAlmacenamiento,
+            'expedientesPorTipo' => $expedientesPorTipo,
+            'tendenciaExpedientes' => $tendenciaExpedientes,
+            'usuariosMasActivos' => $usuariosMasActivos,
+            'filtros' => [
+                'fecha_inicio' => $fechaInicio,
+                'fecha_fin' => $fechaFin,
+                'periodo' => $periodo,
+            ],
+        ]);
+    }
+
+    /**
+     * API para actualizar datos del dashboard en tiempo real
+     */
+    public function dashboardData(Request $request)
+    {
+        $fechaInicio = $request->input('fecha_inicio', Carbon::now()->subMonths(12)->format('Y-m-d'));
+        $fechaFin = $request->input('fecha_fin', Carbon::now()->format('Y-m-d'));
+
+        // Métricas principales
+        $totalDocumentos = Documento::count();
+        $documentosMesActual = Documento::whereMonth('created_at', Carbon::now()->month)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->count();
+        
+        $metricas = [
+            'total_expedientes' => Expediente::count(),
+            'total_documentos' => $totalDocumentos,
+            'expedientes_abiertos' => Expediente::where('estado', 'en_tramite')->count(),
+            'expedientes_cerrados' => Expediente::whereIn('estado', ['inactivo', 'historico'])->count(),
+            'documentos_mes_actual' => $documentosMesActual,
+            'tamaño_total_gb' => round((Documento::sum('tamano_bytes') ?? 0) / (1024 * 1024 * 1024), 2),
+        ];
+
+        // Expedientes por estado
+        $expedientesPorEstado = Expediente::selectRaw('
+                estado as estado,
+                DATE_FORMAT(created_at, "%Y-%m") as mes,
+                COUNT(*) as total
+            ')
+            ->where('created_at', '>=', Carbon::parse($fechaInicio))
+            ->where('created_at', '<=', Carbon::parse($fechaFin))
+            ->groupBy('estado', 'mes')
+            ->orderBy('mes')
+            ->get()
+            ->groupBy('estado');
+
+        // Documentos por tipo
+        $documentosPorTipo = Documento::selectRaw('
+                COALESCE(formato, "Sin formato") as tipo_documento,
+                COUNT(*) as total,
+                SUM(tamano_bytes) as tamaño_total
+            ')
+            ->groupBy('formato')
+            ->orderBy('total', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Actividad reciente
+        $actividadReciente = PistaAuditoria::with('usuario')
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($actividad) {
+                return [
+                    'id' => $actividad->id,
+                    'usuario' => $actividad->usuario->name ?? 'Sistema',
+                    'accion' => $actividad->accion ?? $actividad->evento,
+                    'tabla_afectada' => $actividad->tabla_afectada,
+                    'descripcion' => $actividad->descripcion ?? $actividad->accion_detalle,
+                    'fecha' => $actividad->created_at->format('Y-m-d H:i:s'),
+                    'fecha_relativa' => $actividad->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json([
+            'metricas' => $metricas,
+            'expedientesPorEstado' => $expedientesPorEstado,
+            'documentosPorTipo' => $documentosPorTipo,
+            'actividadReciente' => $actividadReciente,
+            'timestamp' => now()->toISOString(),
         ]);
     }
 
