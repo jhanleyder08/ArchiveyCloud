@@ -85,7 +85,7 @@ class SolicitudFirma extends Model
      */
     public function firmantes(): HasMany
     {
-        return $this->hasMany(FirmanteSolicitud::class, 'solicitud_id');
+        return $this->hasMany(FirmanteSolicitud::class, 'solicitud_firma_id');
     }
 
     /**

@@ -94,8 +94,8 @@ class AdminPrestamoController extends Controller
             ->get();
 
         $documentos = Documento::with('expediente:id,codigo,titulo')
-            ->select('id', 'nombre', 'expediente_id', 'ubicacion_fisica')
-            ->orderBy('nombre')
+            ->select('id', 'titulo', 'expediente_id', 'ubicacion_fisica')
+            ->orderBy('titulo')
             ->get();
 
         $usuarios = User::select('id', 'name', 'email')
@@ -357,14 +357,14 @@ class AdminPrestamoController extends Controller
                 ->get();
         } else {
             $resultados = Documento::with('expediente:id,codigo,titulo')
-                ->where('nombre', 'like', "%{$query}%")
+                ->where('titulo', 'like', "%{$query}%")
                 ->whereNotIn('id', function ($q) {
                     $q->select('documento_id')
                         ->from('prestamos')
                         ->where('estado', 'prestado')
                         ->whereNotNull('documento_id');
                 })
-                ->select('id', 'nombre', 'expediente_id', 'ubicacion_fisica')
+                ->select('id', 'titulo', 'expediente_id', 'ubicacion_fisica')
                 ->limit(10)
                 ->get();
         }

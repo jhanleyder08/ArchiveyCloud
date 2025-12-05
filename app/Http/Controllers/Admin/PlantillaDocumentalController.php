@@ -781,8 +781,8 @@ class PlantillaDocumentalController extends Controller
     public function obtenerDocumentosDisponibles()
     {
         $documentos = Documento::whereDoesntHave('plantillaGenerada')
-            ->select('id', 'nombre', 'tipo_mime', 'created_at')
-            ->with('expediente:id,codigo,nombre')
+            ->select('id', 'titulo', 'formato as tipo_mime', 'created_at')
+            ->with('expediente:id,codigo,titulo')
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get();
