@@ -24,7 +24,12 @@ import {
     ArrowLeft,
     Download,
     Upload,
-    GitBranch
+    GitBranch,
+    FileJson,
+    FileSpreadsheet,
+    File,
+    RotateCcw,
+    History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInertiaActions } from '@/hooks/useInertiaActions';
@@ -43,6 +48,19 @@ interface CCDNivel {
     ruta?: string;
     palabras_clave?: string[];
     hijos?: CCDNivel[];
+}
+
+interface CCDVersion {
+    id: number;
+    version_anterior: string;
+    version_nueva: string;
+    cambios: string;
+    fecha_cambio: string;
+    created_at: string;
+    modificador?: {
+        id: number;
+        name: string;
+    };
 }
 
 interface CCD {
@@ -66,6 +84,7 @@ interface CCD {
         id: number;
         name: string;
     };
+    versiones?: CCDVersion[];
 }
 
 interface TRDRelacionada {
@@ -236,8 +255,16 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
     
     const [showAddNivelModal, setShowAddNivelModal] = useState(false);
     const [showEditNivelModal, setShowEditNivelModal] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [showVersionModal, setShowVersionModal] = useState(false);
+    const [exportLoading, setExportLoading] = useState(false);
     const [selectedParent, setSelectedParent] = useState<CCDNivel | null>(null);
     const [selectedNivel, setSelectedNivel] = useState<CCDNivel | null>(null);
+    
+    // Estados para diálogos de confirmación
+    const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+    const [showConfirmRevert, setShowConfirmRevert] = useState(false);
+    const [versionToAction, setVersionToAction] = useState<{id: number, version: string} | null>(null);
 
     const [nivelForm, setNivelForm] = useState({
         codigo: '',
@@ -246,6 +273,11 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
         tipo_nivel: 'fondo',
         orden: 0,
         activo: true,
+    });
+
+    const [versionForm, setVersionForm] = useState({
+        version: '',
+        cambios: '',
     });
 
     const breadcrumbItems = [
@@ -345,6 +377,137 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
         actions.create(`/admin/ccd/${ccd.id}/aprobar`, {}, {
             successMessage: 'CCD aprobado exitosamente',
             errorMessage: 'Error al aprobar el CCD',
+        });
+    };
+
+    const handleExport = async (formato: string) => {
+        setExportLoading(true);
+        try {
+            const url = `/admin/ccd/${ccd.id}/exportar?formato=${formato}`;
+            
+            // Para JSON, CSV y Excel, usar descarga directa
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `CCD_${ccd.codigo}_v${ccd.version}.${formato === 'excel' ? 'xlsx' : formato}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            toast.success(`Exportación en formato ${formato.toUpperCase()} iniciada`);
+            setShowExportModal(false);
+        } catch (error) {
+            console.error('Error al exportar:', error);
+            toast.error('Error al exportar el CCD');
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
+    const exportFormats = [
+        { 
+            id: 'json', 
+            name: 'JSON', 
+            description: 'Formato de datos estructurado, ideal para integración con otros sistemas',
+            icon: FileJson,
+            color: 'text-yellow-600 bg-yellow-50'
+        },
+        { 
+            id: 'csv', 
+            name: 'CSV', 
+            description: 'Valores separados por comas, compatible con Excel y hojas de cálculo',
+            icon: FileText,
+            color: 'text-green-600 bg-green-50'
+        },
+        { 
+            id: 'excel', 
+            name: 'Excel (XLSX)', 
+            description: 'Hoja de cálculo con formato y colores por tipo de nivel',
+            icon: FileSpreadsheet,
+            color: 'text-emerald-600 bg-emerald-50'
+        },
+        { 
+            id: 'pdf', 
+            name: 'PDF', 
+            description: 'Documento portable para impresión y archivo',
+            icon: File,
+            color: 'text-red-600 bg-red-50'
+        },
+    ];
+
+    const openVersionModal = () => {
+        // Sugerir nueva versión basada en la actual
+        const currentVersion = ccd.version || '1.0';
+        const parts = currentVersion.split('.');
+        const minor = parseInt(parts[1] || '0') + 1;
+        const suggestedVersion = `${parts[0]}.${minor}`;
+        
+        setVersionForm({
+            version: suggestedVersion,
+            cambios: '',
+        });
+        setShowVersionModal(true);
+    };
+
+    const submitNewVersion = () => {
+        if (!versionForm.version.trim()) {
+            toast.error('La versión es requerida');
+            return;
+        }
+        if (!versionForm.cambios.trim()) {
+            toast.error('Debe describir los cambios realizados');
+            return;
+        }
+
+        router.post(`/admin/ccd/${ccd.id}/version`, versionForm, {
+            onSuccess: () => {
+                toast.success('Nueva versión creada exitosamente. El CCD requiere nueva aprobación.');
+                setShowVersionModal(false);
+                setVersionForm({ version: '', cambios: '' });
+            },
+            onError: (errors) => {
+                console.error('Errores:', errors);
+                toast.error('Error al crear la nueva versión');
+            },
+        });
+    };
+
+    const confirmDeleteVersion = (versionId: number, versionNueva: string) => {
+        setVersionToAction({ id: versionId, version: versionNueva });
+        setShowConfirmDelete(true);
+    };
+
+    const handleDeleteVersion = () => {
+        if (!versionToAction) return;
+
+        router.delete(`/admin/ccd/version/${versionToAction.id}`, {
+            onSuccess: () => {
+                toast.success(`Versión ${versionToAction.version} eliminada exitosamente`);
+                setShowConfirmDelete(false);
+                setVersionToAction(null);
+            },
+            onError: () => {
+                toast.error('Error al eliminar la versión');
+            },
+        });
+    };
+
+    const confirmRevertVersion = (versionId: number, versionAnterior: string) => {
+        setVersionToAction({ id: versionId, version: versionAnterior });
+        setShowConfirmRevert(true);
+    };
+
+    const handleRevertVersion = () => {
+        if (!versionToAction) return;
+
+        router.post(`/admin/ccd/${ccd.id}/revertir/${versionToAction.id}`, {}, {
+            onSuccess: () => {
+                toast.success(`CCD revertido a versión ${versionToAction.version}`);
+                setShowConfirmRevert(false);
+                setVersionToAction(null);
+            },
+            onError: () => {
+                toast.error('Error al revertir la versión');
+            },
         });
     };
 
@@ -455,6 +618,146 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
                     </Card>
                 </div>
 
+                {/* Estado de Versión e Historial */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Versión Actual */}
+                    <Card className={ccd.estado === 'borrador' ? 'border-orange-300 bg-orange-50' : 'border-green-300 bg-green-50'}>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                {ccd.estado === 'borrador' ? (
+                                    <>
+                                        <AlertCircle className="h-5 w-5 text-orange-600" />
+                                        <span className="text-orange-800">Versión en Borrador</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle className="h-5 w-5 text-green-600" />
+                                        <span className="text-green-800">Versión Aprobada</span>
+                                    </>
+                                )}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">Versión:</span>
+                                    <Badge className="bg-purple-100 text-purple-800 text-lg px-3">
+                                        v{ccd.version}
+                                    </Badge>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">Estado:</span>
+                                    <Badge className={getEstadoBadge(ccd.estado)}>
+                                        {ccd.estado === 'borrador' ? 'Pendiente de Aprobación' : ccd.estado}
+                                    </Badge>
+                                </div>
+                                {ccd.fecha_aprobacion && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Fecha Aprobación:</span>
+                                        <span className="text-sm">{new Date(ccd.fecha_aprobacion).toLocaleDateString('es-ES')}</span>
+                                    </div>
+                                )}
+                                {ccd.aprobador && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Aprobado por:</span>
+                                        <span className="text-sm">{ccd.aprobador.name}</span>
+                                    </div>
+                                )}
+                                {ccd.estado === 'borrador' && (
+                                    <div className="mt-4 p-3 bg-orange-100 rounded-lg">
+                                        <p className="text-sm text-orange-800">
+                                            <strong>⚠️ Esta versión requiere aprobación.</strong> Una vez aprobada, 
+                                            estará disponible para su uso en el sistema.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Historial de Versiones */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <GitBranch className="h-5 w-5 text-[#2a3d83]" />
+                                Historial de Versiones
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {ccd.versiones && ccd.versiones.length > 0 ? (
+                                <div className="space-y-3 max-h-80 overflow-y-auto">
+                                    {ccd.versiones.map((version, idx) => (
+                                        <div key={version.id} className={`flex items-start gap-3 p-3 rounded-lg ${
+                                            version.version_nueva === ccd.version 
+                                                ? 'bg-orange-50 border border-orange-200' 
+                                                : 'bg-gray-50'
+                                        }`}>
+                                            <div className={`flex-shrink-0 w-8 h-8 text-white rounded-full flex items-center justify-center text-xs font-bold ${
+                                                version.version_nueva === ccd.version 
+                                                    ? 'bg-orange-500' 
+                                                    : 'bg-[#2a3d83]'
+                                            }`}>
+                                                {idx + 1}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className="text-xs">
+                                                            v{version.version_anterior} → v{version.version_nueva}
+                                                        </Badge>
+                                                        {version.version_nueva === ccd.version && (
+                                                            <Badge className="bg-orange-100 text-orange-800 text-xs">
+                                                                Actual
+                                                            </Badge>
+                                                        )}
+                                                        <span className="text-xs text-gray-500">
+                                                            {new Date(version.created_at).toLocaleDateString('es-ES')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                                            onClick={() => confirmRevertVersion(version.id, version.version_anterior)}
+                                                            title={`Revertir a v${version.version_anterior}`}
+                                                        >
+                                                            <RotateCcw className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                                                            onClick={() => confirmDeleteVersion(version.id, version.version_nueva)}
+                                                            title="Eliminar versión"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-gray-700 mt-1">
+                                                    {version.cambios}
+                                                </p>
+                                                {version.modificador && (
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Por: {version.modificador.name}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6 text-gray-500">
+                                    <GitBranch className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">No hay historial de versiones</p>
+                                    <p className="text-xs">Esta es la versión inicial del CCD</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
                 {/* Relaciones con TRD y Series */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* TRDs Relacionadas */}
@@ -560,14 +863,14 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
                                 {ccd.estado === 'borrador' && errores_validacion.length === 0 && (
                                     <Button onClick={handleAprobar} className="bg-green-600 hover:bg-green-700">
                                         <CheckCircle className="h-4 w-4 mr-2" />
-                                        Aprobar CCD
+                                        {(ccd.versiones && ccd.versiones.length > 0) ? 'Aprobar Versión' : 'Aprobar CCD'}
                                     </Button>
                                 )}
-                                <Button variant="outline">
+                                <Button variant="outline" onClick={() => setShowExportModal(true)}>
                                     <Download className="h-4 w-4 mr-2" />
                                     Exportar
                                 </Button>
-                                <Button variant="outline">
+                                <Button variant="outline" onClick={openVersionModal}>
                                     <GitBranch className="h-4 w-4 mr-2" />
                                     Nueva Versión
                                 </Button>
@@ -754,6 +1057,145 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
                             </Button>
                             <Button onClick={submitEditNivel} className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
                                 Actualizar Nivel
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modal Exportar */}
+                <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Download className="h-5 w-5 text-[#2a3d83]" />
+                                Exportar CCD
+                            </DialogTitle>
+                            <DialogDescription>
+                                Seleccione el formato en el que desea exportar el Cuadro de Clasificación Documental
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-3 py-4">
+                            {exportFormats.map((format) => {
+                                const IconComponent = format.icon;
+                                return (
+                                    <button
+                                        key={format.id}
+                                        onClick={() => handleExport(format.id)}
+                                        disabled={exportLoading}
+                                        className="flex items-start gap-4 p-4 border rounded-lg hover:border-[#2a3d83] hover:bg-gray-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <div className={`p-2 rounded-lg ${format.color}`}>
+                                            <IconComponent className="h-5 w-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="font-medium text-gray-900">{format.name}</div>
+                                            <div className="text-sm text-gray-500">{format.description}</div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowExportModal(false)}>
+                                Cancelar
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modal Nueva Versión */}
+                <Dialog open={showVersionModal} onOpenChange={setShowVersionModal}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <GitBranch className="h-5 w-5 text-[#2a3d83]" />
+                                Crear Nueva Versión
+                            </DialogTitle>
+                            <DialogDescription>
+                                Cree una nueva versión del CCD "{ccd.nombre}". La versión actual es {ccd.version}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="version">Nueva Versión *</Label>
+                                <Input
+                                    id="version"
+                                    value={versionForm.version}
+                                    onChange={(e) => setVersionForm({...versionForm, version: e.target.value})}
+                                    placeholder="Ej: 2.0, 1.1, etc."
+                                />
+                                <p className="text-xs text-gray-500">
+                                    Versión actual: {ccd.version}
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="cambios">Descripción de Cambios *</Label>
+                                <Textarea
+                                    id="cambios"
+                                    value={versionForm.cambios}
+                                    onChange={(e) => setVersionForm({...versionForm, cambios: e.target.value})}
+                                    placeholder="Describa los cambios realizados en esta versión..."
+                                    rows={4}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowVersionModal(false)}>
+                                Cancelar
+                            </Button>
+                            <Button onClick={submitNewVersion} className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
+                                <GitBranch className="h-4 w-4 mr-2" />
+                                Crear Versión
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Confirmación Eliminar Versión */}
+                <Dialog open={showConfirmDelete} onOpenChange={setShowConfirmDelete}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-red-600">
+                                <AlertCircle className="h-5 w-5" />
+                                Eliminar Versión
+                            </DialogTitle>
+                            <DialogDescription>
+                                ¿Está seguro de eliminar la versión <strong>{versionToAction?.version}</strong>?
+                                <br/><br/>
+                                Esta acción no se puede deshacer. Si es la versión actual, el CCD volverá al estado de la versión anterior.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowConfirmDelete(false)}>
+                                Cancelar
+                            </Button>
+                            <Button onClick={handleDeleteVersion} variant="destructive">
+                                Sí, eliminar versión
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Confirmación Revertir Versión */}
+                <Dialog open={showConfirmRevert} onOpenChange={setShowConfirmRevert}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-blue-600">
+                                <RotateCcw className="h-5 w-5" />
+                                Revertir a Versión Anterior
+                            </DialogTitle>
+                            <DialogDescription>
+                                ¿Está seguro de revertir a la versión <strong>{versionToAction?.version}</strong>?
+                                <br/><br/>
+                                Se creará un nuevo registro de versión. El CCD volverá a estado <strong>borrador</strong> y requerirá nueva aprobación.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowConfirmRevert(false)}>
+                                Cancelar
+                            </Button>
+                            <Button onClick={handleRevertVersion} className="bg-blue-600 hover:bg-blue-700">
+                                Sí, revertir versión
                             </Button>
                         </DialogFooter>
                     </DialogContent>

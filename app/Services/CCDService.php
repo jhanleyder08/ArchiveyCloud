@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CCD;
 use App\Models\CCDNivel;
+use App\Models\CCDVersion;
 use App\Models\CCDVocabulario;
 use App\Models\TablaRetencionDocumental;
 use App\Models\SerieDocumental;
@@ -268,5 +269,42 @@ class CCDService
     public function obtenerEstructuraJerarquica(CCD $ccd): array
     {
         return $ccd->getEstructuraJerarquica();
+    }
+
+    /**
+     * Crear una nueva versión del CCD
+     */
+    public function crearVersion(CCD $ccd, string $version, string $cambios, $user): CCD
+    {
+        return DB::transaction(function () use ($ccd, $version, $cambios, $user) {
+            // Guardar versión histórica del CCD actual
+            CCDVersion::create([
+                'ccd_id' => $ccd->id,
+                'version_anterior' => $ccd->version,
+                'version_nueva' => $version,
+                'datos_anteriores' => [
+                    'codigo' => $ccd->codigo,
+                    'nombre' => $ccd->nombre,
+                    'descripcion' => $ccd->descripcion,
+                    'estado' => $ccd->estado,
+                    'estructura' => $this->obtenerEstructuraJerarquica($ccd),
+                ],
+                'cambios' => $cambios,
+                'modificado_por' => $user->id,
+                'fecha_cambio' => now(),
+            ]);
+
+            // Actualizar el CCD con la nueva versión
+            // El estado cambia a 'borrador' para requerir nueva aprobación
+            $ccd->update([
+                'version' => $version,
+                'estado' => 'borrador',
+                'fecha_aprobacion' => null,
+                'aprobado_por' => null,
+                'updated_by' => $user->id,
+            ]);
+
+            return $ccd->fresh();
+        });
     }
 }

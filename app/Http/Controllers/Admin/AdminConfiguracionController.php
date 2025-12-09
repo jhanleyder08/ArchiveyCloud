@@ -30,6 +30,14 @@ class AdminConfiguracionController extends Controller
      */
     public function index()
     {
+        return $this->dashboard();
+    }
+
+    /**
+     * Dashboard de configuración
+     */
+    public function dashboard()
+    {
         try {
             $configuraciones = ConfiguracionServicio::all()->keyBy('clave');
             
@@ -100,6 +108,81 @@ class AdminConfiguracionController extends Controller
     }
 
     /**
+     * Configuración del sistema
+     */
+    public function sistema()
+    {
+        return $this->categoria('sistema');
+    }
+
+    /**
+     * Configuración de email
+     */
+    public function email()
+    {
+        return $this->categoria('email');
+    }
+
+    /**
+     * Configuración de SMS
+     */
+    public function sms()
+    {
+        return $this->categoria('sms');
+    }
+
+    /**
+     * Configuración de seguridad
+     */
+    public function seguridad()
+    {
+        return $this->categoria('seguridad');
+    }
+
+    /**
+     * Configuración de notificaciones
+     */
+    public function notificaciones()
+    {
+        return $this->categoria('notificaciones');
+    }
+
+    /**
+     * Mostrar configuraciones por categoría
+     */
+    public function categoria(string $categoria)
+    {
+        try {
+            $categoriasValidas = ['sistema', 'email', 'sms', 'seguridad', 'branding', 'notificaciones'];
+            
+            if (!in_array($categoria, $categoriasValidas)) {
+                return redirect()->route('admin.configuracion.index')
+                    ->with('error', 'Categoría de configuración no válida');
+            }
+
+            $configuraciones = ConfiguracionServicio::where('categoria', $categoria)->get();
+
+            $titulos = [
+                'sistema' => 'Sistema',
+                'email' => 'Correo Electrónico',
+                'sms' => 'SMS',
+                'seguridad' => 'Seguridad',
+                'branding' => 'Branding',
+                'notificaciones' => 'Notificaciones',
+            ];
+
+            return Inertia::render('admin/configuracion/ConfiguracionCategoria', [
+                'configuraciones' => $configuraciones,
+                'categoria' => $categoria,
+                'titulo' => $titulos[$categoria] ?? ucfirst($categoria),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error en configuración {$categoria}: " . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al cargar configuración');
+        }
+    }
+
+    /**
      * Panel de branding y personalización
      */
     public function branding()
@@ -122,11 +205,21 @@ class AdminConfiguracionController extends Controller
                 'auto' => 'Automático',
             ];
 
-            $logos = [
+            // Generar URLs completas para los logos
+            $logosPaths = [
                 'principal' => $configuraciones['logo_principal']->valor ?? null,
                 'favicon' => $configuraciones['favicon']->valor ?? null,
                 'login' => $configuraciones['logo_secundario']->valor ?? null,
             ];
+
+            $logos = [];
+            foreach ($logosPaths as $key => $path) {
+                if ($path && Storage::disk('public')->exists($path)) {
+                    $logos[$key] = asset('storage/' . $path);
+                } else {
+                    $logos[$key] = null;
+                }
+            }
 
             return Inertia::render('admin/configuracion/ConfiguracionBranding', [
                 'configuraciones' => $configuraciones,
@@ -145,13 +238,25 @@ class AdminConfiguracionController extends Controller
     public function subirArchivoBranding(Request $request)
     {
         $request->validate([
-            'archivo' => 'required|file|mimes:png,jpg,jpeg,svg,ico|max:2048',
-            'tipo' => 'required|in:logo_principal,logo_secundario,favicon',
+            'archivo' => 'required|file|mimes:png,jpg,jpeg,svg,ico,gif,webp|max:2048',
+            'tipo' => 'required|in:logo_principal,logo_secundario,favicon,principal,login',
         ]);
+
+        // Mapear tipos del frontend a claves de base de datos
+        $tipoMap = [
+            'principal' => 'logo_principal',
+            'login' => 'logo_secundario',
+            'favicon' => 'favicon',
+            'logo_principal' => 'logo_principal',
+            'logo_secundario' => 'logo_secundario',
+        ];
 
         try {
             $archivo = $request->file('archivo');
-            $tipo = $request->tipo;
+            $tipoOriginal = $request->tipo;
+            
+            // Convertir tipo del frontend a clave de base de datos
+            $tipo = $tipoMap[$tipoOriginal] ?? $tipoOriginal;
             
             // Crear directorio si no existe
             $directorio = 'branding';
@@ -565,9 +670,9 @@ class AdminConfiguracionController extends Controller
             $configuraciones = [
                 'app_name' => $request->nombre_aplicacion,
                 'app_description' => $request->descripcion,
-                'brand_primary_color' => $request->color_primario,
-                'brand_secondary_color' => $request->color_secundario,
-                'default_theme' => $request->tema_default,
+                'color_primario' => $request->color_primario,
+                'color_secundario' => $request->color_secundario,
+                'tema_predeterminado' => $request->tema_default,
             ];
 
             foreach ($configuraciones as $clave => $valor) {
@@ -580,6 +685,10 @@ class AdminConfiguracionController extends Controller
                     ]
                 );
             }
+
+            // Limpiar caché de branding para que los cambios se apliquen inmediatamente
+            Cache::forget('branding_config');
+            Cache::forget('configuraciones_branding');
 
             return redirect()->back()->with('success', 'Configuración de branding actualizada exitosamente');
         } catch (\Exception $e) {

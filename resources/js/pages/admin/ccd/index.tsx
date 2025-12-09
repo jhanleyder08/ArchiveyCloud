@@ -26,12 +26,22 @@ import {
 import { toast } from 'sonner';
 import { useInertiaActions } from '@/hooks/useInertiaActions';
 
+interface CCDVersion {
+    id: number;
+    version_anterior: string;
+    version_nueva: string;
+    cambios: string;
+    fecha_cambio: string;
+}
+
 interface CCD {
     id: number;
     codigo: string;
     nombre: string;
     descripcion?: string;
+    version: string;
     estado: 'borrador' | 'activo' | 'inactivo' | 'historico';
+    fecha_aprobacion?: string;
     created_at: string;
     updated_at: string;
     creador?: {
@@ -39,6 +49,8 @@ interface CCD {
         name: string;
     };
     niveles_count?: number;
+    versiones_count?: number;
+    versiones?: CCDVersion[];
 }
 
 interface CCDOption {
@@ -459,6 +471,7 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                 <tr>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Código</th>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Nombre</th>
+                                    <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Versión</th>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Estado</th>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Niveles</th>
                                     <th className="text-left py-3 px-6 text-sm font-medium text-gray-900">Creado</th>
@@ -468,7 +481,7 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                             <tbody className="divide-y divide-gray-200">
                                 {ccds.data.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="py-8 px-6 text-center text-gray-500">
+                                        <td colSpan={7} className="py-8 px-6 text-center text-gray-500">
                                             No se encontraron CCDs.
                                         </td>
                                     </tr>
@@ -480,12 +493,31 @@ export default function CCDIndex({ ccds, estadisticas, filters, opciones }: CCDI
                                                 <div>
                                                     <div className="font-medium text-gray-900">{ccd.nombre}</div>
                                                     {ccd.descripcion && (
-                                                        <div className="text-sm text-gray-500">{ccd.descripcion}</div>
+                                                        <div className="text-sm text-gray-500 truncate max-w-xs">{ccd.descripcion}</div>
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6">
-                                                {getEstadoBadge(ccd.estado)}
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                        v{ccd.version || '1.0'}
+                                                    </span>
+                                                    {(ccd.versiones_count || 0) > 0 && (
+                                                        <span className="text-xs text-gray-500">
+                                                            {ccd.versiones_count} cambios
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <div className="flex flex-col gap-1">
+                                                    {getEstadoBadge(ccd.estado)}
+                                                    {ccd.estado === 'borrador' && (
+                                                        <span className="text-xs text-orange-600">
+                                                            Pendiente aprobación
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-[#2a3d83]">

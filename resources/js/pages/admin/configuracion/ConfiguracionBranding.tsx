@@ -54,9 +54,9 @@ export default function ConfiguracionBranding({ configuraciones, logos }: Props)
     const { data, setData, put, processing } = useForm({
         nombre_aplicacion: configuraciones.app_name?.valor || 'ArchiveyCloud',
         descripcion: configuraciones.app_description?.valor || '',
-        color_primario: configuraciones.brand_primary_color?.valor || '#3b82f6',
-        color_secundario: configuraciones.brand_secondary_color?.valor || '#6b7280',
-        tema_default: configuraciones.default_theme?.valor || 'light',
+        color_primario: configuraciones.color_primario?.valor || '#3b82f6',
+        color_secundario: configuraciones.color_secundario?.valor || '#6b7280',
+        tema_default: configuraciones.tema_predeterminado?.valor || 'light',
         mostrar_logo: configuraciones.show_logo?.valor === 'true',
     });
 
@@ -91,9 +91,9 @@ export default function ConfiguracionBranding({ configuraciones, logos }: Props)
             return;
         }
 
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon'];
         if (!allowedTypes.includes(file.type)) {
-            toast.error('Tipo de archivo no permitido. Use JPEG, PNG, GIF o WebP.');
+            toast.error('Tipo de archivo no permitido. Use JPEG, PNG, GIF, WebP, SVG o ICO.');
             return;
         }
 
@@ -173,8 +173,8 @@ export default function ConfiguracionBranding({ configuraciones, logos }: Props)
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Branding y Personalización</h1>
-                            <p className="text-gray-600 mt-2">
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Branding y Personalización</h1>
+                            <p className="text-gray-600 dark:text-gray-400 mt-2">
                                 Configura la identidad visual y temas de ArchiveyCloud
                             </p>
                         </div>
@@ -280,6 +280,33 @@ export default function ConfiguracionBranding({ configuraciones, logos }: Props)
                                             <SelectItem value="auto">Automático</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                </div>
+                            </div>
+
+                            {/* Vista previa de colores */}
+                            <div className="mt-6 p-4 border rounded-lg">
+                                <h4 className="font-medium mb-3">Vista Previa</h4>
+                                <div className="flex gap-4 items-center">
+                                    <div 
+                                        className="w-24 h-12 rounded-lg flex items-center justify-center text-white text-sm font-medium shadow-md"
+                                        style={{ backgroundColor: data.color_primario }}
+                                    >
+                                        Primario
+                                    </div>
+                                    <div 
+                                        className="w-24 h-12 rounded-lg flex items-center justify-center text-white text-sm font-medium shadow-md"
+                                        style={{ backgroundColor: data.color_secundario }}
+                                    >
+                                        Secundario
+                                    </div>
+                                    <div className="flex-1 p-3 rounded-lg border">
+                                        <div className="text-sm font-medium" style={{ color: data.color_primario }}>
+                                            {data.nombre_aplicacion}
+                                        </div>
+                                        <div className="text-xs" style={{ color: data.color_secundario }}>
+                                            {data.descripcion || 'Descripción de la aplicación'}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -503,7 +530,7 @@ export default function ConfiguracionBranding({ configuraciones, logos }: Props)
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml,image/x-icon,.ico,.svg"
                     onChange={handleFileSelected}
                     className="hidden"
                 />

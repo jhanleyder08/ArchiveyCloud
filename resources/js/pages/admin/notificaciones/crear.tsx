@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,7 @@ const tipoOptions = [
 ];
 
 export default function CrearNotificacion({ usuarios }: Props) {
+    const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const [selectAll, setSelectAll] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -116,6 +117,24 @@ export default function CrearNotificacion({ usuarios }: Props) {
             <Head title="Crear Notificación" />
 
             <div className="space-y-6">
+                {/* Mensaje de éxito */}
+                {flash?.success && (
+                    <Alert className="bg-green-50 border-green-200">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <AlertDescription className="text-green-800">
+                            {flash.success}
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {/* Mensaje de error */}
+                {flash?.error && (
+                    <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>{flash.error}</AlertDescription>
+                    </Alert>
+                )}
+
                 {/* Header */}
                 <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-4">

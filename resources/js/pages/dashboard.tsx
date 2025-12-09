@@ -134,13 +134,13 @@ export default function Dashboard({
                     <Card className="md:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-[#2a3d83]" />
+                                <Clock className="h-5 w-5 text-brand-primary" />
                                 Hora Actual
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
-                                <div className="text-4xl font-bold text-[#2a3d83]">
+                                <div className="text-4xl font-bold text-brand-primary">
                                     {formatTime(currentTime)}
                                 </div>
                                 <div className="text-lg text-muted-foreground capitalize">
@@ -154,7 +154,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Users className="h-5 w-5 text-[#2a3d83]" />
+                                <Users className="h-5 w-5 text-brand-primary" />
                                 Bienvenido
                             </CardTitle>
                         </CardHeader>
@@ -162,7 +162,7 @@ export default function Dashboard({
                             <div className="space-y-2">
                                 <div className="font-semibold text-lg">{usuario.nombre}</div>
                                 <div className="text-sm text-muted-foreground">{usuario.email}</div>
-                                <Badge className="bg-[#2a3d83] text-white">{usuario.rol}</Badge>
+                                <Badge className="bg-brand-primary text-white">{usuario.rol}</Badge>
                             </div>
                         </CardContent>
                     </Card>
@@ -173,7 +173,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Documentos</CardTitle>
-                            <FileText className="h-4 w-4 text-[#2a3d83]" />
+                            <FileText className="h-4 w-4 text-brand-primary" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{metricas.total_documentos.toLocaleString()}</div>
@@ -186,7 +186,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Expedientes</CardTitle>
-                            <Folder className="h-4 w-4 text-[#2a3d83]" />
+                            <Folder className="h-4 w-4 text-brand-primary" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{metricas.total_expedientes.toLocaleString()}</div>
@@ -199,7 +199,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Usuarios Activos</CardTitle>
-                            <Users className="h-4 w-4 text-[#2a3d83]" />
+                            <Users className="h-4 w-4 text-brand-primary" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{metricas.total_usuarios.toLocaleString()}</div>
@@ -212,7 +212,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Almacenamiento</CardTitle>
-                            <HardDrive className="h-4 w-4 text-[#2a3d83]" />
+                            <HardDrive className="h-4 w-4 text-brand-primary" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
@@ -233,7 +233,7 @@ export default function Dashboard({
                     <Card className="lg:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Activity className="h-5 w-5 text-[#2a3d83]" />
+                                <Activity className="h-5 w-5 text-brand-primary" />
                                 Actividad Reciente
                             </CardTitle>
                             <CardDescription>Últimas acciones realizadas</CardDescription>
@@ -243,8 +243,8 @@ export default function Dashboard({
                                 <div className="space-y-3">
                                     {actividad_reciente.map((actividad) => (
                                         <div key={actividad.id} className="flex items-start gap-3 border-b pb-3 last:border-0">
-                                            <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#2a3d83]/10">
-                                                <Activity className="h-4 w-4 text-[#2a3d83]" />
+                                            <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary-10">
+                                                <Activity className="h-4 w-4 text-brand-primary" />
                                             </div>
                                             <div className="flex-1">
                                                 <div className="text-sm font-medium">{actividad.descripcion}</div>
@@ -267,7 +267,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Bell className="h-5 w-5 text-[#2a3d83]" />
+                                <Bell className="h-5 w-5 text-brand-primary" />
                                 Notificaciones
                             </CardTitle>
                             <CardDescription>Pendientes de revisar</CardDescription>
@@ -307,7 +307,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-[#2a3d83]" />
+                                <FileText className="h-5 w-5 text-brand-primary" />
                                 Documentos Recientes
                             </CardTitle>
                             <CardDescription>Últimos documentos creados</CardDescription>
@@ -348,7 +348,7 @@ export default function Dashboard({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Folder className="h-5 w-5 text-[#2a3d83]" />
+                                <Folder className="h-5 w-5 text-brand-primary" />
                                 Expedientes Recientes
                             </CardTitle>
                             <CardDescription>Últimos expedientes creados</CardDescription>

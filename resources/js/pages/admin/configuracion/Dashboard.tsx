@@ -4,7 +4,7 @@ import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Database, Shield, Palette, Users, Mail, Smartphone } from 'lucide-react';
+import { Settings, Database, Shield, Palette, Users, Mail, Smartphone, Bell, Wrench, Download, Upload, Zap, Server } from 'lucide-react';
 
 interface ConfiguracionData {
     clave: string;
@@ -48,6 +48,8 @@ export default function ConfiguracionDashboard({ configuraciones, estadisticas, 
                 return <Shield className="h-5 w-5" />;
             case 'usuarios':
                 return <Users className="h-5 w-5" />;
+            case 'notificaciones':
+                return <Bell className="h-5 w-5" />;
             default:
                 return <Database className="h-5 w-5" />;
         }
@@ -172,7 +174,7 @@ export default function ConfiguracionDashboard({ configuraciones, estadisticas, 
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <Button 
                                 variant="outline" 
                                 className="h-auto p-4 flex flex-col items-center gap-2"
@@ -198,9 +200,49 @@ export default function ConfiguracionDashboard({ configuraciones, estadisticas, 
                                 className="h-auto p-4 flex flex-col items-center gap-2"
                                 onClick={() => window.location.href = '/admin/configuracion/mantenimiento'}
                             >
-                                <Settings className="h-8 w-8 text-orange-500" />
+                                <Wrench className="h-8 w-8 text-orange-500" />
                                 <span className="font-medium">Mantenimiento del Sistema</span>
                                 <span className="text-xs text-gray-500">Comandos, caché, optimización</span>
+                            </Button>
+
+                            <Button 
+                                variant="outline" 
+                                className="h-auto p-4 flex flex-col items-center gap-2"
+                                onClick={() => window.location.href = '/admin/configuracion/seguridad'}
+                            >
+                                <Shield className="h-8 w-8 text-red-500" />
+                                <span className="font-medium">Seguridad</span>
+                                <span className="text-xs text-gray-500">2FA, contraseñas, bloqueos</span>
+                            </Button>
+
+                            <Button 
+                                variant="outline" 
+                                className="h-auto p-4 flex flex-col items-center gap-2"
+                                onClick={() => window.location.href = '/admin/configuracion/notificaciones'}
+                            >
+                                <Bell className="h-8 w-8 text-purple-500" />
+                                <span className="font-medium">Notificaciones</span>
+                                <span className="text-xs text-gray-500">Email, SMS, navegador</span>
+                            </Button>
+
+                            <Button 
+                                variant="outline" 
+                                className="h-auto p-4 flex flex-col items-center gap-2"
+                                onClick={() => window.location.href = '/admin/servicios-externos'}
+                            >
+                                <Server className="h-8 w-8 text-cyan-500" />
+                                <span className="font-medium">Servicios Externos</span>
+                                <span className="text-xs text-gray-500">Email, SMS, integraciones</span>
+                            </Button>
+
+                            <Button 
+                                variant="outline" 
+                                className="h-auto p-4 flex flex-col items-center gap-2"
+                                onClick={() => window.location.href = '/admin/optimizacion'}
+                            >
+                                <Zap className="h-8 w-8 text-yellow-500" />
+                                <span className="font-medium">Optimización</span>
+                                <span className="text-xs text-gray-500">Rendimiento y monitoreo</span>
                             </Button>
                         </div>
                     </CardContent>

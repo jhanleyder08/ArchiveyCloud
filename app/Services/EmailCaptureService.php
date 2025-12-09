@@ -58,8 +58,13 @@ class EmailCaptureService
     /**
      * Conectar al servidor de correo
      */
-    protected function connect(EmailAccount $account)
+    public function connect(EmailAccount $account)
     {
+        // Verificar que la extensión IMAP esté disponible
+        if (!function_exists('imap_open')) {
+            throw new Exception('La extensión PHP IMAP no está instalada. Por favor, habilite la extensión php-imap en su servidor.');
+        }
+
         $mailbox = sprintf(
             '{%s:%d/%s/%s}INBOX',
             $account->host,
@@ -68,7 +73,7 @@ class EmailCaptureService
             $account->encryption
         );
 
-        $connection = imap_open(
+        $connection = @imap_open(
             $mailbox,
             $account->email,
             $account->getDecryptedPassword(),
@@ -77,7 +82,8 @@ class EmailCaptureService
         );
 
         if (!$connection) {
-            throw new Exception('No se pudo conectar al servidor de correo: ' . imap_last_error());
+            $error = imap_last_error();
+            throw new Exception('No se pudo conectar al servidor de correo: ' . ($error ?: 'Error desconocido'));
         }
 
         return $connection;

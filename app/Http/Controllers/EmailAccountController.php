@@ -20,7 +20,7 @@ class EmailAccountController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return Inertia::render('Admin/EmailAccounts/Index', [
+        return Inertia::render('admin/EmailAccounts/Index', [
             'accounts' => $accounts,
         ]);
     }
@@ -148,7 +148,7 @@ class EmailAccountController extends Controller
             ->orderBy('email_date', 'desc')
             ->paginate(20);
 
-        return Inertia::render('Admin/EmailAccounts/Captures', [
+        return Inertia::render('admin/EmailAccounts/Captures', [
             'account' => $account,
             'captures' => $captures,
         ]);

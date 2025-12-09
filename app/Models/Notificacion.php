@@ -44,6 +44,11 @@ class Notificacion extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'icono',
+        'color_prioridad',
+    ];
+
     /**
      * Relación con el usuario destinatario
      */
@@ -204,7 +209,9 @@ class Notificacion extends Model
     {
         $notificaciones = [];
         foreach ($userIds as $userId) {
-            $notificaciones[] = array_merge($datos, [
+            $notificaciones[] = array_merge([
+                'estado' => 'pendiente', // Valor por defecto explícito
+            ], $datos, [
                 'user_id' => $userId,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),

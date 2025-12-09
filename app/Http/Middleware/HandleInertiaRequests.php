@@ -5,6 +5,8 @@ namespace App\Http\Middleware;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use App\Models\ConfiguracionServicio;
+use Illuminate\Support\Facades\Cache;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -90,15 +92,58 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        // Obtener configuración de branding con caché
+        $branding = Cache::remember('branding_config', 3600, function () {
+            try {
+                $configs = ConfiguracionServicio::whereIn('clave', [
+                    'app_name',
+                    'app_description', 
+                    'color_primario',
+                    'color_secundario',
+                    'tema_predeterminado',
+                    'logo_principal',
+                    'logo_secundario',
+                    'favicon',
+                ])->pluck('valor', 'clave')->toArray();
+
+                return [
+                    'app_name' => $configs['app_name'] ?? config('app.name'),
+                    'app_description' => $configs['app_description'] ?? '',
+                    'color_primario' => $configs['color_primario'] ?? '#2a3d83',
+                    'color_secundario' => $configs['color_secundario'] ?? '#6b7280',
+                    'tema_predeterminado' => $configs['tema_predeterminado'] ?? 'light',
+                    'logo_principal' => !empty($configs['logo_principal']) ? asset('storage/' . $configs['logo_principal']) : null,
+                    'logo_secundario' => !empty($configs['logo_secundario']) ? asset('storage/' . $configs['logo_secundario']) : null,
+                    'favicon' => !empty($configs['favicon']) ? asset('storage/' . $configs['favicon']) : null,
+                ];
+            } catch (\Exception $e) {
+                return [
+                    'app_name' => config('app.name'),
+                    'app_description' => '',
+                    'color_primario' => '#2a3d83',
+                    'color_secundario' => '#6b7280',
+                    'tema_predeterminado' => 'light',
+                    'logo_principal' => null,
+                    'logo_secundario' => null,
+                    'favicon' => null,
+                ];
+            }
+        });
+
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+            'name' => $branding['app_name'],
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $user,
                 'permissions' => $permissions,
             ],
+            'branding' => $branding,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
         ];
     }
 }

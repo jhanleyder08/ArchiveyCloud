@@ -115,7 +115,17 @@ class NotificacionController extends Controller
             'creado_por' => Auth::id(),
         ];
 
+        \Log::info('Creando notificaciones', [
+            'user_ids' => $request->user_ids,
+            'datos' => $datos,
+        ]);
+
         $creadas = Notificacion::crearParaUsuarios($request->user_ids, $datos);
+
+        \Log::info('Notificaciones creadas', [
+            'cantidad' => $creadas,
+            'total_en_db' => Notificacion::count(),
+        ]);
 
         return back()->with('success', "Se crearon {$creadas} notificaciones exitosamente.");
     }

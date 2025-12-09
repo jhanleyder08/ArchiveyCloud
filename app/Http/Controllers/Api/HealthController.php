@@ -56,13 +56,24 @@ class HealthController extends Controller
         $endTime = microtime(true);
         $responseTime = round(($endTime - $startTime) * 1000, 2);
 
+        // Convertir checks a formato array para el frontend
+        $checksArray = [];
+        foreach ($checks as $name => $check) {
+            $checksArray[] = [
+                'name' => ucfirst(str_replace('_', ' ', $name)),
+                'status' => $check['status'] === 'healthy' ? 'ok' : $check['status'],
+                'message' => $check['message'] ?? null,
+                'response_time' => isset($check['response_time']) ? (float) str_replace('ms', '', $check['response_time']) : null,
+            ];
+        }
+
         return response()->json([
-            'status' => $overallStatus,
+            'status' => $overallStatus === 'healthy' ? 'ok' : $overallStatus,
             'timestamp' => now()->toISOString(),
             'response_time' => $responseTime . 'ms',
             'version' => config('app.version', '1.0.0'),
             'environment' => app()->environment(),
-            'checks' => $checks,
+            'checks' => $checksArray,
             'system_info' => $this->getSystemInfo(),
         ], $overallStatus === 'healthy' ? 200 : 503);
     }

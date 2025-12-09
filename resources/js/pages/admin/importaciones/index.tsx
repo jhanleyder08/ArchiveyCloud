@@ -67,7 +67,7 @@ interface ImportacionDatos {
 interface PaginatedData {
     data: ImportacionDatos[];
     links: any[];
-    meta: {
+    meta?: {
         current_page: number;
         from: number;
         last_page: number;
@@ -75,6 +75,13 @@ interface PaginatedData {
         to: number;
         total: number;
     };
+    // Propiedades alternativas (Laravel puede enviar paginación en formato plano)
+    current_page?: number;
+    from?: number;
+    last_page?: number;
+    per_page?: number;
+    to?: number;
+    total?: number;
 }
 
 interface Filtros {
@@ -239,14 +246,14 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Tipo</label>
                                 <Select
-                                    value={filtrosLocales.tipo || ''}
-                                    onValueChange={(value) => setFiltrosLocales(prev => ({ ...prev, tipo: value || undefined }))}
+                                    value={filtrosLocales.tipo || '_all'}
+                                    onValueChange={(value) => setFiltrosLocales(prev => ({ ...prev, tipo: value === '_all' ? undefined : value }))}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los tipos" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los tipos</SelectItem>
+                                        <SelectItem value="_all">Todos los tipos</SelectItem>
                                         {Object.entries(tipos).map(([key, label]) => (
                                             <SelectItem key={key} value={key}>
                                                 {tiposIcons[key as keyof typeof tiposIcons]} {label}
@@ -259,14 +266,14 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Estado</label>
                                 <Select
-                                    value={filtrosLocales.estado || ''}
-                                    onValueChange={(value) => setFiltrosLocales(prev => ({ ...prev, estado: value || undefined }))}
+                                    value={filtrosLocales.estado || '_all'}
+                                    onValueChange={(value) => setFiltrosLocales(prev => ({ ...prev, estado: value === '_all' ? undefined : value }))}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Todos los estados" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos los estados</SelectItem>
+                                        <SelectItem value="_all">Todos los estados</SelectItem>
                                         {Object.entries(estados).map(([key, label]) => (
                                             <SelectItem key={key} value={key}>
                                                 {label}
@@ -306,7 +313,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-muted-foreground">Total</p>
-                                    <p className="text-2xl font-bold">{importaciones.meta.total}</p>
+                                    <p className="text-2xl font-bold">{importaciones?.meta?.total ?? importaciones?.total ?? 0}</p>
                                 </div>
                                 <FileText className="h-8 w-8 text-blue-600" />
                             </div>
@@ -319,7 +326,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                                 <div>
                                     <p className="text-sm text-muted-foreground">En Proceso</p>
                                     <p className="text-2xl font-bold text-blue-600">
-                                        {importaciones.data.filter(i => i.estado === 'procesando').length}
+                                        {(importaciones?.data ?? []).filter(i => i.estado === 'procesando').length}
                                     </p>
                                 </div>
                                 <Play className="h-8 w-8 text-blue-600" />
@@ -333,7 +340,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                                 <div>
                                     <p className="text-sm text-muted-foreground">Completadas</p>
                                     <p className="text-2xl font-bold text-green-600">
-                                        {importaciones.data.filter(i => i.estado === 'completada').length}
+                                        {(importaciones?.data ?? []).filter(i => i.estado === 'completada').length}
                                     </p>
                                 </div>
                                 <CheckCircle className="h-8 w-8 text-green-600" />
@@ -347,7 +354,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                                 <div>
                                     <p className="text-sm text-muted-foreground">Fallidas</p>
                                     <p className="text-2xl font-bold text-red-600">
-                                        {importaciones.data.filter(i => i.estado === 'fallida').length}
+                                        {(importaciones?.data ?? []).filter(i => i.estado === 'fallida').length}
                                     </p>
                                 </div>
                                 <XCircle className="h-8 w-8 text-red-600" />
@@ -361,7 +368,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                     <CardHeader>
                         <CardTitle>Lista de Importaciones</CardTitle>
                         <CardDescription>
-                            Mostrando {importaciones.meta.from} - {importaciones.meta.to} de {importaciones.meta.total} importaciones
+                            Mostrando {importaciones?.meta?.from ?? importaciones?.from ?? 0} - {importaciones?.meta?.to ?? importaciones?.to ?? 0} de {importaciones?.meta?.total ?? importaciones?.total ?? 0} importaciones
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -381,7 +388,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {importaciones.data.map((importacion) => {
+                                    {(importaciones?.data ?? []).map((importacion) => {
                                         const estadoConfig = estadosConfig[importacion.estado as keyof typeof estadosConfig];
                                         const IconoEstado = estadoConfig?.icon || Clock;
                                         
@@ -533,7 +540,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
 
                                                             <DropdownMenuSeparator />
 
-                                                            {importacion.archivos_generados.map((archivo) => (
+                                                            {(importacion.archivos_generados ?? []).map((archivo) => (
                                                                 <DropdownMenuItem key={archivo.tipo} asChild>
                                                                     <a href={`/admin/importaciones/${importacion.id}/descargar/${archivo.tipo}`}>
                                                                         <Download className="h-4 w-4 mr-2" />
@@ -563,7 +570,7 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                                 </TableBody>
                             </Table>
 
-                            {importaciones.data.length === 0 && (
+                            {(importaciones?.data ?? []).length === 0 && (
                                 <div className="text-center py-8">
                                     <Download className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
                                     <h3 className="mt-4 text-lg font-semibold">No hay importaciones</h3>
@@ -580,13 +587,13 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                         </div>
 
                         {/* Paginación */}
-                        {importaciones.meta.last_page > 1 && (
+                        {(importaciones?.meta?.last_page ?? importaciones?.last_page ?? 1) > 1 && (
                             <div className="flex items-center justify-between mt-4">
                                 <div className="text-sm text-muted-foreground">
-                                    Mostrando {importaciones.meta.from} a {importaciones.meta.to} de {importaciones.meta.total} resultados
+                                    Mostrando {importaciones?.meta?.from ?? importaciones?.from ?? 0} a {importaciones?.meta?.to ?? importaciones?.to ?? 0} de {importaciones?.meta?.total ?? importaciones?.total ?? 0} resultados
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    {importaciones.links.map((link, index) => (
+                                    {(importaciones?.links ?? []).map((link, index) => (
                                         <Button
                                             key={index}
                                             variant={link.active ? "default" : "outline"}

@@ -60,6 +60,12 @@
 }
 
 :root {
+    /* Colores de branding dinámicos - se sobrescriben via JavaScript */
+    --brand-primary: #2a3d83;
+    --brand-secondary: #6b7280;
+    --brand-primary-rgb: 42, 61, 131;
+    --brand-secondary-rgb: 107, 114, 128;
+    
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -137,5 +143,44 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+/* Clases utilitarias para colores de branding */
+@layer utilities {
+    .text-brand-primary {
+        color: var(--brand-primary) !important;
+    }
+
+    .text-brand-secondary {
+        color: var(--brand-secondary) !important;
+    }
+
+    .bg-brand-primary {
+        background-color: var(--brand-primary) !important;
+    }
+
+    .bg-brand-secondary {
+        background-color: var(--brand-secondary) !important;
+    }
+
+    .border-brand-primary {
+        border-color: var(--brand-primary) !important;
+    }
+
+    .border-brand-secondary {
+        border-color: var(--brand-secondary) !important;
+    }
+
+    .bg-brand-primary-10 {
+        background-color: rgba(var(--brand-primary-rgb), 0.1) !important;
+    }
+
+    .bg-brand-primary-20 {
+        background-color: rgba(var(--brand-primary-rgb), 0.2) !important;
+    }
+
+    .ring-brand-primary {
+        --tw-ring-color: var(--brand-primary) !important;
     }
 }

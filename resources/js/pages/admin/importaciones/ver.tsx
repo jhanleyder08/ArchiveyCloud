@@ -220,9 +220,9 @@ export default function VerImportacion({ importacion, archivosGenerados, puedeEd
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between text-sm">
                                     <span>Progreso general</span>
-                                    <span className="font-medium">{progreso.porcentaje_avance.toFixed(1)}%</span>
+                                    <span className="font-medium">{Number(progreso.porcentaje_avance || 0).toFixed(1)}%</span>
                                 </div>
-                                <Progress value={progreso.porcentaje_avance} className="h-3" />
+                                <Progress value={Number(progreso.porcentaje_avance || 0)} className="h-3" />
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                     <span>Iniciado: {progreso.fecha_inicio ? formatearFecha(progreso.fecha_inicio) : '-'}</span>
                                     <span>Tiempo: {formatearTiempo(progreso.tiempo_procesamiento)}</span>
@@ -387,19 +387,25 @@ export default function VerImportacion({ importacion, archivosGenerados, puedeEd
                                             <div>
                                                 <p className="text-sm font-medium">Tasa de éxito:</p>
                                                 <p className="text-2xl font-bold text-green-600">
-                                                    {((progreso.registros_exitosos / progreso.total_registros) * 100).toFixed(1)}%
+                                                    {progreso.total_registros > 0 
+                                                        ? ((progreso.registros_exitosos / progreso.total_registros) * 100).toFixed(1) 
+                                                        : '0.0'}%
                                                 </p>
                                             </div>
                                             <div>
                                                 <p className="text-sm font-medium">Tasa de error:</p>
                                                 <p className="text-2xl font-bold text-red-600">
-                                                    {((progreso.registros_fallidos / progreso.total_registros) * 100).toFixed(1)}%
+                                                    {progreso.total_registros > 0 
+                                                        ? ((progreso.registros_fallidos / progreso.total_registros) * 100).toFixed(1) 
+                                                        : '0.0'}%
                                                 </p>
                                             </div>
                                         </div>
                                         
                                         <Progress 
-                                            value={(progreso.registros_exitosos / progreso.total_registros) * 100} 
+                                            value={progreso.total_registros > 0 
+                                                ? (progreso.registros_exitosos / progreso.total_registros) * 100 
+                                                : 0} 
                                             className="h-4"
                                         />
                                     </div>

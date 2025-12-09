@@ -205,6 +205,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::post('/{ccd}/aprobar', [App\Http\Controllers\CCDController::class, 'aprobar'])->name('aprobar');
                 Route::post('/{ccd}/archivar', [App\Http\Controllers\CCDController::class, 'archivar'])->name('archivar');
                 Route::post('/{ccd}/version', [App\Http\Controllers\CCDController::class, 'crearVersion'])->name('version');
+                Route::delete('/version/{version}', [App\Http\Controllers\CCDController::class, 'eliminarVersion'])->name('eliminarVersion');
+                Route::post('/{ccd}/revertir/{version}', [App\Http\Controllers\CCDController::class, 'revertirVersion'])->name('revertirVersion');
                 
                 // Gestión de niveles
                 Route::post('/{ccd}/nivel', [App\Http\Controllers\CCDController::class, 'agregarNivel'])->name('agregarNivel');
@@ -215,6 +217,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             
             // Estructura (accesible para todos con permiso ccd.ver)
             Route::get('/{ccd}/estructura', [App\Http\Controllers\CCDController::class, 'getEstructura'])->name('estructura');
+            
+            // Exportar CCD
+            Route::get('/{ccd}/exportar', [App\Http\Controllers\CCDController::class, 'exportar'])->name('exportar');
         });
         
         // Gestión de Documentos - Protegido con permisos
@@ -558,6 +563,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('configuracion')->name('configuracion.')->middleware('permission:administracion.configuracion.gestionar')->group(function () {
             // Dashboard principal
             Route::get('/', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'index'])->name('index');
+            
+            // Configuración por categorías
+            Route::get('/sistema', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'sistema'])->name('sistema');
+            Route::get('/email', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'email'])->name('email');
+            Route::get('/sms', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'sms'])->name('sms');
+            Route::get('/seguridad', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'seguridad'])->name('seguridad');
+            Route::get('/notificaciones', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'notificaciones'])->name('notificaciones');
             
             // Actualización de configuraciones
             Route::put('/{clave}', [App\Http\Controllers\Admin\AdminConfiguracionController::class, 'actualizar'])->name('actualizar');

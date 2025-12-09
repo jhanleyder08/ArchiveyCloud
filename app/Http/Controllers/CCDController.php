@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CCD;
 use App\Models\CCDNivel;
+use App\Models\CCDVersion;
 use App\Services\CCDService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +26,10 @@ class CCDController extends Controller
      */
     public function index(Request $request): Response
     {
-        $query = CCD::with(['creador', 'niveles'])
-            ->withCount('niveles');
+        $query = CCD::with(['creador', 'niveles', 'versiones' => function($q) {
+            $q->orderBy('created_at', 'desc')->limit(5);
+        }])
+            ->withCount(['niveles', 'versiones']);
 
         // Filtros
         if ($request->has('estado')) {
@@ -311,6 +314,89 @@ class CCDController extends Controller
     }
 
     /**
+     * Eliminar una versión del historial
+     */
+    public function eliminarVersion(CCDVersion $version)
+    {
+        try {
+            $ccd = $version->ccd;
+            $versionEliminada = $version->version_nueva;
+            $versionAnterior = $version->version_anterior;
+            
+            // Si es la versión más reciente (la actual del CCD), revertir a la anterior
+            if ($ccd->version === $versionEliminada) {
+                $ccd->update([
+                    'version' => $versionAnterior,
+                    'estado' => 'borrador', // Vuelve a borrador para revisión
+                ]);
+            }
+            
+            $version->delete();
+            
+            Log::info('Versión eliminada', [
+                'ccd_id' => $ccd->id,
+                'version_eliminada' => $versionEliminada,
+                'user_id' => request()->user()->id,
+            ]);
+            
+            return back()->with('success', "Versión {$versionEliminada} eliminada exitosamente");
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar versión', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error al eliminar versión: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Revertir a una versión anterior
+     */
+    public function revertirVersion(CCD $ccd, CCDVersion $version)
+    {
+        try {
+            // Verificar que la versión pertenece al CCD
+            if ($version->ccd_id !== $ccd->id) {
+                return back()->with('error', 'La versión no pertenece a este CCD');
+            }
+            
+            // Guardar la versión actual antes de revertir
+            CCDVersion::create([
+                'ccd_id' => $ccd->id,
+                'version_anterior' => $ccd->version,
+                'version_nueva' => $version->version_anterior,
+                'datos_anteriores' => [
+                    'codigo' => $ccd->codigo,
+                    'nombre' => $ccd->nombre,
+                    'descripcion' => $ccd->descripcion,
+                    'estado' => $ccd->estado,
+                ],
+                'cambios' => "Reversión a versión {$version->version_anterior}",
+                'modificado_por' => request()->user()->id,
+                'fecha_cambio' => now(),
+            ]);
+            
+            // Revertir el CCD a la versión anterior
+            $ccd->update([
+                'version' => $version->version_anterior,
+                'estado' => 'borrador', // Requiere nueva aprobación
+                'fecha_aprobacion' => null,
+                'aprobado_por' => null,
+            ]);
+            
+            Log::info('CCD revertido a versión anterior', [
+                'ccd_id' => $ccd->id,
+                'version_revertida' => $version->version_anterior,
+                'user_id' => request()->user()->id,
+            ]);
+            
+            return redirect()
+                ->route('admin.ccd.show', $ccd->id)
+                ->with('success', "CCD revertido a versión {$version->version_anterior}");
+        } catch (\Exception $e) {
+            Log::error('Error al revertir versión', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error al revertir versión: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Agregar nivel al CCD
      */
     public function agregarNivel(Request $request, CCD $ccd)
@@ -501,6 +587,249 @@ class CCDController extends Controller
             
             return back()->with('error', 'Error al eliminar CCD: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Exportar CCD en diferentes formatos
+     */
+    public function exportar(CCD $ccd, Request $request)
+    {
+        $formato = $request->get('formato', 'json');
+        
+        // Cargar estructura completa
+        $ccd->load(['niveles' => function($query) {
+            $query->orderBy('nivel')->orderBy('orden');
+        }, 'creador', 'aprobador']);
+        
+        $estructura = $this->ccdService->obtenerEstructuraJerarquica($ccd);
+        
+        $data = [
+            'ccd' => [
+                'codigo' => $ccd->codigo,
+                'nombre' => $ccd->nombre,
+                'descripcion' => $ccd->descripcion,
+                'version' => $ccd->version,
+                'estado' => $ccd->estado,
+                'fecha_aprobacion' => $ccd->fecha_aprobacion?->format('Y-m-d'),
+                'fecha_vigencia_inicio' => $ccd->fecha_vigencia_inicio?->format('Y-m-d'),
+                'fecha_vigencia_fin' => $ccd->fecha_vigencia_fin?->format('Y-m-d'),
+                'creador' => $ccd->creador?->name,
+                'aprobador' => $ccd->aprobador?->name,
+            ],
+            'estructura' => $estructura,
+            'exportado_en' => now()->toISOString(),
+        ];
+        
+        $filename = "CCD_{$ccd->codigo}_v{$ccd->version}_" . now()->format('Ymd_His');
+        
+        switch ($formato) {
+            case 'json':
+                return response()->json($data, 200, [
+                    'Content-Disposition' => "attachment; filename=\"{$filename}.json\"",
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                
+            case 'csv':
+                return $this->exportarCSV($ccd, $estructura, $filename);
+                
+            case 'excel':
+                return $this->exportarExcel($ccd, $estructura, $filename);
+                
+            case 'pdf':
+                return $this->exportarPDF($ccd, $estructura, $filename);
+                
+            default:
+                return response()->json(['error' => 'Formato no soportado'], 400);
+        }
+    }
+    
+    /**
+     * Exportar a CSV
+     */
+    private function exportarCSV(CCD $ccd, array $estructura, string $filename)
+    {
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
+        ];
+        
+        $callback = function() use ($ccd, $estructura) {
+            $file = fopen('php://output', 'w');
+            
+            // BOM para UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Encabezado del CCD
+            fputcsv($file, ['CUADRO DE CLASIFICACIÓN DOCUMENTAL']);
+            fputcsv($file, ['Código', $ccd->codigo]);
+            fputcsv($file, ['Nombre', $ccd->nombre]);
+            fputcsv($file, ['Versión', $ccd->version]);
+            fputcsv($file, ['Estado', $ccd->estado]);
+            fputcsv($file, ['']);
+            
+            // Encabezados de estructura
+            fputcsv($file, ['Nivel', 'Código', 'Nombre', 'Tipo', 'Descripción', 'Ruta']);
+            
+            // Función recursiva para aplanar estructura
+            $this->escribirNivelesCSV($file, $estructura, 0);
+            
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
+    }
+    
+    /**
+     * Escribir niveles recursivamente en CSV
+     */
+    private function escribirNivelesCSV($file, array $niveles, int $profundidad): void
+    {
+        foreach ($niveles as $nivel) {
+            $indentacion = str_repeat('  ', $profundidad);
+            fputcsv($file, [
+                $profundidad + 1,
+                $nivel['codigo'],
+                $indentacion . $nivel['nombre'],
+                $nivel['tipo_nivel'],
+                $nivel['descripcion'] ?? '',
+                $nivel['ruta'] ?? '',
+            ]);
+            
+            if (!empty($nivel['hijos'])) {
+                $this->escribirNivelesCSV($file, $nivel['hijos'], $profundidad + 1);
+            }
+        }
+    }
+    
+    /**
+     * Exportar a Excel (XLSX)
+     */
+    private function exportarExcel(CCD $ccd, array $estructura, string $filename)
+    {
+        // Verificar si PhpSpreadsheet está disponible
+        if (!class_exists(\PhpOffice\PhpSpreadsheet\Spreadsheet::class)) {
+            // Fallback a CSV si no está disponible
+            return $this->exportarCSV($ccd, $estructura, $filename);
+        }
+        
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('CCD');
+        
+        // Estilos
+        $headerStyle = [
+            'font' => ['bold' => true, 'size' => 14],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '2a3d83']
+            ],
+            'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true]
+        ];
+        
+        // Información del CCD
+        $sheet->setCellValue('A1', 'CUADRO DE CLASIFICACIÓN DOCUMENTAL');
+        $sheet->mergeCells('A1:F1');
+        $sheet->getStyle('A1')->applyFromArray(['font' => ['bold' => true, 'size' => 16]]);
+        
+        $sheet->setCellValue('A3', 'Código:');
+        $sheet->setCellValue('B3', $ccd->codigo);
+        $sheet->setCellValue('A4', 'Nombre:');
+        $sheet->setCellValue('B4', $ccd->nombre);
+        $sheet->setCellValue('A5', 'Versión:');
+        $sheet->setCellValue('B5', $ccd->version);
+        $sheet->setCellValue('A6', 'Estado:');
+        $sheet->setCellValue('B6', $ccd->estado);
+        
+        // Encabezados de estructura
+        $row = 8;
+        $headers = ['Nivel', 'Código', 'Nombre', 'Tipo', 'Descripción', 'Estado'];
+        foreach ($headers as $col => $header) {
+            $sheet->setCellValueByColumnAndRow($col + 1, $row, $header);
+        }
+        $sheet->getStyle("A{$row}:F{$row}")->applyFromArray($headerStyle);
+        
+        // Datos de estructura
+        $row = 9;
+        $this->escribirNivelesExcel($sheet, $estructura, $row, 0);
+        
+        // Autoajustar columnas
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        
+        // Generar archivo
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        
+        $headers = [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$filename}.xlsx\"",
+        ];
+        
+        return response()->streamDownload(function() use ($writer) {
+            $writer->save('php://output');
+        }, "{$filename}.xlsx", $headers);
+    }
+    
+    /**
+     * Escribir niveles recursivamente en Excel
+     */
+    private function escribirNivelesExcel($sheet, array $niveles, int &$row, int $profundidad): void
+    {
+        $tipoColors = [
+            'fondo' => 'E3F2FD',
+            'seccion' => 'E8F5E9',
+            'subseccion' => 'FFF8E1',
+            'serie' => 'F3E5F5',
+            'subserie' => 'FCE4EC',
+        ];
+        
+        foreach ($niveles as $nivel) {
+            $indentacion = str_repeat('    ', $profundidad);
+            
+            $sheet->setCellValueByColumnAndRow(1, $row, $profundidad + 1);
+            $sheet->setCellValueByColumnAndRow(2, $row, $nivel['codigo']);
+            $sheet->setCellValueByColumnAndRow(3, $row, $indentacion . $nivel['nombre']);
+            $sheet->setCellValueByColumnAndRow(4, $row, ucfirst($nivel['tipo_nivel']));
+            $sheet->setCellValueByColumnAndRow(5, $row, $nivel['descripcion'] ?? '');
+            $sheet->setCellValueByColumnAndRow(6, $row, $nivel['activo'] ? 'Activo' : 'Inactivo');
+            
+            // Color de fondo según tipo
+            $color = $tipoColors[$nivel['tipo_nivel']] ?? 'FFFFFF';
+            $sheet->getStyle("A{$row}:F{$row}")->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB($color);
+            
+            $row++;
+            
+            if (!empty($nivel['hijos'])) {
+                $this->escribirNivelesExcel($sheet, $nivel['hijos'], $row, $profundidad + 1);
+            }
+        }
+    }
+    
+    /**
+     * Exportar a PDF
+     */
+    private function exportarPDF(CCD $ccd, array $estructura, string $filename)
+    {
+        // Generar HTML para el PDF
+        $html = view('exports.ccd-pdf', [
+            'ccd' => $ccd,
+            'estructura' => $estructura,
+            'fecha_exportacion' => now()->format('d/m/Y H:i'),
+        ])->render();
+        
+        // Verificar si Dompdf está disponible
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+            $pdf->setPaper('A4', 'portrait');
+            return $pdf->download("{$filename}.pdf");
+        }
+        
+        // Fallback: devolver HTML si no hay PDF disponible
+        return response($html, 200, [
+            'Content-Type' => 'text/html',
+            'Content-Disposition' => "attachment; filename=\"{$filename}.html\"",
+        ]);
     }
 
     /**
