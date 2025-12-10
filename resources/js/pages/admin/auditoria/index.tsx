@@ -83,6 +83,7 @@ const RISK_COLORS = ['#dc2626', '#ea580c', '#d97706', '#16a34a'];
 
 export default function AuditoriaIndex({ eventos, estadisticas, usuarios, acciones, filtros, resultados, modulos }: Props) {
     const [autoRefresh, setAutoRefresh] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const getBadgeVariant = (resultado: string) => {
         switch (resultado) {
@@ -125,25 +126,34 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
     };
 
     const handleFiltrar = (campo: string, valor: string) => {
-        const nuevaUrl = route('admin.auditoria.index', {
+        router.get(route('admin.auditoria.index'), {
             ...filtros,
             [campo]: valor === 'all' ? '' : valor,
             page: 1
+        }, {
+            preserveState: true,
+            preserveScroll: true
         });
-        router.get(nuevaUrl);
     };
 
     const handleBuscar = (buscar: string) => {
-        const nuevaUrl = route('admin.auditoria.index', {
+        router.get(route('admin.auditoria.index'), {
             ...filtros,
             buscar,
             page: 1
+        }, {
+            preserveState: true,
+            preserveScroll: true
         });
-        router.get(nuevaUrl);
     };
 
     const refreshData = () => {
-        router.reload();
+        setIsRefreshing(true);
+        router.reload({ 
+            only: ['eventos', 'estadisticas'],
+            preserveScroll: true,
+            onFinish: () => setIsRefreshing(false)
+        });
     };
 
     useEffect(() => {
@@ -197,22 +207,24 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
                             />
                             <label htmlFor="autoRefresh" className="text-sm">Auto-refresh</label>
                         </div>
-                        <Button variant="outline" size="sm" onClick={refreshData}>
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Actualizar
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={refreshData} 
+                            type="button"
+                            disabled={isRefreshing}
+                        >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            {isRefreshing ? 'Actualizando...' : 'Actualizar'}
                         </Button>
-                        <Link href={route('admin.auditoria.analytics')}>
-                            <Button variant="outline">
-                                <BarChart3 className="h-4 w-4 mr-2" />
-                                Analytics
-                            </Button>
-                        </Link>
-                        <Link href={route('admin.auditoria.patrones')}>
-                            <Button>
-                                <TrendingUp className="h-4 w-4 mr-2" />
-                                Patrones
-                            </Button>
-                        </Link>
+                        <Button variant="outline" onClick={() => router.visit(route('admin.auditoria.analytics'))} type="button">
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Analytics
+                        </Button>
+                        <Button onClick={() => router.visit(route('admin.auditoria.patrones'))} type="button">
+                            <TrendingUp className="h-4 w-4 mr-2" />
+                            Patrones
+                        </Button>
                     </div>
                 </div>
 
@@ -447,20 +459,23 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
                                                         <div className="text-sm">
                                                             <div className="font-mono">{evento.ip_address}</div>
                                                             <div className="text-gray-500">
-                                                                {evento.ciudad}, {evento.pais}
+                                                                {evento.pais || 'N/A'}
                                                             </div>
                                                             <div className="text-xs text-gray-400">
-                                                                {evento.dispositivo_tipo} • {evento.navegador}
+                                                                {evento.dispositivo || 'N/A'} • {evento.navegador || 'N/A'}
                                                             </div>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Link href={route('admin.auditoria.show', evento.id)}>
-                                                            <Button variant="outline" size="sm">
-                                                                <Eye className="h-4 w-4 mr-1" />
-                                                                Ver
-                                                            </Button>
-                                                        </Link>
+                                                        <Button 
+                                                            variant="outline" 
+                                                            size="sm"
+                                                            onClick={() => router.visit(route('admin.auditoria.show', evento.id))}
+                                                            type="button"
+                                                        >
+                                                            <Eye className="h-4 w-4 mr-1" />
+                                                            Ver
+                                                        </Button>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
