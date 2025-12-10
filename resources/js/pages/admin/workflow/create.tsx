@@ -31,7 +31,7 @@ interface Usuario {
 
 interface Props {
     documento?: Documento;
-    usuariosDisponibles: Usuario[];
+    usuarios_disponibles?: Usuario[];
 }
 
 interface FormData {
@@ -43,7 +43,8 @@ interface FormData {
     dias_vencimiento: number;
 }
 
-export default function WorkflowCreate({ documento, usuariosDisponibles }: Props) {
+export default function WorkflowCreate({ documento, usuarios_disponibles = [] }: Props) {
+    const usuariosDisponibles = usuarios_disponibles; // Alias para usar en el código
     const [aprobadoresSeleccionados, setAprobadoresSeleccionados] = useState<Usuario[]>([]);
     const [mostrarBuscarDocumento, setMostrarBuscarDocumento] = useState(!documento);
     

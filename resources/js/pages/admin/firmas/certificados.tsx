@@ -88,7 +88,7 @@ interface Props {
         name: string;
         email: string;
     }>;
-    estadisticas: {
+    estadisticas?: {
         total: number;
         activos: number;
         proximos_vencer: number;
@@ -98,6 +98,20 @@ interface Props {
 }
 
 export default function CertificadosIndex({ certificados, filtros, usuarios, estadisticas }: Props) {
+    // Debug: Ver qué está llegando
+    console.log('Props recibidas:', { certificados, filtros, usuarios, estadisticas });
+    
+    // Valores por defecto para estadisticas si es undefined
+    const stats = estadisticas || {
+        total: 0,
+        activos: 0,
+        proximos_vencer: 0,
+        vencidos: 0,
+        revocados: 0
+    };
+    
+    console.log('Stats calculadas:', stats);
+    
     const [filtrosLocales, setFiltrosLocales] = useState(filtros);
     const [certificadoSeleccionado, setCertificadoSeleccionado] = useState<CertificadoDigital | null>(null);
     const [mostrarDetalles, setMostrarDetalles] = useState(false);
@@ -250,7 +264,7 @@ export default function CertificadosIndex({ certificados, filtros, usuarios, est
                                 <CardTitle className="text-sm font-medium">Total</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{estadisticas.total}</div>
+                                <div className="text-2xl font-bold">{stats.total}</div>
                                 <p className="text-xs text-muted-foreground">certificados</p>
                             </CardContent>
                         </Card>
@@ -260,7 +274,7 @@ export default function CertificadosIndex({ certificados, filtros, usuarios, est
                                 <CardTitle className="text-sm font-medium">Activos</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-green-600">{estadisticas.activos}</div>
+                                <div className="text-2xl font-bold text-green-600">{stats.activos}</div>
                                 <p className="text-xs text-muted-foreground">vigentes</p>
                             </CardContent>
                         </Card>
@@ -270,7 +284,7 @@ export default function CertificadosIndex({ certificados, filtros, usuarios, est
                                 <CardTitle className="text-sm font-medium">Próximos a Vencer</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-orange-600">{estadisticas.proximos_vencer}</div>
+                                <div className="text-2xl font-bold text-orange-600">{stats.proximos_vencer}</div>
                                 <p className="text-xs text-muted-foreground">{'<'} 30 días</p>
                             </CardContent>
                         </Card>
@@ -280,7 +294,7 @@ export default function CertificadosIndex({ certificados, filtros, usuarios, est
                                 <CardTitle className="text-sm font-medium">Vencidos</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-red-600">{estadisticas.vencidos}</div>
+                                <div className="text-2xl font-bold text-red-600">{stats.vencidos}</div>
                                 <p className="text-xs text-muted-foreground">inválidos</p>
                             </CardContent>
                         </Card>
@@ -290,18 +304,18 @@ export default function CertificadosIndex({ certificados, filtros, usuarios, est
                                 <CardTitle className="text-sm font-medium">Revocados</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-red-800">{estadisticas.revocados}</div>
+                                <div className="text-2xl font-bold text-red-800">{stats.revocados}</div>
                                 <p className="text-xs text-muted-foreground">cancelados</p>
                             </CardContent>
                         </Card>
                     </div>
 
                     {/* Alertas */}
-                    {estadisticas.proximos_vencer > 0 && (
+                    {stats.proximos_vencer > 0 && (
                         <Alert className="mb-6 border-orange-200 bg-orange-50">
                             <AlertTriangle className="h-4 w-4 text-orange-600" />
                             <AlertDescription className="text-orange-800">
-                                Tienes {estadisticas.proximos_vencer} certificado(s) que vencerán en los próximos 30 días.
+                                Tienes {stats.proximos_vencer} certificado(s) que vencerán en los próximos 30 días.
                                 Es recomendable renovarlos o generar nuevos certificados.
                             </AlertDescription>
                         </Alert>

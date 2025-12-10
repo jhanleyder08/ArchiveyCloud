@@ -80,7 +80,23 @@ class CertificadoDigitalController extends Controller
         $certificados = $query->paginate(15)->withQueryString();
 
         // Estadísticas para el dashboard
-        $estadisticas = $this->obtenerEstadisticas();
+        try {
+            $estadisticas = $this->obtenerEstadisticas();
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener estadísticas de certificados: ' . $e->getMessage());
+            $estadisticas = [
+                'total' => 0,
+                'activos' => 0,
+                'vencidos' => 0,
+                'proximos_vencer' => 0,
+                'revocados' => 0,
+                'por_tipo' => [],
+                'usuarios_con_certificados' => 0,
+                'firmas_realizadas' => 0
+            ];
+        }
+        
+        \Log::info('CertificadoDigitalController@index - Estadisticas:', $estadisticas);
 
         // Usuarios para filtros
         $usuarios = User::select('id', 'name', 'email')

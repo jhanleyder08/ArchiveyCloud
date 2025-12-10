@@ -149,8 +149,30 @@ class FirmaDigitalAvanzadaController extends Controller
 
         $certificados = $query->orderBy('created_at', 'desc')->paginate(15);
 
+        // Estadísticas de certificados (solo los 5 campos que espera la vista)
+        $estadisticas = [
+            'total' => CertificadoDigital::where('usuario_id', Auth::id())->count(),
+            'activos' => CertificadoDigital::where('usuario_id', Auth::id())
+                ->where('estado', 'activo')
+                ->where('fecha_vencimiento', '>', now())->count(),
+            'proximos_vencer' => CertificadoDigital::where('usuario_id', Auth::id())
+                ->where('estado', 'activo')
+                ->whereBetween('fecha_vencimiento', [now(), now()->addDays(30)])->count(),
+            'vencidos' => CertificadoDigital::where('usuario_id', Auth::id())
+                ->where('fecha_vencimiento', '<=', now())->count(),
+            'revocados' => CertificadoDigital::where('usuario_id', Auth::id())
+                ->where('estado', 'revocado')->count(),
+        ];
+        
+        \Log::info('FirmaDigitalAvanzadaController@certificados - Enviando datos:', [
+            'certificados_count' => $certificados->count(),
+            'estadisticas' => $estadisticas
+        ]);
+
         return Inertia::render('admin/firmas/certificados', [
             'certificados' => $certificados,
+            'estadisticas' => $estadisticas,
+            'usuarios' => [],
             'filtros' => $request->only(['estado', 'tipo']),
             'tipos_certificado' => [
                 CertificadoDigital::TIPO_USUARIO => 'Usuario',

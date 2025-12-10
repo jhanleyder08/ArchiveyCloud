@@ -111,7 +111,7 @@ class WorkflowController extends Controller
             ->get(['id', 'nombre', 'descripcion', 'tipo_entidad']);
         
         // Obtener usuarios para asignación
-        $usuariosDisponibles = User::where('activo', true)
+        $usuariosDisponibles = User::where('active', true)
             ->where('id', '!=', auth()->id())
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'cargo']);

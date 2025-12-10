@@ -52,7 +52,7 @@ class EmailAccountController extends Controller
     /**
      * Actualizar cuenta
      */
-    public function update(Request $request, EmailAccount $account)
+    public function update(Request $request, EmailAccount $emailAccount)
     {
         $validated = $request->validate([
             'nombre' => 'string|max:255',
@@ -73,7 +73,7 @@ class EmailAccountController extends Controller
             unset($validated['password']);
         }
 
-        $account->update($validated);
+        $emailAccount->update($validated);
 
         return redirect()->back()->with('success', 'Cuenta actualizada correctamente');
     }
@@ -81,75 +81,76 @@ class EmailAccountController extends Controller
     /**
      * Eliminar cuenta
      */
-    public function destroy(EmailAccount $account)
+    public function destroy(EmailAccount $emailAccount)
     {
-        $account->delete();
+        $emailAccount->delete();
         return redirect()->back()->with('success', 'Cuenta eliminada correctamente');
     }
 
     /**
      * Probar conexión
      */
-    public function testConnection(EmailAccount $account)
+    public function testConnection(EmailAccount $emailAccount)
     {
-        try {
-            $service = app(EmailCaptureService::class);
-            $connection = $service->connect($account);
-            $service->disconnect($connection);
-
+        // Ejecutar test usando CLI PHP que tiene IMAP
+        $command = sprintf(
+            'php %s/artisan email:test-connection --account=%d 2>&1',
+            base_path(),
+            $emailAccount->id
+        );
+        
+        $output = [];
+        $returnCode = 0;
+        exec($command, $output, $returnCode);
+        
+        if ($returnCode === 0) {
             return response()->json([
                 'success' => true,
                 'message' => 'Conexión exitosa',
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
         }
+        
+        return response()->json([
+            'success' => false,
+            'message' => implode("\n", $output) ?: 'Error al probar la conexión',
+        ], 400);
     }
 
     /**
      * Capturar manualmente
      */
-    public function capture(Request $request, EmailAccount $account)
+    public function capture(Request $request, EmailAccount $emailAccount)
     {
-        $async = $request->boolean('async', true);
         $limit = $request->integer('limit', 100);
 
-        if ($async) {
-            CaptureEmailsJob::dispatch($account, $limit)
-                ->onQueue(config('email_capture.queue.queue_name'));
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Captura iniciada en segundo plano',
-            ]);
-        }
-
-        // Captura síncrona
-        $service = app(EmailCaptureService::class);
-        $captured = $service->captureFromAccount($account, $limit);
+        // Ejecutar comando artisan con el PHP del sistema que sí tiene IMAP
+        $command = sprintf(
+            'php %s/artisan email:capture --account=%d --limit=%d > /dev/null 2>&1 &',
+            base_path(),
+            $emailAccount->id,
+            $limit
+        );
+        
+        exec($command);
 
         return response()->json([
             'success' => true,
-            'count' => count($captured),
-            'message' => "Capturados " . count($captured) . " emails",
+            'message' => 'Captura iniciada en segundo plano',
         ]);
     }
 
     /**
      * Ver capturas de una cuenta
      */
-    public function captures(EmailAccount $account)
+    public function captures(EmailAccount $emailAccount)
     {
-        $captures = $account->captures()
+        $captures = $emailAccount->captures()
             ->with(['documento', 'attachments'])
             ->orderBy('email_date', 'desc')
             ->paginate(20);
 
         return Inertia::render('admin/EmailAccounts/Captures', [
-            'account' => $account,
+            'account' => $emailAccount,
             'captures' => $captures,
         ]);
     }
