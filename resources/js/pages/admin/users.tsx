@@ -451,6 +451,42 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                         </div>
                     </div>
                 )}
+
+                {/* Delete User Dialog */}
+                <Dialog open={!!showDeleteModal} onOpenChange={(open) => !open && setShowDeleteModal(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Confirmar Eliminación</DialogTitle>
+                            <DialogDescription>
+                                ¿Estás seguro de que deseas eliminar al usuario <span className="font-semibold">{showDeleteModal?.name}</span>?
+                                Esta acción no se puede deshacer.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowDeleteModal(null)}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => {
+                                    if (showDeleteModal) {
+                                        router.delete(`/admin/users/${showDeleteModal.id}`, {
+                                            preserveState: true,
+                                            onSuccess: () => {
+                                                setShowDeleteModal(null);
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                Eliminar
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );
