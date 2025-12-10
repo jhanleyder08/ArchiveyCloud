@@ -96,16 +96,20 @@ export default function ConfiguracionMantenimiento({
         setCommandOutput('Ejecutando comando...\n');
         
         try {
-            await router.post(route('admin.configuracion.mantenimiento.comando'), {
+            router.post(route('admin.configuracion.mantenimiento.comando'), {
                 comando: comando.comando
             }, {
+                preserveState: false,
                 onSuccess: (page) => {
-                    setCommandOutput(prev => prev + '\nComando ejecutado exitosamente!');
+                    setCommandOutput(prev => prev + '\n✓ Comando ejecutado exitosamente!');
                     toast.success(`Comando '${comando.nombre}' ejecutado correctamente`);
+                    // Recargar la página para actualizar estadísticas
+                    setTimeout(() => router.reload({ only: ['estadisticas_cache'] }), 1000);
                 },
                 onError: (errors) => {
                     console.error('Command execution errors:', errors);
-                    setCommandOutput(prev => prev + '\nError ejecutando comando: ' + JSON.stringify(errors));
+                    const errorMsg = typeof errors === 'string' ? errors : JSON.stringify(errors);
+                    setCommandOutput(prev => prev + '\n✗ Error: ' + errorMsg);
                     toast.error(`Error ejecutando comando: ${comando.nombre}`);
                 },
                 onFinish: () => {
@@ -115,7 +119,7 @@ export default function ConfiguracionMantenimiento({
             });
         } catch (error) {
             console.error('Error executing command:', error);
-            setCommandOutput(prev => prev + '\nError inesperado: ' + error);
+            setCommandOutput(prev => prev + '\n✗ Error inesperado: ' + error);
             toast.error('Error inesperado ejecutando comando');
             setExecuting(null);
         }

@@ -33,6 +33,11 @@ class OptimizeProduction extends Command
      */
     public function handle()
     {
+        // Si no hay output (ejecutado desde HTTP), no mostrar info
+        if (!$this->output->isDecorated() && php_sapi_name() !== 'cli') {
+            return $this->handleNonInteractive();
+        }
+
         $this->info('🚀 Iniciando optimización para producción de ArchiveyCloud...');
         $this->newLine();
 
@@ -42,7 +47,7 @@ class OptimizeProduction extends Command
             $this->newLine();
         }
 
-        // Verificar entorno
+        // Verificar entorno - Solo si no está en modo force
         if (app()->environment('local', 'development') && !$this->option('force') && !$this->option('dry-run')) {
             if (!$this->confirm('Estás en entorno de desarrollo. ¿Continuar con la optimización?')) {
                 $this->error('❌ Optimización cancelada.');
@@ -390,6 +395,27 @@ class OptimizeProduction extends Command
         } catch (\Exception $e) {
             Log::error('Error generating optimization manifest: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Manejo no interactivo (cuando se ejecuta desde HTTP)
+     */
+    protected function handleNonInteractive()
+    {
+        try {
+            // Ejecutar optimizaciones básicas sin interacción
+            Artisan::call('config:cache');
+            Artisan::call('route:cache');
+            Artisan::call('view:cache');
+            Cache::flush();
+            
+            Log::info('Optimización ejecutada desde contexto HTTP');
+            
+            return Command::SUCCESS;
+        } catch (\Exception $e) {
+            Log::error('Error en optimización no interactiva: ' . $e->getMessage());
+            return Command::FAILURE;
         }
     }
 }

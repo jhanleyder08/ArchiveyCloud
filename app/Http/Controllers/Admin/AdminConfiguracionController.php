@@ -469,7 +469,14 @@ class AdminConfiguracionController extends Controller
             // Log de seguridad
             Log::info("Usuario " . auth()->user()->email . " ejecutando comando: {$comando}");
 
-            $exitCode = Artisan::call($comando);
+            // Ejecutar comando con parámetros apropiados para contexto HTTP
+            if ($comando === 'optimize:production') {
+                // Usar --force y --skip para evitar confirmaciones interactivas
+                $exitCode = Artisan::call($comando, ['--force' => true]);
+            } else {
+                $exitCode = Artisan::call($comando);
+            }
+            
             $output = Artisan::output();
 
             if ($exitCode === 0) {
