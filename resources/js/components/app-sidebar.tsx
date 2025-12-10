@@ -250,9 +250,27 @@ export function AppSidebar() {
                 <SidebarHeader>
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <SidebarMenuButton size="lg" asChild>
+                            <SidebarMenuButton 
+                                size="lg" 
+                                asChild
+                                className="
+                                    group relative overflow-hidden
+                                    hover:bg-accent/50 
+                                    transition-all duration-300
+                                    hover:shadow-lg hover:scale-[1.02]
+                                    group-data-[collapsible=icon]:justify-center
+                                    group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10
+                                    before:absolute before:inset-0 
+                                    before:bg-gradient-to-r before:from-primary/0 
+                                    before:via-primary/5 before:to-primary/0
+                                    before:translate-x-[-100%] hover:before:translate-x-[100%]
+                                    before:transition-transform before:duration-1000
+                                "
+                            >
                                 <Link href="/dashboard" prefetch>
-                                    <AppLogo />
+                                    <div className="transition-transform duration-300 group-hover:scale-110">
+                                        <AppLogo />
+                                    </div>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -271,10 +289,25 @@ export function AppSidebar() {
                         <SidebarMenuItem>
                             <SidebarMenuButton
                                 onClick={() => setShowSupportModal(true)}
-                                className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
+                                tooltip={{ children: "Soporte Técnico" }}
+                                className="
+                                    group relative overflow-hidden
+                                    text-neutral-600 hover:text-neutral-800 
+                                    dark:text-neutral-300 dark:hover:text-neutral-100
+                                    hover:bg-accent/50
+                                    transition-all duration-200
+                                    hover:shadow-md hover:scale-[1.01]
+                                    group-data-[collapsible=icon]:justify-center
+                                    group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10
+                                    before:absolute before:inset-0 
+                                    before:bg-gradient-to-r before:from-transparent 
+                                    before:via-white/5 before:to-transparent
+                                    before:translate-x-[-100%] hover:before:translate-x-[100%]
+                                    before:transition-transform before:duration-700
+                                "
                             >
-                                <HelpCircle className="h-5 w-5" />
-                                <span>Soporte Técnico</span>
+                                <HelpCircle className="h-5 w-5 transition-all duration-200 group-hover:scale-110 group-hover:rotate-12" />
+                                <span className="group-data-[collapsible=icon]:hidden">Soporte Técnico</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>

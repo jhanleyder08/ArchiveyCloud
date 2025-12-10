@@ -171,7 +171,7 @@ class AdminConfiguracionController extends Controller
                 'notificaciones' => 'Notificaciones',
             ];
 
-            return Inertia::render('admin/configuracion/ConfiguracionCategoria', [
+            return Inertia::render('admin/configuracion/Seguridad', [
                 'configuraciones' => $configuraciones,
                 'categoria' => $categoria,
                 'titulo' => $titulos[$categoria] ?? ucfirst($categoria),

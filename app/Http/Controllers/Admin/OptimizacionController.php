@@ -334,10 +334,13 @@ class OptimizacionController extends Controller
     private function getHealthStatus(): array
     {
         try {
-            $response = Http::timeout(10)->get(url('/api/health'));
+            // Llamar directamente al controlador en lugar de hacer HTTP request
+            $healthController = app(\App\Http\Controllers\Api\HealthController::class);
+            $response = $healthController->check();
             
-            if ($response->successful()) {
-                $data = $response->json();
+            // Aceptar tanto 200 (ok) como 503 (degraded)
+            if (in_array($response->status(), [200, 503])) {
+                $data = json_decode($response->getContent(), true);
                 return [
                     'status' => $data['status'] ?? 'unknown',
                     'response_time' => $data['response_time'] ?? 'N/A',

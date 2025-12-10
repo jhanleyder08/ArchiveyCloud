@@ -155,8 +155,10 @@ class ApiTokenController extends Controller
         $token = $apiToken->load(['usuario:id,name,email']);
         
         // Solo el propietario o administradores pueden ver detalles
-        if (!Auth::user()->hasRole(['Super Administrador', 'Administrador SGDEA']) && 
-            $token->usuario_id !== Auth::id()) {
+        $isAdmin = Auth::user()->hasRole('Super Administrador') || 
+                   Auth::user()->hasRole('Administrador SGDEA');
+                   
+        if (!$isAdmin && $token->usuario_id !== Auth::id()) {
             abort(403, 'No tienes permisos para ver este token');
         }
 
