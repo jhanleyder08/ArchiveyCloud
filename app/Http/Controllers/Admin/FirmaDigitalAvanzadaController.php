@@ -166,10 +166,11 @@ class FirmaDigitalAvanzadaController extends Controller
      */
     public function crearSolicitud(): Response
     {
-        $documentos = Documento::where('usuario_id', Auth::id())
-                              ->orWhere('es_publico', true)
-                              ->select('id', 'nombre', 'expediente_id')
-                              ->with('expediente:id,codigo,nombre')
+        // Obtener documentos del usuario productor
+        $documentos = Documento::where('productor_id', Auth::id())
+                              ->where('activo', true)
+                              ->select('id', 'titulo', 'expediente_id')
+                              ->with('expediente:id,codigo,titulo')
                               ->get();
 
         $usuarios = User::select('id', 'name', 'email')
@@ -228,7 +229,7 @@ class FirmaDigitalAvanzadaController extends Controller
             $documento = Documento::findOrFail($request->documento_id);
             
             // Verificar permisos sobre el documento
-            if ($documento->usuario_id !== Auth::id() && !$documento->es_publico) {
+            if ($documento->productor_id !== Auth::id()) {
                 return back()->withErrors(['documento_id' => 'No tienes permisos para este documento']);
             }
 
@@ -259,7 +260,7 @@ class FirmaDigitalAvanzadaController extends Controller
             'documento.expediente',
             'solicitante',
             'firmantes.usuario',
-            'firmas.usuario'
+            // 'firmas.usuario' // TODO: Descomentar cuando se ejecute migración PKI
         ]);
 
         // Verificar permisos

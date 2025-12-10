@@ -51,19 +51,20 @@ interface Usuario {
 
 interface Documento {
     id: number;
-    nombre: string;
-    tipo_documento: string;
+    titulo: string;
+    tipo_documento?: string;
     expediente?: {
         id: number;
         codigo: string;
-        titulo: string;
+        titulo?: string;
     };
 }
 
 interface Firmante {
     usuario_id: number;
     orden: number;
-    requerido: boolean;
+    es_obligatorio: boolean;
+    rol: 'aprobador' | 'revisor' | 'testigo' | 'autoridad' | 'validador';
     usuario?: Usuario;
 }
 
@@ -94,7 +95,8 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
         firmantes: [] as Array<{
             usuario_id: number;
             orden: number;
-            requerido: boolean;
+            es_obligatorio: boolean;
+            rol: 'aprobador' | 'revisor' | 'testigo' | 'autoridad' | 'validador';
         }>
     });
 
@@ -112,7 +114,8 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
         const nuevoFirmante: Firmante = {
             usuario_id: usuario.id,
             orden: firmantes.length + 1,
-            requerido: true,
+            es_obligatorio: true,
+            rol: 'aprobador',
             usuario: usuario
         };
 
@@ -123,7 +126,8 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
         setData('firmantes', nuevosFirmantes.map(f => ({
             usuario_id: f.usuario_id,
             orden: f.orden,
-            requerido: f.requerido
+            es_obligatorio: f.es_obligatorio,
+            rol: f.rol
         })));
 
         setMostrarSelectorUsuarios(false);
@@ -139,7 +143,8 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
         setData('firmantes', nuevosFirmantes.map(f => ({
             usuario_id: f.usuario_id,
             orden: f.orden,
-            requerido: f.requerido
+            es_obligatorio: f.es_obligatorio,
+            rol: f.rol
         })));
     };
 
@@ -163,20 +168,36 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
         setData('firmantes', firmantesReordenados.map(f => ({
             usuario_id: f.usuario_id,
             orden: f.orden,
-            requerido: f.requerido
+            es_obligatorio: f.es_obligatorio,
+            rol: f.rol
         })));
     };
 
-    const toggleRequerido = (usuarioId: number) => {
+    const toggleEsObligatorio = (usuarioId: number) => {
         const nuevosFirmantes = firmantes.map(f => 
-            f.usuario_id === usuarioId ? { ...f, requerido: !f.requerido } : f
+            f.usuario_id === usuarioId ? { ...f, es_obligatorio: !f.es_obligatorio } : f
         );
         
         setFirmantes(nuevosFirmantes);
         setData('firmantes', nuevosFirmantes.map(f => ({
             usuario_id: f.usuario_id,
             orden: f.orden,
-            requerido: f.requerido
+            es_obligatorio: f.es_obligatorio,
+            rol: f.rol
+        })));
+    };
+
+    const cambiarRolFirmante = (usuarioId: number, nuevoRol: 'aprobador' | 'revisor' | 'testigo' | 'autoridad' | 'validador') => {
+        const nuevosFirmantes = firmantes.map(f => 
+            f.usuario_id === usuarioId ? { ...f, rol: nuevoRol } : f
+        );
+        
+        setFirmantes(nuevosFirmantes);
+        setData('firmantes', nuevosFirmantes.map(f => ({
+            usuario_id: f.usuario_id,
+            orden: f.orden,
+            es_obligatorio: f.es_obligatorio,
+            rol: f.rol
         })));
     };
 
@@ -187,7 +208,7 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
         
         // Auto-generar título si está vacío
         if (!data.titulo && documento) {
-            setData('titulo', `Solicitud de firma: ${documento.nombre}`);
+            setData('titulo', `Solicitud de firma: ${documento.titulo}`);
         }
     };
 
@@ -219,7 +240,8 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
         return colores[prioridad as keyof typeof colores] || 'bg-gray-500 text-white';
     };
 
-    const fechaMinima = new Date().toISOString().split('T')[0];
+    // Fecha mínima debe ser al menos mañana (after:now)
+    const fechaMinima = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
     return (
         <AppLayout>
@@ -271,9 +293,9 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
                                                 {documentos.map((documento) => (
                                                     <SelectItem key={documento.id} value={documento.id.toString()}>
                                                         <div>
-                                                            <div className="font-medium">{documento.nombre}</div>
+                                                            <div className="font-medium">{documento.titulo}</div>
                                                             <div className="text-xs text-gray-500">
-                                                                {documento.tipo_documento}
+                                                                {documento.tipo_documento || 'Sin tipo'}
                                                                 {documento.expediente && (
                                                                     <span> • Exp: {documento.expediente.codigo}</span>
                                                                 )}
@@ -409,13 +431,13 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
                                         <div className="flex items-start space-x-3">
                                             <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
                                             <div className="flex-1">
-                                                <h4 className="font-medium text-blue-900">{documentoSeleccionado.nombre}</h4>
+                                                <h4 className="font-medium text-blue-900">{documentoSeleccionado.titulo}</h4>
                                                 <p className="text-sm text-blue-700 mt-1">
-                                                    Tipo: {documentoSeleccionado.tipo_documento}
+                                                    Tipo: {documentoSeleccionado.tipo_documento || 'Sin tipo'}
                                                 </p>
                                                 {documentoSeleccionado.expediente && (
                                                     <p className="text-sm text-blue-700">
-                                                        Expediente: {documentoSeleccionado.expediente.codigo} - {documentoSeleccionado.expediente.titulo}
+                                                        Expediente: {documentoSeleccionado.expediente.codigo}{documentoSeleccionado.expediente.titulo ? ` - ${documentoSeleccionado.expediente.titulo}` : ''}
                                                     </p>
                                                 )}
                                             </div>
@@ -466,7 +488,8 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
                                                     {data.tipo_flujo === 'secuencial' && <TableHead>Orden</TableHead>}
                                                     <TableHead>Firmante</TableHead>
                                                     <TableHead>Cargo</TableHead>
-                                                    <TableHead>Requerido</TableHead>
+                                                    <TableHead>Rol</TableHead>
+                                                    <TableHead>Obligatorio</TableHead>
                                                     <TableHead>Acciones</TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -519,9 +542,26 @@ export default function CrearSolicitudFirma({ documentos, usuarios }: Props) {
                                                             </span>
                                                         </TableCell>
                                                         <TableCell>
+                                                            <Select
+                                                                value={firmante.rol}
+                                                                onValueChange={(value) => cambiarRolFirmante(firmante.usuario_id, value as any)}
+                                                            >
+                                                                <SelectTrigger className="w-[140px]">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="aprobador">Aprobador</SelectItem>
+                                                                    <SelectItem value="revisor">Revisor</SelectItem>
+                                                                    <SelectItem value="testigo">Testigo</SelectItem>
+                                                                    <SelectItem value="autoridad">Autoridad</SelectItem>
+                                                                    <SelectItem value="validador">Validador</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </TableCell>
+                                                        <TableCell>
                                                             <Checkbox
-                                                                checked={firmante.requerido}
-                                                                onCheckedChange={() => toggleRequerido(firmante.usuario_id)}
+                                                                checked={firmante.es_obligatorio}
+                                                                onCheckedChange={() => toggleEsObligatorio(firmante.usuario_id)}
                                                             />
                                                         </TableCell>
                                                         <TableCell>

@@ -444,17 +444,17 @@ class AdminReportController extends Controller
             });
 
         // Documentos más grandes
-        $documentosMasGrandes = Documento::orderBy('tamaño', 'desc')
-            ->with('expediente:id,codigo,nombre')
+        $documentosMasGrandes = Documento::orderBy('tamano_bytes', 'desc')
+            ->with('expediente:id,codigo,titulo')
             ->limit(20)
             ->get()
             ->map(function ($documento) {
                 return [
                     'id' => $documento->id,
-                    'nombre' => $documento->nombre,
-                    'expediente' => $documento->expediente ? $documento->expediente->codigo . ' - ' . $documento->expediente->nombre : 'Sin expediente',
-                    'tipo' => $documento->tipo_documento,
-                    'tamaño_mb' => round($documento->tamaño / (1024 * 1024), 2),
+                    'nombre' => $documento->titulo,
+                    'expediente' => $documento->expediente ? $documento->expediente->codigo . ' - ' . $documento->expediente->titulo : 'Sin expediente',
+                    'tipo' => $documento->formato,
+                    'tamaño_mb' => round($documento->tamano_bytes / (1024 * 1024), 2),
                     'fecha_creacion' => $documento->created_at->format('Y-m-d'),
                 ];
             });
@@ -462,8 +462,8 @@ class AdminReportController extends Controller
         // Resumen general
         $resumenAlmacenamiento = [
             'total_documentos' => Documento::count(),
-            'tamaño_total_gb' => round(Documento::sum('tamaño') / (1024 * 1024 * 1024), 2),
-            'tamaño_promedio_mb' => round(Documento::avg('tamaño') / (1024 * 1024), 2),
+            'tamaño_total_gb' => round(Documento::sum('tamano_bytes') / (1024 * 1024 * 1024), 2),
+            'tamaño_promedio_mb' => round(Documento::avg('tamano_bytes') / (1024 * 1024), 2),
             'documentos_este_mes' => Documento::whereMonth('created_at', Carbon::now()->month)
                 ->whereYear('created_at', Carbon::now()->year)
                 ->count(),
