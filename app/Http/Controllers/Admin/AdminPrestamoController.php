@@ -167,6 +167,7 @@ class AdminPrestamoController extends Controller
             // Registrar en auditoría
             PistaAuditoria::create([
                 'usuario_id' => auth()->id(),
+                'evento' => 'crear_prestamo',
                 'accion' => 'crear_prestamo',
                 'tabla_afectada' => 'prestamos',
                 'registro_id' => $prestamo->id,
@@ -231,6 +232,7 @@ class AdminPrestamoController extends Controller
             // Registrar en auditoría
             PistaAuditoria::create([
                 'usuario_id' => auth()->id(),
+                'evento' => 'devolver_prestamo',
                 'accion' => 'devolver_prestamo',
                 'tabla_afectada' => 'prestamos',
                 'registro_id' => $prestamo->id,
@@ -269,6 +271,7 @@ class AdminPrestamoController extends Controller
         // Registrar en auditoría
         PistaAuditoria::create([
             'usuario_id' => auth()->id(),
+            'evento' => 'renovar_prestamo',
             'accion' => 'renovar_prestamo',
             'tabla_afectada' => 'prestamos',
             'registro_id' => $prestamo->id,

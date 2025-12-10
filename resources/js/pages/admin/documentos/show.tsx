@@ -415,7 +415,7 @@ const DocumentoShow = ({ documento, puedeVisualizar }: Props) => {
                                         variant="outline"
                                         size="sm"
                                         className="w-full justify-start"
-                                        onClick={() => router.visit(`/admin/firmas/documento/${documento.id}/firmar`)}
+                                        onClick={() => router.visit(route('admin.firmas.documento.firmar', documento.id))}
                                     >
                                         <ShieldCheckIcon className="h-4 w-4 mr-2" />
                                         Firmar Digitalmente

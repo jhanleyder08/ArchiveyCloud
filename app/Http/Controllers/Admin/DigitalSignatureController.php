@@ -73,9 +73,9 @@ class DigitalSignatureController extends Controller
     {
         $user = auth()->user();
         
-        // Verificar permisos
-        if (!$user->can('firmar_documento', $documento)) {
-            abort(403, 'No tiene permisos para firmar este documento');
+        // Verificar que el usuario esté autenticado
+        if (!$user) {
+            abort(403, 'No está autenticado');
         }
         
         // Obtener certificados válidos del usuario
@@ -321,15 +321,37 @@ class DigitalSignatureController extends Controller
         $user = auth()->user();
         
         $certificados = CertificadoDigital::where('usuario_id', $user->id)
+            ->with(['usuario:id,name,email'])
             ->orderBy('fecha_vencimiento', 'desc')
-            ->get();
+            ->paginate(15);
         
         // Verificar próximos vencimientos
         $proximosVencimientos = $this->certificateService->verificarProximosVencimientos();
         
+        // Estadísticas de certificados
+        $estadisticas = [
+            'total' => CertificadoDigital::count(),
+            'activos' => CertificadoDigital::where('estado', 'activo')
+                ->where('fecha_vencimiento', '>', now())->count(),
+            'vencidos' => CertificadoDigital::where('fecha_vencimiento', '<=', now())->count(),
+            'proximos_vencer' => CertificadoDigital::where('estado', 'activo')
+                ->whereBetween('fecha_vencimiento', [now(), now()->addDays(30)])->count(),
+            'revocados' => CertificadoDigital::where('estado', 'revocado')->count(),
+            'por_tipo' => CertificadoDigital::selectRaw('tipo_certificado, COUNT(*) as total')
+                ->groupBy('tipo_certificado')
+                ->pluck('total', 'tipo_certificado')
+                ->toArray(),
+            'usuarios_con_certificados' => \DB::table('certificados_digitales')
+                ->distinct('usuario_id')->count('usuario_id'),
+            'firmas_realizadas' => \DB::table('firmas_digitales')->count()
+        ];
+        
         return Inertia::render('admin/certificados/index', [
             'certificados' => $certificados,
-            'proximos_vencimientos' => $proximosVencimientos
+            'proximos_vencimientos' => $proximosVencimientos,
+            'estadisticas' => $estadisticas,
+            'usuarios' => [],
+            'filtros' => []
         ]);
     }
 

@@ -181,6 +181,7 @@ class CertificadoDigitalController extends Controller
             // Registrar en auditoría
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
+                'evento' => 'crear_certificado',
                 'accion' => 'crear',
                 'entidad_type' => 'App\\Models\\CertificadoDigital',
                 'entidad_id' => $certificado->id,
@@ -249,6 +250,7 @@ class CertificadoDigitalController extends Controller
             // Registrar en auditoría
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
+                'evento' => 'revocar_certificado',
                 'accion' => 'revocar',
                 'entidad_type' => 'App\\Models\\CertificadoDigital',
                 'entidad_id' => $certificado->id,
@@ -319,6 +321,7 @@ class CertificadoDigitalController extends Controller
             // Registrar en auditoría
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
+                'evento' => 'renovar_certificado',
                 'accion' => 'renovar',
                 'entidad_type' => 'App\\Models\\CertificadoDigital',
                 'entidad_id' => $certificado->id,
@@ -383,6 +386,7 @@ class CertificadoDigitalController extends Controller
             // Registrar descarga en auditoría
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
+                'evento' => 'descargar_certificado',
                 'accion' => 'descargar',
                 'entidad_type' => 'App\\Models\\CertificadoDigital',
                 'entidad_id' => $certificado->id,

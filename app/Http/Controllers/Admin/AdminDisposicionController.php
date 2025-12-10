@@ -376,6 +376,7 @@ class AdminDisposicionController extends Controller
             // Registrar en auditoría
             PistaAuditoria::create([
                 'usuario_id' => auth()->id(),
+                'evento' => 'enviar_revision_disposicion',
                 'accion' => 'enviar_revision_disposicion',
                 'tabla_afectada' => 'disposicion_finals',
                 'registro_id' => $disposicion->id,
@@ -411,9 +412,10 @@ class AdminDisposicionController extends Controller
                 'acta_comite' => $validated['acta_comite'],
             ]);
 
-            // Registrar en auditoría
+            // Registrar auditoría
             PistaAuditoria::create([
                 'usuario_id' => auth()->id(),
+                'evento' => 'aprobar_disposicion',
                 'accion' => 'aprobar_disposicion',
                 'tabla_afectada' => 'disposicion_finals',
                 'registro_id' => $disposicion->id,
@@ -446,9 +448,10 @@ class AdminDisposicionController extends Controller
                 'observaciones_rechazo' => $validated['observaciones_rechazo'],
             ]);
 
-            // Registrar en auditoría
+            // Registrar auditoría
             PistaAuditoria::create([
                 'usuario_id' => auth()->id(),
+                'evento' => 'rechazar_disposicion',
                 'accion' => 'rechazar_disposicion',
                 'tabla_afectada' => 'disposicion_finals',
                 'registro_id' => $disposicion->id,
@@ -497,9 +500,10 @@ class AdminDisposicionController extends Controller
                 }
             }
 
-            // Registrar en auditoría
+            // Registrar auditoría
             PistaAuditoria::create([
                 'usuario_id' => auth()->id(),
+                'evento' => 'ejecutar_disposicion',
                 'accion' => 'ejecutar_disposicion',
                 'tabla_afectada' => 'disposicion_finals',
                 'registro_id' => $disposicion->id,

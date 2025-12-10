@@ -83,6 +83,7 @@ export default function PrestamosCreate({ expedientes, documentos, usuarios, err
         expediente_id: '',
         documento_id: '',
         solicitante_id: '',
+        fecha_prestamo: new Date().toISOString().split('T')[0],
         motivo: '',
         fecha_devolucion_esperada: '',
         observaciones: '',
