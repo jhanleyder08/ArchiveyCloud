@@ -456,9 +456,15 @@ class CCDController extends Controller
     /**
      * Eliminar nivel
      */
-    public function eliminarNivel(CCDNivel $nivel)
+    public function eliminarNivel($nivelId)
     {
         try {
+            $nivel = CCDNivel::find($nivelId);
+            
+            if (!$nivel) {
+                return back()->with('error', 'El nivel no existe o ya fue eliminado');
+            }
+
             if (!$nivel->esHoja()) {
                 return back()->with('error', 'No se puede eliminar un nivel que tiene hijos');
             }
@@ -742,9 +748,7 @@ class CCDController extends Controller
         // Encabezados de estructura
         $row = 8;
         $headers = ['Nivel', 'Código', 'Nombre', 'Tipo', 'Descripción', 'Estado'];
-        foreach ($headers as $col => $header) {
-            $sheet->setCellValueByColumnAndRow($col + 1, $row, $header);
-        }
+        $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle("A{$row}:F{$row}")->applyFromArray($headerStyle);
         
         // Datos de estructura
@@ -782,15 +786,17 @@ class CCDController extends Controller
             'subserie' => 'FCE4EC',
         ];
         
+        $columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+        
         foreach ($niveles as $nivel) {
             $indentacion = str_repeat('    ', $profundidad);
             
-            $sheet->setCellValueByColumnAndRow(1, $row, $profundidad + 1);
-            $sheet->setCellValueByColumnAndRow(2, $row, $nivel['codigo']);
-            $sheet->setCellValueByColumnAndRow(3, $row, $indentacion . $nivel['nombre']);
-            $sheet->setCellValueByColumnAndRow(4, $row, ucfirst($nivel['tipo_nivel']));
-            $sheet->setCellValueByColumnAndRow(5, $row, $nivel['descripcion'] ?? '');
-            $sheet->setCellValueByColumnAndRow(6, $row, $nivel['activo'] ? 'Activo' : 'Inactivo');
+            $sheet->setCellValue($columns[0] . $row, $profundidad + 1);
+            $sheet->setCellValue($columns[1] . $row, $nivel['codigo']);
+            $sheet->setCellValue($columns[2] . $row, $indentacion . $nivel['nombre']);
+            $sheet->setCellValue($columns[3] . $row, ucfirst($nivel['tipo_nivel']));
+            $sheet->setCellValue($columns[4] . $row, $nivel['descripcion'] ?? '');
+            $sheet->setCellValue($columns[5] . $row, $nivel['activo'] ? 'Activo' : 'Inactivo');
             
             // Color de fondo según tipo
             $color = $tipoColors[$nivel['tipo_nivel']] ?? 'FFFFFF';
@@ -849,5 +855,137 @@ class CCDController extends Controller
                 })
                 ->count(),
         ];
+    }
+
+    /**
+     * Importar series y subseries desde Excel
+     */
+    public function importarExcel(Request $request, CCD $ccd)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240', // 10MB max
+        ]);
+
+        try {
+            $import = new \App\Imports\CCDImport($ccd->id);
+            $import->import($request->file('file')->getRealPath());
+
+            $stats = $import->getStats();
+
+            // Si hay errores de validación, revertir transacción
+            if (!empty($stats['errores'])) {
+                return back()->with([
+                    'error' => 'Se encontraron errores en el archivo Excel',
+                    'errores_importacion' => $stats['errores'],
+                ]);
+            }
+
+            return back()->with([
+                'success' => sprintf(
+                    'Importación completada: %d series y %d subseries creadas',
+                    $stats['series_creadas'],
+                    $stats['subseries_creadas']
+                ),
+                'stats_importacion' => $stats,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en importación Excel CCD', [
+                'ccd_id' => $ccd->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', 'Error al importar archivo: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descargar plantilla Excel para importación
+     */
+    public function descargarPlantilla()
+    {
+        try {
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('CCD Importacion');
+
+            // Estilos para encabezados
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '2a3d83']
+                ],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            ];
+
+            // Instrucciones
+            $sheet->setCellValue('A1', 'PLANTILLA DE IMPORTACION - CUADRO DE CLASIFICACION DOCUMENTAL');
+            $sheet->mergeCells('A1:I1');
+            $sheet->getStyle('A1')->applyFromArray(['font' => ['bold' => true, 'size' => 14]]);
+
+            $sheet->setCellValue('A2', 'INSTRUCCIONES: Complete los datos a partir de la fila 4. Puede omitir SUBSECCION si la SERIE pertenece directamente a la SECCION');
+
+            // Encabezados de columnas (fila 3)
+            $headers = [
+                'No.',
+                'SECCIÓN',
+                'CÓDIGO',
+                'SUBSECCION',
+                'CÓDIGO',
+                'SERIE',
+                'CÓDIGO',
+                'SUBSERIE',
+                'CÓDIGO'
+            ];
+
+            // Encabezados en la fila 3
+            $sheet->fromArray($headers, null, 'A3');
+            $sheet->getStyle('A3:I3')->applyFromArray($headerStyle);
+
+            // Datos de ejemplo - Basados en el formato real
+            $ejemplos = [
+                // GERENCIA GENERAL sin subsección - Series directas
+                [1, 'GERENCIA GENERAL', '100', '', '', 'ACTAS', '2', 'Actas de Comité Directivo', '19'],
+                [2, 'GERENCIA GENERAL', '100', '', '', 'ACTAS', '2', 'Actas de Junta Directiva', '31'],
+                [3, 'GERENCIA GENERAL', '100', '', '', 'ACTOS', '3', 'Acuerdos', '1'],
+                [4, 'GERENCIA GENERAL', '100', '', '', 'CIRCULARES', '9', 'Circulares Dispositivas', '1'],
+                [5, 'GERENCIA GENERAL', '100', '', '', 'INFORMES', '26', 'Informes de Gestión', '10'],
+                // GERENCIA GENERAL con subsección OFICINA ASESORA DE PLANEACIÓN
+                [6, 'GERENCIA GENERAL', '100', 'OFICINA ASESORA DE PLANEACIÓN', '101', 'ACTAS', '2', 'Actas de Comité Institucional de Gestión', '22'],
+                [7, 'GERENCIA GENERAL', '100', 'OFICINA ASESORA DE PLANEACIÓN', '101', 'INFORMES', '26', 'Informes de Gestión de Indicadores', '11'],
+                [8, 'GERENCIA GENERAL', '100', 'OFICINA ASESORA DE PLANEACIÓN', '101', 'PLANES', '33', 'Plan de Desarrollo Institucional', '8'],
+                [9, 'GERENCIA GENERAL', '100', 'OFICINA ASESORA DE PLANEACIÓN', '101', 'PLANES', '33', 'Plan de Operativo Anual Institucional', '15'],
+            ];
+
+            // Insertar datos de ejemplo
+            $sheet->fromArray($ejemplos, null, 'A4');
+
+            // Autoajustar columnas
+            foreach (range('A', 'I') as $columnID) {
+                $sheet->getColumnDimension($columnID)->setAutoSize(true);
+            }
+
+            // Congelar paneles (después de los encabezados)
+            $sheet->freezePane('A4');
+
+            // Generar archivo en memoria
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            
+            $filename = 'Plantilla_CCD_Importacion_' . now()->format('Ymd') . '.xlsx';
+
+            // Usar streamDownload para evitar problemas con archivos temporales
+            return response()->streamDownload(function() use ($writer) {
+                $writer->save('php://output');
+            }, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Cache-Control' => 'max-age=0',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al generar plantilla Excel', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error al generar plantilla: ' . $e->getMessage());
+        }
     }
 }

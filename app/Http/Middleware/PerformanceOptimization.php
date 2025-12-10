@@ -18,15 +18,36 @@ class PerformanceOptimization
         $startTime = microtime(true);
         $startMemory = memory_get_usage(true);
 
-        // Aplicar optimizaciones antes del procesamiento
-        $this->applyPreProcessingOptimizations($request);
+        // No aplicar optimizaciones a rutas de descarga/exportación
+        $isDownload = $this->isDownloadRequest($request);
+        
+        if (!$isDownload) {
+            // Aplicar optimizaciones antes del procesamiento
+            $this->applyPreProcessingOptimizations($request);
+        }
 
         $response = $next($request);
 
-        // Aplicar optimizaciones después del procesamiento
-        $this->applyPostProcessingOptimizations($request, $response, $startTime, $startMemory);
+        if (!$isDownload) {
+            // Aplicar optimizaciones después del procesamiento
+            $this->applyPostProcessingOptimizations($request, $response, $startTime, $startMemory);
+        }
 
         return $response;
+    }
+
+    /**
+     * Determinar si es una request de descarga
+     */
+    private function isDownloadRequest(Request $request): bool
+    {
+        return $request->is('api/*/download') || 
+               $request->is('*/export/*') || 
+               $request->is('*/exportar') ||
+               $request->is('*/descargar') ||
+               $request->is('*/plantilla-excel/*') ||
+               $request->is('admin/ccd/*/exportar') ||
+               $request->is('admin/ccd/plantilla-excel/descargar');
     }
 
     /**
@@ -59,6 +80,12 @@ class PerformanceOptimization
         float $startTime, 
         int $startMemory
     ): void {
+        // No aplicar optimizaciones a respuestas de archivos binarios o streaming
+        if ($response instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse ||
+            $response instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+            return;
+        }
+
         $endTime = microtime(true);
         $endMemory = memory_get_usage(true);
         $executionTime = ($endTime - $startTime) * 1000; // en milisegundos
@@ -124,8 +151,14 @@ class PerformanceOptimization
             return false;
         }
 
-        // No comprimir para requests específicas
-        if ($request->is('api/*/download') || $request->is('*/export/*')) {
+        // No comprimir para requests de descarga de archivos
+        if ($request->is('api/*/download') || 
+            $request->is('*/export/*') || 
+            $request->is('*/exportar') ||
+            $request->is('*/descargar') ||
+            $request->is('*/plantilla-excel/*') ||
+            $request->is('admin/ccd/*/exportar') ||
+            $request->is('admin/ccd/plantilla-excel/descargar')) {
             return false;
         }
 

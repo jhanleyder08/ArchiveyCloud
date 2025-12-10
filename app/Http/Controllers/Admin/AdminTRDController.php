@@ -23,7 +23,7 @@ class AdminTRDController extends Controller
      */
     public function index(Request $request)
     {
-        $query = TablaRetencionDocumental::with(['creador', 'modificador'])
+        $query = TablaRetencionDocumental::with(['creador', 'modificador', 'cuadroClasificacion'])
             ->withCount(['series', 'expedientes']);
 
         // Filtros

@@ -220,6 +220,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             
             // Exportar CCD
             Route::get('/{ccd}/exportar', [App\Http\Controllers\CCDController::class, 'exportar'])->name('exportar');
+            
+            // Importar desde Excel
+            Route::post('/{ccd}/importar-excel', [App\Http\Controllers\CCDController::class, 'importarExcel'])
+                ->name('importar-excel')
+                ->middleware('permission:ccd.editar');
+            
+            // Descargar plantilla Excel
+            Route::get('/plantilla-excel/descargar', [App\Http\Controllers\CCDController::class, 'descargarPlantilla'])
+                ->name('plantilla-excel')
+                ->middleware(['auth', 'verified']);
         });
         
         // Gestión de Documentos - Protegido con permisos

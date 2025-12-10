@@ -208,7 +208,7 @@ class DocumentIndexingService
     public function indexExpediente(Expediente $expediente): bool
     {
         try {
-            $expediente->load(['serieDocumental', 'subserieDocumental', 'usuarioCreador']);
+            $expediente->load(['serie', 'subserie', 'usuarioCreador']);
 
             $body = [
                 'id' => $expediente->id,
@@ -218,16 +218,16 @@ class DocumentIndexingService
                 'estado' => $expediente->estado,
                 'fecha_apertura' => $expediente->fecha_apertura?->toIso8601String(),
                 'fecha_cierre' => $expediente->fecha_cierre?->toIso8601String(),
-                'serie_documental_id' => $expediente->serie_documental_id,
-                'subserie_documental_id' => $expediente->subserie_documental_id,
+                'serie_documental_id' => $expediente->serie_id,
+                'subserie_documental_id' => $expediente->subserie_id,
             ];
 
-            if ($expediente->serieDocumental) {
-                $body['serie_documental_nombre'] = $expediente->serieDocumental->nombre;
+            if ($expediente->serie) {
+                $body['serie_documental_nombre'] = $expediente->serie->nombre;
             }
 
-            if ($expediente->subserieDocumental) {
-                $body['subserie_documental_nombre'] = $expediente->subserieDocumental->nombre;
+            if ($expediente->subserie) {
+                $body['subserie_documental_nombre'] = $expediente->subserie->nombre;
             }
 
             return $this->elasticsearchService->indexDocument(
@@ -293,7 +293,7 @@ class DocumentIndexingService
             $preparedDocs = [];
             foreach ($expedientes as $expediente) {
                 try {
-                    $expediente->load(['serieDocumental', 'subserieDocumental']);
+                    $expediente->load(['serie', 'subserie']);
                     $body = [
                         'id' => $expediente->id,
                         'codigo' => $expediente->codigo,

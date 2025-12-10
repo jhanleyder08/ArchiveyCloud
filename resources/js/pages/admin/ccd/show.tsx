@@ -257,7 +257,11 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
     const [showEditNivelModal, setShowEditNivelModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
     const [showVersionModal, setShowVersionModal] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
     const [exportLoading, setExportLoading] = useState(false);
+    const [importLoading, setImportLoading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [dragActive, setDragActive] = useState(false);
     const [selectedParent, setSelectedParent] = useState<CCDNivel | null>(null);
     const [selectedNivel, setSelectedNivel] = useState<CCDNivel | null>(null);
     
@@ -401,6 +405,75 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
         } finally {
             setExportLoading(false);
         }
+    };
+
+    const handleImportExcel = () => {
+        if (!selectedFile) {
+            toast.error('Por favor seleccione un archivo Excel');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        setImportLoading(true);
+
+        router.post(route('admin.ccd.importar-excel', ccd.id), formData, {
+            onSuccess: () => {
+                toast.success('Archivo importado exitosamente');
+                setShowImportModal(false);
+                setSelectedFile(null);
+                router.reload({ only: ['estructura', 'estadisticas'] });
+            },
+            onError: (errors) => {
+                console.error('Errores de importación:', errors);
+                toast.error(errors.file || 'Error al importar el archivo');
+            },
+            onFinish: () => {
+                setImportLoading(false);
+            },
+        });
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (!file.name.match(/\.(xlsx|xls|csv)$/)) {
+                toast.error('Por favor seleccione un archivo Excel (.xlsx, .xls o .csv)');
+                return;
+            }
+            setSelectedFile(file);
+        }
+    };
+
+    const handleDrag = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === 'dragenter' || e.type === 'dragover') {
+            setDragActive(true);
+        } else if (e.type === 'dragleave') {
+            setDragActive(false);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+            if (!file.name.match(/\.(xlsx|xls|csv)$/)) {
+                toast.error('Por favor seleccione un archivo Excel (.xlsx, .xls o .csv)');
+                return;
+            }
+            setSelectedFile(file);
+        }
+    };
+
+    const handleDescargarPlantilla = () => {
+        window.location.href = route('admin.ccd.plantilla-excel');
+        toast.success('Descargando plantilla Excel...');
     };
 
     const exportFormats = [
@@ -866,6 +939,10 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
                                         {(ccd.versiones && ccd.versiones.length > 0) ? 'Aprobar Versión' : 'Aprobar CCD'}
                                     </Button>
                                 )}
+                                <Button variant="outline" onClick={() => setShowImportModal(true)}>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Importar Excel
+                                </Button>
                                 <Button variant="outline" onClick={() => setShowExportModal(true)}>
                                     <Download className="h-4 w-4 mr-2" />
                                     Exportar
@@ -1098,6 +1175,144 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setShowExportModal(false)}>
                                 Cancelar
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modal Importar Excel */}
+                <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
+                    <DialogContent className="sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Upload className="h-5 w-5 text-[#2a3d83]" />
+                                Importar Series desde Excel
+                            </DialogTitle>
+                            <DialogDescription>
+                                Cargue un archivo Excel con la estructura de series y subseries documentales
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            {/* Drag & Drop Zone */}
+                            <div
+                                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                                    dragActive 
+                                        ? 'border-[#2a3d83] bg-blue-50' 
+                                        : 'border-gray-300 hover:border-gray-400'
+                                }`}
+                                onDragEnter={handleDrag}
+                                onDragLeave={handleDrag}
+                                onDragOver={handleDrag}
+                                onDrop={handleDrop}
+                            >
+                                <FileSpreadsheet className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                                {selectedFile ? (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-center gap-2 text-sm font-medium text-green-600">
+                                            <CheckCircle className="h-4 w-4" />
+                                            Archivo seleccionado
+                                        </div>
+                                        <div className="text-sm text-gray-600">{selectedFile.name}</div>
+                                        <div className="text-xs text-gray-500">
+                                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm"
+                                            onClick={() => setSelectedFile(null)}
+                                            className="text-red-600 hover:text-red-700"
+                                        >
+                                            Eliminar
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <p className="text-sm text-gray-600">
+                                            Arrastre y suelte su archivo Excel aquí
+                                        </p>
+                                        <p className="text-xs text-gray-500">o</p>
+                                        <label className="cursor-pointer">
+                                            <span className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                                <Upload className="h-4 w-4" />
+                                                Seleccionar archivo
+                                            </span>
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept=".xlsx,.xls,.csv"
+                                                onChange={handleFileChange}
+                                            />
+                                        </label>
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            Formatos aceptados: .xlsx, .xls, .csv (Máx. 10MB)
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Plantilla */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg">
+                                        <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-medium text-blue-900 mb-1">
+                                            ¿No tiene una plantilla?
+                                        </h4>
+                                        <p className="text-sm text-blue-700 mb-3">
+                                            Descargue nuestra plantilla Excel con el formato correcto y ejemplos
+                                        </p>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={handleDescargarPlantilla}
+                                            className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Descargar Plantilla
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Instrucciones */}
+                            <div className="text-sm text-gray-600 space-y-2">
+                                <p className="font-medium">Instrucciones:</p>
+                                <ul className="list-disc list-inside space-y-1 text-xs">
+                                    <li>El archivo debe tener las columnas: codigo_serie, nombre_serie, codigo_subserie, nombre_subserie</li>
+                                    <li>Campos opcionales: descripcion, tipo_documental, soporte, retencion_ag, retencion_ac, disposicion_final</li>
+                                    <li>Las series se crean automáticamente si no existen</li>
+                                    <li>Las subseries se asocian a su serie correspondiente</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button 
+                                variant="outline" 
+                                onClick={() => {
+                                    setShowImportModal(false);
+                                    setSelectedFile(null);
+                                }}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button 
+                                onClick={handleImportExcel}
+                                disabled={!selectedFile || importLoading}
+                                className="bg-[#2a3d83] hover:bg-[#1e2b5f]"
+                            >
+                                {importLoading ? (
+                                    <>
+                                        <Upload className="h-4 w-4 mr-2 animate-pulse" />
+                                        Importando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="h-4 w-4 mr-2" />
+                                        Importar
+                                    </>
+                                )}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
