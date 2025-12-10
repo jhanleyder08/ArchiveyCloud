@@ -1,5 +1,4 @@
 import RegisteredUserController from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
-import { login } from '@/routes/index';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle, Eye, EyeOff, User, Mail, Lock } from 'lucide-react';
 import { useState } from 'react';
@@ -246,7 +245,7 @@ export default function Register() {
 
                             <div className="text-center text-sm text-foreground">
                                 ¿Ya tienes una cuenta?{' '}
-                                <TextLink href={login()} className="text-[#2a3d83] hover:text-[#1e2b5f]" tabIndex={6}>
+                                <TextLink href={route('login')} className="text-[#2a3d83] hover:text-[#1e2b5f]" tabIndex={6}>
                                     Iniciar sesión
                                 </TextLink>
                             </div>

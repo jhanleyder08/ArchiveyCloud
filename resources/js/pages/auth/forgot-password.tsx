@@ -1,6 +1,6 @@
 // Components
 import PasswordResetLinkController from '@/actions/App/Http/Controllers/Auth/PasswordResetLinkController';
-import { login } from '@/routes/index';
+
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle, Mail } from 'lucide-react';
 
@@ -55,7 +55,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
                             <div className="text-center text-sm text-foreground">
                                 O, regresar a{' '}
-                                <TextLink href={login()} className="text-[#2a3d83] hover:text-[#1e2b5f]">
+                                <TextLink href={route('login')} className="text-[#2a3d83] hover:text-[#1e2b5f]">
                                     iniciar sesión
                                 </TextLink>
                             </div>

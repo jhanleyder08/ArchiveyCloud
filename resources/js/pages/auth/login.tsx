@@ -6,8 +6,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLoginLayout from '@/layouts/auth/auth-login-layout';
-import { register } from '@/routes/index';
-import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle, Eye, EyeOff, User, Lock } from 'lucide-react';
 import { useState } from 'react';
@@ -84,7 +82,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 {/* Options Row */}
                                 <div className="flex items-center justify-between">
                                     {canResetPassword && (
-                                        <TextLink href={request()} className="text-sm text-[#2a3d83] hover:text-[#1e2b5f] transition-colors" tabIndex={5}>
+                                        <TextLink href={route('password.request')} className="text-sm text-[#2a3d83] hover:text-[#1e2b5f] transition-colors" tabIndex={5}>
                                             ¿Olvidaste tu contraseña?
                                         </TextLink>
                                     )}
@@ -116,7 +114,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                             <div className="text-center text-sm text-foreground">
                                 ¿No tienes una cuenta?{' '}
-                                <TextLink href={register()} className="text-[#2a3d83] hover:text-[#1e2b5f]" tabIndex={6}>
+                                <TextLink href={route('register')} className="text-[#2a3d83] hover:text-[#1e2b5f]" tabIndex={6}>
                                     Regístrate
                                 </TextLink>
                             </div>
