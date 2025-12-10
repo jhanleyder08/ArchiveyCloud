@@ -63,6 +63,7 @@ interface Stats {
     active: number;
     pending: number;
     without_role: number;
+    deleted: number; // Usuarios eliminados (soft delete)
 }
 
 interface Role {
@@ -239,6 +240,21 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                 </div>
                                 <div className="p-3 bg-red-100 rounded-full">
                                     <AlertCircle className="h-6 w-6 text-red-600" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {stats.deleted > 0 && (
+                        <div className="bg-white rounded-lg border border-gray-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Eliminados</p>
+                                    <p className="text-2xl font-semibold text-gray-700">{stats.deleted}</p>
+                                    <p className="text-xs text-gray-500 mt-1">Sus correos pueden reutilizarse</p>
+                                </div>
+                                <div className="p-3 bg-gray-100 rounded-full">
+                                    <Trash2 className="h-6 w-6 text-gray-600" />
                                 </div>
                             </div>
                         </div>

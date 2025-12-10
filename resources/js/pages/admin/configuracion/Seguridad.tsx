@@ -64,14 +64,25 @@ export default function Seguridad({ configuraciones, categoria = 'seguridad', ti
     };
 
     return (
-        <AppSidebarLayout
-            breadcrumbs={breadcrumbs}
-            title={titulo}
-            description={`Configuración de ${titulo.toLowerCase()}`}
-        >
+        <AppSidebarLayout breadcrumbs={breadcrumbs}>
             <Head title={titulo} />
 
             <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <Shield className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">{titulo}</h1>
+                            <p className="text-sm text-muted-foreground">
+                                Configuración de {titulo.toLowerCase()}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button

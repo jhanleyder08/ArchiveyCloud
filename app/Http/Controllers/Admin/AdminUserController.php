@@ -38,11 +38,13 @@ class AdminUserController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        // Stats solo de usuarios activos (no eliminados)
         $stats = [
             'total' => User::count(),
             'active' => User::whereNotNull('email_verified_at')->where('active', true)->count(),
             'pending' => User::whereNull('email_verified_at')->count(),
             'without_role' => User::whereNull('role_id')->count(),
+            'deleted' => User::onlyTrashed()->count(), // Usuarios eliminados
         ];
 
         // Obtener todos los roles disponibles para los formularios
@@ -205,6 +207,7 @@ class AdminUserController extends Controller
 
     /**
      * Remove the specified resource from storage.
+     * Usa soft delete para mantener historial y permitir reutilizar emails
      */
     public function destroy(User $user)
     {
@@ -214,10 +217,15 @@ class AdminUserController extends Controller
                 ->with('error', 'No puedes eliminar tu propia cuenta.');
         }
 
+        // Soft delete: marca como eliminado pero mantiene el registro
+        // Esto permite:
+        // 1. Mantener historial de quién creó documentos, expedientes, etc.
+        // 2. Reutilizar el email para crear un nuevo usuario
+        // 3. Cumplir con restricciones de foreign keys
         $user->delete();
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario eliminado exitosamente.');
+            ->with('success', 'Usuario eliminado exitosamente. El correo electrónico puede ser reutilizado para crear un nuevo usuario.');
     }
 
     /**
