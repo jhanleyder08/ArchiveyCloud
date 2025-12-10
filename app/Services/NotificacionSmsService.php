@@ -17,9 +17,24 @@ class NotificacionSmsService
 
     public function __construct()
     {
-        // Configuración del servicio SMS (Twilio, AWS SNS, etc.)
-        // Por ahora usamos configuración simulada
-        $this->apiUrl = config('services.sms.api_url', 'https://api.textlocal.in/send/');
+        // Intentar obtener configuración desde BD primero
+        try {
+            $configBD = ConfiguracionServicio::where('clave', 'servicios_externos')->first();
+            if ($configBD && $configBD->activo) {
+                $config = json_decode($configBD->valor, true);
+                if (isset($config['sms'])) {
+                    $this->apiUrl = $config['sms']['api_url'] ?? 'https://textbelt.com/text';
+                    $this->apiKey = $config['sms']['api_key'] ?? 'demo_key';
+                    $this->sender = $config['sms']['numero_remitente'] ?? 'ArchiveyCloud';
+                    return;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('Error cargando configuración SMS desde BD: ' . $e->getMessage());
+        }
+        
+        // Fallback a configuración de archivo
+        $this->apiUrl = config('services.sms.api_url', 'https://textbelt.com/text');
         $this->apiKey = config('services.sms.api_key', 'demo_key');
         $this->sender = config('services.sms.sender', 'ArchiveyCloud');
     }
@@ -139,10 +154,10 @@ class NotificacionSmsService
     private function enviarSmsApi(string $telefono, string $mensaje): bool
     {
         // En un entorno real, aquí se haría la llamada a la API real
-        // Por ejemplo, Twilio, AWS SNS, TextLocal, etc.
+        // Por ejemplo, Twilio, AWS SNS, TextBelt, Infobip, etc.
         
         // Simulación para desarrollo
-        if (config('app.env') === 'local') {
+        if (config('app.env') === 'local' && $this->apiKey === 'demo_key') {
             Log::info('SMS simulado (desarrollo)', [
                 'telefono' => $this->enmascararTelefono($telefono),
                 'mensaje' => $mensaje,
@@ -152,7 +167,76 @@ class NotificacionSmsService
         }
 
         try {
-            // Ejemplo de implementación con TextLocal
+            // Infobip API
+            if (str_contains($this->apiUrl, 'infobip.com')) {
+                $response = Http::withHeaders([
+                    'Authorization' => 'App ' . $this->apiKey,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ])->post($this->apiUrl, [
+                    'messages' => [
+                        [
+                            'destinations' => [
+                                ['to' => $this->formatearTelefono($telefono)]
+                            ],
+                            'from' => $this->sender,
+                            'text' => $mensaje
+                        ]
+                    ]
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (isset($data['messages'][0]['status']['groupName']) && 
+                        $data['messages'][0]['status']['groupName'] === 'PENDING') {
+                        Log::info('SMS enviado exitosamente vía Infobip', [
+                            'telefono' => $this->enmascararTelefono($telefono),
+                            'messageId' => $data['messages'][0]['messageId'] ?? null
+                        ]);
+                        return true;
+                    }
+                    
+                    Log::error('Infobip error', [
+                        'status' => $data['messages'][0]['status'] ?? 'Unknown',
+                        'response' => $data
+                    ]);
+                    return false;
+                }
+                
+                Log::error('Infobip HTTP error', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+                return false;
+            }
+            
+            // TextBelt API
+            if (str_contains($this->apiUrl, 'textbelt.com')) {
+                $response = Http::asForm()->post($this->apiUrl, [
+                    'phone' => $this->formatearTelefono($telefono),
+                    'message' => $mensaje,
+                    'key' => $this->apiKey,
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    if (isset($data['success']) && $data['success']) {
+                        Log::info('SMS enviado exitosamente vía TextBelt', [
+                            'telefono' => $this->enmascararTelefono($telefono),
+                            'textId' => $data['textId'] ?? null
+                        ]);
+                        return true;
+                    }
+                    
+                    Log::error('TextBelt error', [
+                        'error' => $data['error'] ?? 'Unknown error',
+                        'quota' => $data['quotaRemaining'] ?? null
+                    ]);
+                    return false;
+                }
+            }
+            
+            // Fallback para otros proveedores (TextLocal, etc.)
             $response = Http::asForm()->post($this->apiUrl, [
                 'apikey' => $this->apiKey,
                 'numbers' => $this->formatearTelefono($telefono),
@@ -336,26 +420,18 @@ class NotificacionSmsService
 
         // Si se proporciona teléfono, enviar mensaje de prueba
         if ($telefono && $resultado['configuracion_ok']) {
-            $notificacionPrueba = new Notificacion([
-                'tipo' => 'prueba_sms',
-                'titulo' => 'Prueba SMS ArchiveyCloud',
-                'mensaje' => 'Este es un mensaje de prueba del sistema de notificaciones SMS.',
-                'prioridad' => 'critica',
-            ]);
-
-            $usuarioPrueba = (object)[
-                'id' => 0,
-                'telefono' => $telefono,
-                'name' => 'Usuario Prueba'
-            ];
-
-            $notificacionPrueba->user = $usuarioPrueba;
-            $resultado['mensaje_prueba_enviado'] = $this->enviarSms($notificacionPrueba);
-            
-            if ($resultado['mensaje_prueba_enviado']) {
-                $resultado['detalles'][] = 'Mensaje de prueba enviado exitosamente';
-            } else {
-                $resultado['detalles'][] = 'Error enviando mensaje de prueba';
+            try {
+                $mensaje = 'Prueba SMS desde ArchiveyCloud - ' . now()->format('H:i:s');
+                $resultado['mensaje_prueba_enviado'] = $this->enviarSmsApi($telefono, $mensaje);
+                
+                if ($resultado['mensaje_prueba_enviado']) {
+                    $resultado['detalles'][] = 'Mensaje de prueba enviado exitosamente';
+                } else {
+                    $resultado['detalles'][] = 'Error enviando mensaje de prueba';
+                }
+            } catch (\Exception $e) {
+                $resultado['mensaje_prueba_enviado'] = false;
+                $resultado['detalles'][] = 'Error: ' . $e->getMessage();
             }
         }
 

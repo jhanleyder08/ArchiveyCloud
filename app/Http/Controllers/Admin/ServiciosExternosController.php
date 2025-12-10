@@ -68,8 +68,8 @@ class ServiciosExternosController extends Controller
 
         $usuario = User::findOrFail($request->user_id);
 
-        // Crear notificación de prueba
-        $notificacion = new Notificacion([
+        // Crear y guardar notificación de prueba
+        $notificacion = Notificacion::create([
             'user_id' => $usuario->id,
             'tipo' => 'test_interfaz',
             'titulo' => 'Prueba desde Interfaz Web - ArchiveyCloud',
@@ -78,17 +78,18 @@ class ServiciosExternosController extends Controller
             'estado' => 'pendiente',
             'es_automatica' => true,
             'accion_url' => '/admin/servicios-externos',
-            'datos' => [
+            'datos' => json_encode([
                 'test_interfaz' => true,
                 'enviado_por' => auth()->user()->name,
                 'timestamp' => now()->toISOString()
-            ]
+            ])
         ]);
-
-        $notificacion->user = $usuario;
 
         try {
             $enviado = $this->emailService->enviarNotificacion($notificacion);
+            
+            // No actualizamos el estado ya que solo acepta: pendiente, leida, archivada
+            // El resultado del envío se refleja en la respuesta JSON
             
             return response()->json([
                 'success' => $enviado,
@@ -101,6 +102,11 @@ class ServiciosExternosController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Error en test de email', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
