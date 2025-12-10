@@ -41,11 +41,11 @@ interface Props {
 }
 
 export default function RolesManagement({ roles, permisos }: Props) {
+    const [hasChanges, setHasChanges] = useState(false);
     const [selectedRole, setSelectedRole] = useState<Role | null>(roles[0] || null);
     const [selectedPermisos, setSelectedPermisos] = useState<number[]>(
         selectedRole?.permisos || []
     );
-    const [hasChanges, setHasChanges] = useState(false);
 
     // Cuando cambia el rol seleccionado
     const handleRoleChange = (role: Role) => {

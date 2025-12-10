@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Checkbox } from '@/components/ui/checkbox';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const breadcrumbItems = [
@@ -84,6 +84,8 @@ interface Props {
 export default function AdminUsers({ users, stats, roles, filters }: Props) {
     const { flash } = usePage<{ flash: { success?: string, error?: string } }>().props;
     const permissions = usePermissions();
+    const isFirstRender = useRef(true);
+    
     const [search, setSearch] = useState(filters.search || '');
     const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -94,14 +96,19 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
 
-    // Auto-submit search with debounce
+    // Auto-submit search with debounce - skip first render to avoid unnecessary reload
     useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        
         const timeoutId = setTimeout(() => {
             router.get('/admin/users', {
                 search: searchQuery || undefined,
                 status: statusFilter || undefined
             }, {
-                preserveState: true,
+                preserveState: false, // Importante: no preservar estado para obtener datos frescos
                 replace: true,
             });
         }, 500);
@@ -120,6 +127,9 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
     const handleToggleStatus = (user: User) => {
         router.patch(`/admin/users/${user.id}/toggle-status`, {}, {
             preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['users', 'stats'] });
+            }
         });
     };
 
@@ -168,7 +178,10 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                             </Link>
                         )}
 
-                        <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
+                        <Button 
+                            onClick={() => setShowCreateModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors"
+                        >
                             <Plus className="h-4 w-4" />
                             Nuevo Usuario
                         </Button>
@@ -452,6 +465,129 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                     </div>
                 )}
 
+                {/* Create User Dialog */}
+                <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle>Registrar Nuevo Usuario</DialogTitle>
+                            <DialogDescription>
+                                Complete los datos para crear un nuevo usuario en el sistema.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            setCreateErrors({});
+                            console.log('Enviando formulario:', createForm);
+                            router.post('/admin/users', createForm, {
+                                preserveScroll: true,
+                                onSuccess: () => {
+                                    console.log('Usuario creado exitosamente');
+                                    setShowCreateModal(false);
+                                    setCreateForm({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
+                                    // Forzar recarga de datos frescos
+                                    router.reload({ only: ['users', 'stats'] });
+                                },
+                                onError: (errors) => {
+                                    console.log('Errores de validación:', errors);
+                                    setCreateErrors(errors);
+                                }
+                            });
+                        }}>
+                            <div className="grid gap-4 py-4">
+                                {/* Mostrar errores generales */}
+                                {Object.keys(createErrors).length > 0 && (
+                                    <Alert variant="destructive">
+                                        <AlertDescription>
+                                            {Object.values(createErrors).map((error, i) => (
+                                                <div key={i}>{error}</div>
+                                            ))}
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+                                <div className="grid gap-2">
+                                    <Label htmlFor="create-name">Nombre completo</Label>
+                                    <Input
+                                        id="create-name"
+                                        value={createForm.name}
+                                        onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                                        placeholder="Nombre del usuario"
+                                    />
+                                    {createErrors.name && <InputError message={createErrors.name} />}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="create-email">Correo electrónico</Label>
+                                    <Input
+                                        id="create-email"
+                                        type="email"
+                                        value={createForm.email}
+                                        onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                                        placeholder="correo@ejemplo.com"
+                                    />
+                                    {createErrors.email && <InputError message={createErrors.email} />}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="create-role">Rol</Label>
+                                    <Select
+                                        value={createForm.role_id}
+                                        onValueChange={(value) => setCreateForm({ ...createForm, role_id: value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar rol" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {roles.map((role) => (
+                                                <SelectItem key={role.id} value={role.id.toString()}>
+                                                    {role.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {createErrors.role_id && <InputError message={createErrors.role_id} />}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="create-password">Contraseña</Label>
+                                    <Input
+                                        id="create-password"
+                                        type="password"
+                                        value={createForm.password}
+                                        onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                                        placeholder="••••••••"
+                                    />
+                                    {createErrors.password && <InputError message={createErrors.password} />}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="create-password-confirm">Confirmar contraseña</Label>
+                                    <Input
+                                        id="create-password-confirm"
+                                        type="password"
+                                        value={createForm.password_confirmation}
+                                        onChange={(e) => setCreateForm({ ...createForm, password_confirmation: e.target.value })}
+                                        placeholder="••••••••"
+                                    />
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="create-verify-email"
+                                        checked={createForm.verify_email}
+                                        onCheckedChange={(checked) => setCreateForm({ ...createForm, verify_email: checked as boolean })}
+                                    />
+                                    <Label htmlFor="create-verify-email" className="text-sm font-normal">
+                                        Marcar email como verificado
+                                    </Label>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
+                                    Cancelar
+                                </Button>
+                                <Button type="submit" className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
+                                    Crear Usuario
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
                 {/* Delete User Dialog */}
                 <Dialog open={!!showDeleteModal} onOpenChange={(open) => !open && setShowDeleteModal(null)}>
                     <DialogContent>
@@ -477,6 +613,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                             preserveScroll: true,
                                             onSuccess: () => {
                                                 setShowDeleteModal(null);
+                                                router.reload({ only: ['users', 'stats'] });
                                             }
                                         });
                                     }

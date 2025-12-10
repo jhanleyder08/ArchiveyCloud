@@ -221,6 +221,14 @@ class PerformanceOptimization
             return;
         }
 
+        // IMPORTANTE: No cachear respuestas de Inertia para que los datos se actualicen en tiempo real
+        if ($request->header('X-Inertia') || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
+            return;
+        }
+
         $path = $request->path();
 
         // Caché específico por tipo de contenido
@@ -238,14 +246,16 @@ class PerformanceOptimization
             $response->headers->set('Cache-Control', 'public, max-age=60'); // 1 minuto
         }
 
-        // ETag para validación de caché
-        $etag = md5($response->getContent());
-        $response->headers->set('ETag', '"' . $etag . '"');
+        // ETag para validación de caché (solo para contenido estático, no para Inertia)
+        if ($this->isStaticAsset($request)) {
+            $etag = md5($response->getContent());
+            $response->headers->set('ETag', '"' . $etag . '"');
 
-        // Verificar If-None-Match para 304 Not Modified
-        if ($request->header('If-None-Match') === '"' . $etag . '"') {
-            $response->setStatusCode(304);
-            $response->setContent('');
+            // Verificar If-None-Match para 304 Not Modified
+            if ($request->header('If-None-Match') === '"' . $etag . '"') {
+                $response->setStatusCode(304);
+                $response->setContent('');
+            }
         }
     }
 
