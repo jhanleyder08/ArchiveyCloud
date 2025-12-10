@@ -44,7 +44,11 @@ class ImportacionDatos extends Model
         'metadatos' => 'array',
         'fecha_inicio' => 'datetime',
         'fecha_finalizacion' => 'datetime',
-        'porcentaje_avance' => 'decimal:2'
+        'porcentaje_avance' => 'float',
+        'total_registros' => 'integer',
+        'registros_procesados' => 'integer',
+        'registros_exitosos' => 'integer',
+        'registros_fallidos' => 'integer'
     ];
 
     // Estados

@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use League\Csv\Reader;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Carbon\Carbon;
 
 class ImportacionDatosService
@@ -191,41 +193,43 @@ class ImportacionDatosService
      */
     private function procesarExcel(ImportacionDatos $importacion, string $rutaArchivo): array
     {
-        Log::info('Iniciando procesarExcel con PHPExcel', ['importacion_id' => $importacion->id, 'ruta' => $rutaArchivo]);
+        Log::info('Iniciando procesarExcel con PhpSpreadsheet', ['importacion_id' => $importacion->id, 'ruta' => $rutaArchivo]);
         try {
             if (!file_exists($rutaArchivo)) {
                 throw new \Exception("El archivo no existe en la ruta especificada: $rutaArchivo");
             }
 
-            // Cargar archivo usando PHPExcel
-            $objPHPExcel = \PHPExcel_IOFactory::load($rutaArchivo);
-            Log::info('PHPExcel cargado correctamente');
+            // Cargar archivo usando PhpSpreadsheet
+            $spreadsheet = IOFactory::load($rutaArchivo);
+            Log::info('PhpSpreadsheet cargado correctamente');
             
-            $sheet = $objPHPExcel->getActiveSheet();
+            $sheet = $spreadsheet->getActiveSheet();
             
-            // Obtener encabezados
+            // Obtener encabezados de la primera fila
             $headers = [];
-            foreach ($sheet->getRowIterator(1, 1) as $row) {
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(false);
-                foreach ($cellIterator as $cell) {
-                    $headers[] = $cell->getValue();
-                }
+            $highestColumn = $sheet->getHighestColumn();
+            $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+            
+            for ($col = 1; $col <= $highestColumnIndex; $col++) {
+                $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                $cellValue = $sheet->getCell($columnLetter . '1')->getValue();
+                $headers[] = $cellValue;
             }
             Log::info('Encabezados obtenidos', ['headers' => $headers]);
             
-            // Obtener datos
+            // Obtener datos (desde la fila 2 en adelante)
             $registros = [];
-            foreach ($sheet->getRowIterator(2) as $row) {
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(false);
+            $highestRow = $sheet->getHighestRow();
+            
+            for ($row = 2; $row <= $highestRow; $row++) {
                 $datos = [];
-                $colIndex = 0;
-                foreach ($cellIterator as $cell) {
-                    if (isset($headers[$colIndex])) {
-                        $datos[$headers[$colIndex]] = $cell->getValue();
+                for ($col = 1; $col <= $highestColumnIndex; $col++) {
+                    $headerIndex = $col - 1;
+                    if (isset($headers[$headerIndex])) {
+                        $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+                        $cellValue = $sheet->getCell($columnLetter . $row)->getValue();
+                        $datos[$headers[$headerIndex]] = $cellValue;
                     }
-                    $colIndex++;
                 }
                 
                 // Ignorar filas vacías

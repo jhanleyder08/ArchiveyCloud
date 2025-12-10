@@ -442,9 +442,9 @@ export default function ImportacionesIndex({ importaciones, filtros, tipos, esta
                                                         <div className="space-y-1">
                                                             <div className="flex items-center justify-between text-sm">
                                                                 <span>{importacion.registros_procesados} / {importacion.total_registros}</span>
-                                                                <span className="font-medium">{importacion.porcentaje_avance.toFixed(1)}%</span>
+                                                                <span className="font-medium">{parseFloat(importacion.porcentaje_avance || 0).toFixed(1)}%</span>
                                                             </div>
-                                                            <Progress value={importacion.porcentaje_avance} className="h-2" />
+                                                            <Progress value={parseFloat(importacion.porcentaje_avance || 0)} className="h-2" />
                                                         </div>
                                                     ) : importacion.estado === 'completada' ? (
                                                         <div className="text-sm">
