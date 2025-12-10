@@ -1,5 +1,5 @@
 import { ShieldX, ArrowLeft, Home } from 'lucide-react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 
 interface AccessDeniedProps {
@@ -17,6 +17,17 @@ export default function AccessDenied({
     showHomeButton = true,
     backUrl,
 }: AccessDeniedProps) {
+    // Función segura para volver atrás
+    const handleGoBack = () => {
+        if (backUrl) {
+            router.visit(backUrl);
+        } else if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            router.visit('/dashboard');
+        }
+    };
+
     return (
         <div className="min-h-[60vh] flex items-center justify-center p-4">
             <div className="max-w-lg w-full text-center">
@@ -52,7 +63,7 @@ export default function AccessDenied({
                     {showBackButton && (
                         <Button
                             variant="outline"
-                            onClick={() => window.history.back()}
+                            onClick={handleGoBack}
                             className="flex items-center gap-2"
                         >
                             <ArrowLeft className="w-4 h-4" />

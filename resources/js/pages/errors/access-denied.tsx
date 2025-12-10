@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { ShieldX, ArrowLeft, Home, AlertTriangle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
@@ -18,6 +18,16 @@ export default function AccessDenied({
     userRole,
     isConsulta,
 }: Props) {
+    // Función segura para volver atrás
+    const handleGoBack = () => {
+        // Verificar si hay historial disponible
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            // Si no hay historial, ir al dashboard
+            router.visit('/dashboard');
+        }
+    };
     return (
         <AppLayout breadcrumbs={[
             { title: 'Dashboard', href: '/dashboard' },
@@ -109,7 +119,7 @@ export default function AccessDenied({
                         <Button
                             variant="outline"
                             size="lg"
-                            onClick={() => window.history.back()}
+                            onClick={handleGoBack}
                             className="flex items-center gap-2 text-lg px-8"
                         >
                             <ArrowLeft className="w-5 h-5" />
