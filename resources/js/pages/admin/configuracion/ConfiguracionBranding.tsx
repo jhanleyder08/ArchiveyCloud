@@ -120,6 +120,7 @@ export default function ConfiguracionBranding({ configuraciones, logos }: Props)
         }, 200);
 
         router.post('/admin/configuracion/branding/upload', formData, {
+            preserveScroll: true,
             onSuccess: () => {
                 setUploadProgress(100);
                 setTimeout(() => {
@@ -148,6 +149,7 @@ export default function ConfiguracionBranding({ configuraciones, logos }: Props)
 
     const deleteLogo = (tipo: 'principal' | 'favicon' | 'login') => {
         router.delete(`/admin/configuracion/branding/logo/${tipo}`, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success('Logo eliminado exitosamente');
             },

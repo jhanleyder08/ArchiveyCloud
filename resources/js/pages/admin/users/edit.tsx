@@ -47,9 +47,6 @@ export default function EditUser({ user, roles }: Props) {
         e.preventDefault();
         put(`/admin/users/${user.id}`, {
             preserveScroll: true,
-            onSuccess: () => {
-                // Redirigir después de guardar exitosamente
-            },
         });
     };
 

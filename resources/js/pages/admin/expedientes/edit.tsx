@@ -85,6 +85,7 @@ export default function Edit({ expediente, opciones }: Props) {
             responsable_id: parseInt(data.responsable_id) || null,
         };
         router.put('/admin/expedientes/' + expediente.id, formData, {
+            preserveScroll: true,
             onSuccess: () => toast.success('Expediente actualizado'),
             onError: () => toast.error('Error al actualizar'),
             onFinish: () => setIsSubmitting(false),

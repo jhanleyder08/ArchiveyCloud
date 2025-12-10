@@ -104,6 +104,7 @@ export default function RolesManagement({ roles, permisos }: Props) {
         router.put(`/admin/roles/${selectedRole.id}/permissions`, {
             permisos: selectedPermisos,
         }, {
+            preserveScroll: true,
             onSuccess: () => {
                 setHasChanges(false);
             },

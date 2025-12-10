@@ -68,6 +68,7 @@ export default function AdminTRDCreate({ estados, ccds = [] }: Props) {
         };
 
         router.post('/admin/trd', formData, {
+            preserveScroll: true,
             onError: (errors) => {
                 setErrors(errors);
                 setProcessing(false);

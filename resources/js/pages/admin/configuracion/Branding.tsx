@@ -135,6 +135,7 @@ export default function ConfiguracionBranding({
 
             await router.post(route('admin.configuracion.branding.upload'), formData, {
                 forceFormData: true,
+                preserveScroll: true,
                 onSuccess: () => {
                     toast.success(`${tipo.replace('_', ' ')} subido exitosamente`);
                     if (fileInputs[tipo].current) {

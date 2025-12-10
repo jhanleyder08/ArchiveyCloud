@@ -200,6 +200,8 @@ export default function CertificadosIndex({ certificados, filtros, usuarios, est
         try {
             await router.post(route('admin.firmas.certificado.revocar', certificado.id), {
                 razon: 'Revocación manual por administrador'
+            }, {
+                preserveScroll: true
             });
         } finally {
             setProcesando(false);

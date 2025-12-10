@@ -182,6 +182,7 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
 
     const handleDelete = (serie: SerieDocumental) => {
         router.delete(`/admin/series/${serie.id}`, {
+            preserveScroll: true,
             onSuccess: () => {
                 setShowDeleteModal(null);
                 toast.success('Serie documental eliminada exitosamente');
@@ -195,6 +196,7 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
 
     const handleDuplicate = (serie: SerieDocumental) => {
         router.post(`/admin/series/${serie.id}/duplicate`, {}, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success('Serie documental duplicada exitosamente');
             },
@@ -312,6 +314,7 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                 };
                                 
                                 router.post('/admin/series', formData, {
+                                     preserveScroll: true,
                                      onSuccess: () => {
                                         setShowCreateModal(false);
                                         setCreateForm({
@@ -862,6 +865,7 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                             <form onSubmit={(e) => {
                                 e.preventDefault();
                                 router.patch(`/admin/series/${showEditModal.id}`, editForm, {
+                                    preserveScroll: true,
                                     onSuccess: () => {
                                         setShowEditModal(null);
                                         toast.success('Serie documental actualizada exitosamente');

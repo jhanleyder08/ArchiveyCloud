@@ -119,7 +119,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
 
     const handleToggleStatus = (user: User) => {
         router.patch(`/admin/users/${user.id}/toggle-status`, {}, {
-            preserveState: true,
+            preserveScroll: true,
         });
     };
 
@@ -474,7 +474,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                 onClick={() => {
                                     if (showDeleteModal) {
                                         router.delete(`/admin/users/${showDeleteModal.id}`, {
-                                            preserveState: true,
+                                            preserveScroll: true,
                                             onSuccess: () => {
                                                 setShowDeleteModal(null);
                                             }

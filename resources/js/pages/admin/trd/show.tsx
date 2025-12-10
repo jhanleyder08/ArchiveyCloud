@@ -85,6 +85,7 @@ export default function AdminTRDShow({ trd, versiones, estadisticas, tieneDocume
 
     const handleDelete = () => {
         router.delete(`/admin/trd/${trd.id}`, {
+            preserveScroll: true,
             onFinish: () => setShowDeleteModal(false)
         });
     };

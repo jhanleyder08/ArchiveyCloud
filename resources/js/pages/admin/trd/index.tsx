@@ -200,6 +200,7 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
 
     const handleDelete = (trd: TRD) => {
         router.delete(`/admin/trd/${trd.id}`, {
+            preserveScroll: true,
             onSuccess: () => {
                 setShowDeleteModal(null);
                 toast.success('TRD eliminada exitosamente');
@@ -238,6 +239,7 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
 
     const handleDuplicate = (trd: TRD) => {
         router.post(`/admin/trd/${trd.id}/duplicate`, {}, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success('TRD duplicada exitosamente');
             },
@@ -350,6 +352,7 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                 console.log('Enviando datos:', formData);
                                 
                                 router.post('/admin/trd', formData, {
+                                     preserveScroll: true,
                                      onSuccess: () => {
                                         setShowCreateModal(false);
                                         setCreateForm({

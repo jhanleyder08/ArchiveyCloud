@@ -121,6 +121,7 @@ export default function VerImportacion({ importacion, archivosGenerados, puedeEd
     const eliminarImportacion = () => {
         if (confirm('¿Estás seguro de que deseas eliminar esta importación?')) {
             router.delete(`/admin/importaciones/${importacion.id}`, {
+                preserveScroll: true,
                 onSuccess: () => router.visit('/admin/importaciones/listado')
             });
         }

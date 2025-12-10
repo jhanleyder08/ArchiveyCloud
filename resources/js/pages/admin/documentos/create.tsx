@@ -180,6 +180,7 @@ export default function CreateDocument({ opciones }: CreateDocumentProps) {
         }, 200);
 
         router.post('/admin/documentos', formData, {
+            preserveScroll: true,
             onSuccess: () => {
                 setUploadProgress(100);
                 toast.success('Documento creado exitosamente');

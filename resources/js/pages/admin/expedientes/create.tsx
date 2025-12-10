@@ -113,6 +113,7 @@ export default function CreateExpediente({ opciones }: CreateExpedienteProps) {
         };
 
         router.post('/admin/expedientes', formData, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success('Expediente creado exitosamente');
             },

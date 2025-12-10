@@ -186,6 +186,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
 
     const handleDelete = (subserie: SubserieDocumental) => {
         router.delete(`/admin/subseries/${subserie.id}`, {
+            preserveScroll: true,
             onSuccess: () => {
                 setShowDeleteModal(null);
                 toast.success('Subserie documental eliminada exitosamente');
@@ -199,6 +200,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
 
     const handleDuplicate = (subserie: SubserieDocumental) => {
         router.post(`/admin/subseries/${subserie.id}/duplicate`, {}, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success('Subserie documental duplicada exitosamente');
             },
@@ -211,6 +213,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
 
     const handleToggleActive = (subserie: SubserieDocumental) => {
         router.patch(`/admin/subseries/${subserie.id}/toggle-active`, {}, {
+            preserveScroll: true,
             onSuccess: () => {
                 const estado = !subserie.activa ? 'activada' : 'desactivada';
                 toast.success(`Subserie documental ${estado} exitosamente`);
@@ -288,6 +291,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                             <form onSubmit={(e) => {
                                 e.preventDefault();
                                 router.post('/admin/subseries', createForm, {
+                                    preserveScroll: true,
                                     onSuccess: () => {
                                         setShowCreateModal(false);
                                         setCreateForm({
@@ -699,6 +703,7 @@ export default function AdminSubseriesIndex({ data, stats, series, areas, flash,
                             <form onSubmit={(e) => {
                                 e.preventDefault();
                                 router.patch(`/admin/subseries/${showEditModal.id}`, editForm, {
+                                    preserveScroll: true,
                                     onSuccess: () => {
                                         setShowEditModal(null);
                                         toast.success('Subserie documental actualizada exitosamente');

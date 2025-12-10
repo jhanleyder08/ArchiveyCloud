@@ -553,6 +553,7 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
         if (!versionToAction) return;
 
         router.delete(`/admin/ccd/version/${versionToAction.id}`, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success(`Versión ${versionToAction.version} eliminada exitosamente`);
                 setShowConfirmDelete(false);
@@ -573,6 +574,7 @@ export default function CCDShow({ ccd, estructura, estadisticas, errores_validac
         if (!versionToAction) return;
 
         router.post(`/admin/ccd/${ccd.id}/revertir/${versionToAction.id}`, {}, {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.success(`CCD revertido a versión ${versionToAction.version}`);
                 setShowConfirmRevert(false);
