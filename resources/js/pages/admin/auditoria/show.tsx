@@ -14,20 +14,19 @@ interface PistaAuditoria {
     fecha_hora: string;
     usuario_id: number;
     accion: string;
-    modelo: string;
+    modelo?: string;
     descripcion: string;
-    nivel_riesgo: string;
-    categoria_evento: string;
+    resultado: 'exitoso' | 'fallido' | 'bloqueado';
+    modulo?: string;
     ip_address: string;
     pais: string;
-    ciudad: string;
-    dispositivo_tipo: string;
+    dispositivo: string;
     navegador: string;
     user_agent: string;
     hash_integridad: string;
-    detalles: Record<string, any>;
-    metadatos_cambios: Record<string, any>;
-    contexto_adicional: Record<string, any>;
+    valores_anteriores?: Record<string, any>;
+    valores_nuevos?: Record<string, any>;
+    contexto_adicional?: Record<string, any>;
     usuario: {
         id: number;
         name: string;
@@ -40,7 +39,7 @@ interface EventoRelacionado {
     fecha_hora: string;
     accion: string;
     descripcion: string;
-    nivel_riesgo: string;
+    resultado: string;
     usuario: {
         id: number;
         name: string;
@@ -76,30 +75,26 @@ interface Props {
 }
 
 export default function AuditoriaShow({ evento, eventos_relacionados, analisis }: Props) {
-    const getBadgeVariant = (nivelRiesgo: string) => {
-        switch (nivelRiesgo) {
-            case 'crítico':
+    const getBadgeVariant = (resultado: string) => {
+        switch (resultado) {
+            case 'bloqueado':
                 return 'destructive';
-            case 'alto':
+            case 'fallido':
                 return 'destructive';
-            case 'medio':
-                return 'default';
-            case 'bajo':
+            case 'exitoso':
                 return 'secondary';
             default:
                 return 'outline';
         }
     };
 
-    const getRiskIcon = (nivelRiesgo: string) => {
-        switch (nivelRiesgo) {
-            case 'crítico':
+    const getRiskIcon = (resultado: string) => {
+        switch (resultado) {
+            case 'bloqueado':
                 return <AlertTriangle className="h-5 w-5 text-red-500" />;
-            case 'alto':
+            case 'fallido':
                 return <AlertTriangle className="h-5 w-5 text-orange-500" />;
-            case 'medio':
-                return <Clock className="h-5 w-5 text-yellow-500" />;
-            case 'bajo':
+            case 'exitoso':
                 return <Shield className="h-5 w-5 text-green-500" />;
             default:
                 return <Shield className="h-5 w-5 text-gray-500" />;
@@ -147,15 +142,15 @@ export default function AuditoriaShow({ evento, eventos_relacionados, analisis }
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                        {getRiskIcon(evento.nivel_riesgo)}
-                        <Badge variant={getBadgeVariant(evento.nivel_riesgo)} className="text-base px-3 py-1">
-                            {evento.nivel_riesgo.toUpperCase()}
+                        {getRiskIcon(evento.resultado)}
+                        <Badge variant={getBadgeVariant(evento.resultado)} className="text-base px-3 py-1">
+                            {evento.resultado.toUpperCase()}
                         </Badge>
                     </div>
                 </div>
 
                 {/* Alertas de Riesgo */}
-                {evento.nivel_riesgo === 'crítico' && (
+                {(evento.resultado === 'bloqueado' || evento.resultado === 'fallido') && (
                     <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
@@ -454,7 +449,7 @@ export default function AuditoriaShow({ evento, eventos_relacionados, analisis }
                                         <div className="flex items-center justify-between">
                                             <span className="text-gray-600">Nivel de Riesgo:</span>
                                             <Badge variant={getBadgeVariant(analisis.nivel_riesgo)} className="text-base">
-                                                {analisis.nivel_riesgo.toUpperCase()}
+                                                {analisis.nivel_riesgo?.toUpperCase() || 'BAJO'}
                                             </Badge>
                                         </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Search, Filter, Eye, AlertTriangle, Shield, Clock, User, Globe, Monitor, RefreshCw, BarChart3, TrendingUp } from 'lucide-react';
+import { Search, Filter, Eye, AlertTriangle, Shield, Clock, User, Globe, Monitor, RefreshCw, BarChart3, TrendingUp, FileText, Briefcase } from 'lucide-react';
 import AppLayout from '../../../layouts/app/app-sidebar-layout';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -18,13 +18,13 @@ interface PistaAuditoria {
     accion: string;
     modelo: string;
     descripcion: string;
-    nivel_riesgo: string;
-    categoria_evento: string;
+    resultado: string; // exitoso, fallido, bloqueado
+    modulo: string;
     ip_address: string;
     pais: string;
-    ciudad: string;
-    dispositivo_tipo: string;
     navegador: string;
+    dispositivo: string;
+    sistema_operativo: string;
     usuario: {
         id: number;
         name: string;
@@ -46,7 +46,7 @@ interface Estadisticas {
     ips_unicas: number;
     acciones_mas_frecuentes: Array<{accion: string, total: number}>;
     actividad_por_dia: Array<{fecha: string, total: number}>;
-    distribucion_riesgos: Array<{nivel_riesgo: string, total: number}>;
+    distribucion_resultados: Array<{resultado: string, total: number}>;
 }
 
 interface Props {
@@ -63,13 +63,13 @@ interface Props {
         fecha_fin?: string;
         usuario_id?: string;
         accion?: string;
-        nivel_riesgo?: string;
-        categoria_evento?: string;
+        resultado?: string;
+        modulo?: string;
         ip_address?: string;
         buscar?: string;
     };
-    niveles_riesgo: string[];
-    categorias_evento: string[];
+    resultados?: string[];
+    modulos?: string[];
 }
 
 const COLORS = {
@@ -81,33 +81,29 @@ const COLORS = {
 
 const RISK_COLORS = ['#dc2626', '#ea580c', '#d97706', '#16a34a'];
 
-export default function AuditoriaIndex({ eventos, estadisticas, usuarios, acciones, filtros, niveles_riesgo, categorias_evento }: Props) {
+export default function AuditoriaIndex({ eventos, estadisticas, usuarios, acciones, filtros, resultados, modulos }: Props) {
     const [autoRefresh, setAutoRefresh] = useState(false);
 
-    const getBadgeVariant = (nivelRiesgo: string) => {
-        switch (nivelRiesgo) {
-            case 'crítico':
+    const getBadgeVariant = (resultado: string) => {
+        switch (resultado) {
+            case 'bloqueado':
                 return 'destructive';
-            case 'alto':
+            case 'fallido':
                 return 'destructive';
-            case 'medio':
-                return 'default';
-            case 'bajo':
+            case 'exitoso':
                 return 'secondary';
             default:
                 return 'outline';
         }
     };
 
-    const getRiskIcon = (nivelRiesgo: string) => {
-        switch (nivelRiesgo) {
-            case 'crítico':
+    const getRiskIcon = (resultado: string) => {
+        switch (resultado) {
+            case 'bloqueado':
                 return <AlertTriangle className="h-4 w-4 text-red-500" />;
-            case 'alto':
+            case 'fallido':
                 return <AlertTriangle className="h-4 w-4 text-orange-500" />;
-            case 'medio':
-                return <Clock className="h-4 w-4 text-yellow-500" />;
-            case 'bajo':
+            case 'exitoso':
                 return <Shield className="h-4 w-4 text-green-500" />;
             default:
                 return <Shield className="h-4 w-4 text-gray-500" />;
@@ -161,21 +157,21 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
     }, [autoRefresh]);
 
     // Preparar datos para gráficos
-    const riskDistributionData = estadisticas.distribucion_riesgos.map(item => ({
-        name: item.nivel_riesgo,
+    const riskDistributionData = estadisticas.distribucion_resultados?.map(item => ({
+        name: item.resultado,
         value: item.total,
-        color: COLORS[item.nivel_riesgo as keyof typeof COLORS] || '#gray'
-    }));
+        color: item.resultado === 'fallido' ? '#dc2626' : item.resultado === 'bloqueado' ? '#ea580c' : '#16a34a'
+    })) || [];
 
-    const activityData = estadisticas.actividad_por_dia.slice(-7).map(item => ({
+    const activityData = estadisticas.actividad_por_dia?.slice(-7).map(item => ({
         fecha: new Date(item.fecha).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }),
         eventos: item.total
-    }));
+    })) || [];
 
-    const topActionsData = estadisticas.acciones_mas_frecuentes.map(item => ({
+    const topActionsData = estadisticas.acciones_mas_frecuentes?.map(item => ({
         accion: item.accion.replace('_', ' '),
         total: item.total
-    }));
+    })) || [];
 
     return (
         <AppLayout>
@@ -354,18 +350,16 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Nivel de Riesgo</label>
-                                        <Select value={filtros.nivel_riesgo || 'all'} onValueChange={(value) => handleFiltrar('nivel_riesgo', value)}>
+                                        <label className="text-sm font-medium">Resultado</label>
+                                        <Select value={filtros.resultado || 'all'} onValueChange={(value) => handleFiltrar('resultado', value)}>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Todos los niveles" />
+                                                <SelectValue placeholder="Todos los resultados" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="all">Todos los niveles</SelectItem>
-                                                {niveles_riesgo.map((nivel) => (
-                                                    <SelectItem key={nivel} value={nivel}>
-                                                        {nivel}
-                                                    </SelectItem>
-                                                ))}
+                                                <SelectItem value="all">Todos los resultados</SelectItem>
+                                                <SelectItem value="exitoso">Exitoso</SelectItem>
+                                                <SelectItem value="fallido">Fallido</SelectItem>
+                                                <SelectItem value="bloqueado">Bloqueado</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -418,9 +412,9 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
                                                 <TableRow key={evento.id}>
                                                     <TableCell>
                                                         <div className="flex items-center space-x-2">
-                                                            {getRiskIcon(evento.nivel_riesgo)}
-                                                            <Badge variant={getBadgeVariant(evento.nivel_riesgo)}>
-                                                                {evento.nivel_riesgo}
+                                                            {getRiskIcon(evento.resultado)}
+                                                            <Badge variant={getBadgeVariant(evento.resultado)}>
+                                                                {evento.resultado}
                                                             </Badge>
                                                         </div>
                                                     </TableCell>
@@ -440,7 +434,7 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center space-x-2">
-                                                            {getCategoryIcon(evento.categoria_evento)}
+                                                            {getCategoryIcon(evento.modulo || 'general')}
                                                             <span className="font-medium">{evento.accion.replace('_', ' ')}</span>
                                                         </div>
                                                     </TableCell>

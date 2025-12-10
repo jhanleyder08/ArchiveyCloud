@@ -31,7 +31,7 @@ class AuditoriaAvanzadaController extends Controller
     {
         $filtros = $request->only([
             'fecha_inicio', 'fecha_fin', 'usuario_id', 'accion', 
-            'nivel_riesgo', 'categoria_evento', 'ip_address', 'buscar'
+            'resultado', 'modulo', 'ip_address', 'buscar'
         ]);
 
         // Aplicar filtros de fecha por defecto (últimos 7 días)
@@ -62,12 +62,12 @@ class AuditoriaAvanzadaController extends Controller
             $query->where('accion', $filtros['accion']);
         }
 
-        if (!empty($filtros['nivel_riesgo'])) {
-            $query->where('nivel_riesgo', $filtros['nivel_riesgo']);
+        if (!empty($filtros['resultado'])) {
+            $query->where('resultado', $filtros['resultado']);
         }
 
-        if (!empty($filtros['categoria_evento'])) {
-            $query->where('categoria_evento', $filtros['categoria_evento']);
+        if (!empty($filtros['modulo'])) {
+            $query->where('modulo', $filtros['modulo']);
         }
 
         if (!empty($filtros['ip_address'])) {
@@ -107,14 +107,21 @@ class AuditoriaAvanzadaController extends Controller
             ->orderBy('accion')
             ->pluck('accion');
 
+        // Módulos disponibles
+        $modulos = PistaAuditoria::select('modulo')
+            ->distinct()
+            ->whereNotNull('modulo')
+            ->orderBy('modulo')
+            ->pluck('modulo');
+
         return Inertia::render('admin/auditoria/index', [
             'eventos' => $eventos,
             'estadisticas' => $estadisticas,
             'usuarios' => $usuarios,
             'acciones' => $acciones,
             'filtros' => $filtros,
-            'niveles_riesgo' => ['bajo', 'medio', 'alto', 'crítico'],
-            'categorias_evento' => ['autenticacion', 'gestion_usuarios', 'gestion_documentos', 'gestion_expedientes', 'seguridad', 'sistema', 'general']
+            'resultados' => ['exitoso', 'fallido', 'bloqueado'],
+            'modulos' => $modulos
         ]);
     }
 
@@ -125,11 +132,16 @@ class AuditoriaAvanzadaController extends Controller
     {
         $auditoria->load(['usuario:id,name,email']);
 
+        // Convertir fecha_hora a Carbon si es necesario
+        $fechaEvento = $auditoria->fecha_hora instanceof \Carbon\Carbon 
+            ? $auditoria->fecha_hora 
+            : \Carbon\Carbon::parse($auditoria->fecha_hora);
+
         // Eventos relacionados del mismo usuario
         $eventosRelacionados = PistaAuditoria::where('usuario_id', $auditoria->usuario_id)
             ->where('id', '!=', $auditoria->id)
-            ->where('fecha_hora', '>=', $auditoria->fecha_hora->subHours(2))
-            ->where('fecha_hora', '<=', $auditoria->fecha_hora->addHours(2))
+            ->where('fecha_hora', '>=', $fechaEvento->copy()->subHours(2))
+            ->where('fecha_hora', '<=', $fechaEvento->copy()->addHours(2))
             ->with(['usuario:id,name'])
             ->orderBy('fecha_hora', 'desc')
             ->limit(10)
@@ -221,7 +233,7 @@ class AuditoriaAvanzadaController extends Controller
             'fecha_inicio' => 'required|date',
             'fecha_fin' => 'required|date|after_or_equal:fecha_inicio',
             'usuario_id' => 'nullable|exists:users,id',
-            'nivel_riesgo' => 'nullable|string',
+            'resultado' => 'nullable|string|in:exitoso,fallido,bloqueado',
             'incluir_estadisticas' => 'boolean',
             'incluir_tendencias' => 'boolean',
             'incluir_recomendaciones' => 'boolean',
@@ -255,7 +267,7 @@ class AuditoriaAvanzadaController extends Controller
         try {
             $metricas = [
                 'eventos_hoy' => PistaAuditoria::whereDate('fecha_hora', today())->count(),
-                'eventos_criticos_hoy' => PistaAuditoria::where('nivel_riesgo', 'crítico')
+                'eventos_criticos_hoy' => PistaAuditoria::where('resultado', 'bloqueado')
                     ->whereDate('fecha_hora', today())->count(),
                 'usuarios_activos_hoy' => PistaAuditoria::whereDate('fecha_hora', today())
                     ->distinct('usuario_id')->count(),
@@ -289,8 +301,8 @@ class AuditoriaAvanzadaController extends Controller
 
         return [
             'total_eventos' => $query->count(),
-            'eventos_criticos' => $query->clone()->where('nivel_riesgo', 'crítico')->count(),
-            'eventos_alto_riesgo' => $query->clone()->where('nivel_riesgo', 'alto')->count(),
+            'eventos_criticos' => $query->clone()->where('resultado', 'fallido')->count(),
+            'eventos_alto_riesgo' => $query->clone()->where('resultado', 'bloqueado')->count(),
             'usuarios_unicos' => $query->clone()->distinct('usuario_id')->count(),
             'ips_unicas' => $query->clone()->distinct('ip_address')->count(),
             'acciones_mas_frecuentes' => $query->clone()
@@ -304,9 +316,9 @@ class AuditoriaAvanzadaController extends Controller
                 ->groupBy('fecha')
                 ->orderBy('fecha')
                 ->get(),
-            'distribucion_riesgos' => $query->clone()
-                ->selectRaw('nivel_riesgo, COUNT(*) as total')
-                ->groupBy('nivel_riesgo')
+            'distribucion_resultados' => $query->clone()
+                ->selectRaw('resultado, COUNT(*) as total')
+                ->groupBy('resultado')
                 ->get()
         ];
     }
@@ -316,23 +328,28 @@ class AuditoriaAvanzadaController extends Controller
      */
     private function analizarEvento(PistaAuditoria $auditoria): array
     {
+        // Convertir fecha_hora a Carbon si es necesario
+        $fechaEvento = $auditoria->fecha_hora instanceof \Carbon\Carbon 
+            ? $auditoria->fecha_hora 
+            : \Carbon\Carbon::parse($auditoria->fecha_hora);
+
         return [
-            'nivel_riesgo' => $auditoria->nivel_riesgo ?? 'bajo',
-            'categoria' => $auditoria->categoria_evento ?? 'general',
+            'nivel_riesgo' => $auditoria->resultado === 'fallido' ? 'alto' : ($auditoria->resultado === 'bloqueado' ? 'critico' : 'bajo'),
+            'categoria' => $auditoria->modulo ?? 'general',
             'contexto_geografico' => [
                 'pais' => $auditoria->pais ?? 'Desconocido',
-                'ciudad' => $auditoria->ciudad ?? 'Desconocido',
+                'ciudad' => 'N/A',
                 'ip' => $auditoria->ip_address
             ],
             'contexto_tecnico' => [
-                'dispositivo' => $auditoria->dispositivo_tipo ?? 'Desconocido',
+                'dispositivo' => $auditoria->dispositivo ?? 'Desconocido',
                 'navegador' => $auditoria->navegador ?? 'Desconocido',
                 'user_agent' => $auditoria->user_agent
             ],
             'contexto_temporal' => [
-                'horario' => $auditoria->fecha_hora->format('H:i'),
-                'dia_semana' => $auditoria->fecha_hora->locale('es')->dayName,
-                'es_horario_laboral' => $this->esHorarioLaboral($auditoria->fecha_hora)
+                'horario' => $fechaEvento->format('H:i'),
+                'dia_semana' => $fechaEvento->locale('es')->dayName,
+                'es_horario_laboral' => $this->esHorarioLaboral($fechaEvento)
             ],
             'eventos_similares' => $this->contarEventosSimilares($auditoria),
             'recomendaciones' => $this->generarRecomendacionesEvento($auditoria)
@@ -354,8 +371,8 @@ class AuditoriaAvanzadaController extends Controller
                 'ips_diferentes' => $query->distinct('ip_address')->count()
             ],
             'analisis_riesgos' => [
-                'eventos_criticos' => $query->clone()->where('nivel_riesgo', 'crítico')->count(),
-                'eventos_alto_riesgo' => $query->clone()->where('nivel_riesgo', 'alto')->count(),
+                'eventos_criticos' => $query->clone()->where('resultado', 'bloqueado')->count(),
+                'eventos_alto_riesgo' => $query->clone()->where('resultado', 'fallido')->count(),
                 'patrones_sospechosos' => $query->clone()->where('accion', 'patron_sospechoso_detectado')->count(),
                 'fallos_autenticacion' => $query->clone()->where('accion', 'login_fallido')->count()
             ],
@@ -377,13 +394,13 @@ class AuditoriaAvanzadaController extends Controller
             'patrones_ultima_semana' => PistaAuditoria::where('accion', 'patron_sospechoso_detectado')
                 ->where('fecha_hora', '>=', now()->subWeek())->count(),
             'tipos_patrones' => PistaAuditoria::where('accion', 'patron_sospechoso_detectado')
-                ->selectRaw('JSON_EXTRACT(detalles, "$.tipo") as tipo, COUNT(*) as total')
+                ->selectRaw('JSON_EXTRACT(contexto_adicional, "$.tipo") as tipo, COUNT(*) as total')
                 ->groupBy('tipo')
                 ->orderBy('total', 'desc')
                 ->get(),
             'distribución_riesgos' => PistaAuditoria::where('accion', 'patron_sospechoso_detectado')
-                ->selectRaw('nivel_riesgo, COUNT(*) as total')
-                ->groupBy('nivel_riesgo')
+                ->selectRaw('resultado, COUNT(*) as total')
+                ->groupBy('resultado')
                 ->get()
         ];
     }
@@ -397,10 +414,10 @@ class AuditoriaAvanzadaController extends Controller
             'ips_bloqueadas' => [],
             'usuarios_suspendidos' => [],
             'patrones_criticos' => PistaAuditoria::where('accion', 'patron_sospechoso_detectado')
-                ->where('nivel_riesgo', 'crítico')
+                ->where('resultado', 'bloqueado')
                 ->where('fecha_hora', '>=', now()->subDay())
                 ->count(),
-            'investigaciones_pendientes' => PistaAuditoria::whereJsonContains('detalles->requiere_investigacion', true)
+            'investigaciones_pendientes' => PistaAuditoria::whereJsonContains('contexto_adicional->requiere_investigacion', true)
                 ->where('fecha_hora', '>=', now()->subWeek())
                 ->count()
         ];
@@ -430,11 +447,19 @@ class AuditoriaAvanzadaController extends Controller
     {
         $recomendaciones = [];
 
-        if ($auditoria->nivel_riesgo === 'crítico') {
+        // Convertir fecha_hora a Carbon
+        $fechaEvento = $auditoria->fecha_hora instanceof \Carbon\Carbon 
+            ? $auditoria->fecha_hora 
+            : \Carbon\Carbon::parse($auditoria->fecha_hora);
+
+        // Nivel de riesgo basado en resultado
+        $esAltoRiesgo = in_array($auditoria->resultado, ['fallido', 'bloqueado']);
+
+        if ($esAltoRiesgo) {
             $recomendaciones[] = 'Investigar inmediatamente este evento';
         }
 
-        if (!$this->esHorarioLaboral($auditoria->fecha_hora)) {
+        if (!$this->esHorarioLaboral($fechaEvento)) {
             $recomendaciones[] = 'Verificar autorización para acceso fuera del horario laboral';
         }
 
@@ -453,7 +478,7 @@ class AuditoriaAvanzadaController extends Controller
 
     private function evaluarEstadoSistema(): string
     {
-        $eventosCriticos = PistaAuditoria::where('nivel_riesgo', 'crítico')
+        $eventosCriticos = PistaAuditoria::where('resultado', 'bloqueado')
             ->whereDate('fecha_hora', today())
             ->count();
 
@@ -482,7 +507,7 @@ class AuditoriaAvanzadaController extends Controller
                 ->with('usuario:id,name')
                 ->get(),
             'con_mas_riesgos' => $query->clone()
-                ->where('nivel_riesgo', 'alto')
+                ->where('resultado', 'fallido')
                 ->selectRaw('usuario_id, COUNT(*) as eventos_riesgo')
                 ->groupBy('usuario_id')
                 ->orderBy('eventos_riesgo', 'desc')

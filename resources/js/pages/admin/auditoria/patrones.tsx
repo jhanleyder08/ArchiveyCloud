@@ -32,21 +32,21 @@ interface PatronSospechoso {
 interface EstadisticasPatrones {
     total_patrones: number;
     patrones_ultima_semana: number;
-    tipos_patrones: Array<{tipo: string, total: number}>;
-    distribucion_riesgos: Array<{nivel_riesgo: string, total: number}>;
+    tipos_patrones?: Array<{tipo: string | null, total: number}>;
+    distribucion_riesgos?: Array<{nivel_riesgo: string, total: number}>;
 }
 
 interface AlertasActivas {
-    ips_bloqueadas: string[];
-    usuarios_suspendidos: string[];
+    ips_bloqueadas?: string[];
+    usuarios_suspendidos?: string[];
     patrones_criticos: number;
     investigaciones_pendientes: number;
 }
 
 interface Props {
-    patrones_sospechosos: PatronSospechoso[];
-    estadisticas_patrones: EstadisticasPatrones;
-    alertas_activas: AlertasActivas;
+    patrones_sospechosos?: PatronSospechoso[];
+    estadisticas_patrones?: EstadisticasPatrones;
+    alertas_activas?: AlertasActivas;
 }
 
 const COLORS = ['#dc2626', '#ea580c', '#d97706', '#16a34a', '#3b82f6'];
@@ -122,21 +122,23 @@ export default function AuditoriaPatrones({ patrones_sospechosos, estadisticas_p
         });
     };
 
-    const patronesFiltrados = filtrarPatrones(patrones_sospechosos);
+    const patronesFiltrados = filtrarPatrones(patrones_sospechosos || []);
 
-    // Preparar datos para gráficos
-    const tiposPatronesData = estadisticas_patrones.tipos_patrones.map((item, index) => ({
-        name: getDescripcionTipo(item.tipo),
-        value: item.total,
-        color: COLORS[index % COLORS.length]
-    }));
+    // Preparar datos para gráficos con validación
+    const tiposPatronesData = (estadisticas_patrones?.tipos_patrones || [])
+        .filter(item => item?.tipo) // Filtrar items con tipo null/undefined
+        .map((item, index) => ({
+            name: getDescripcionTipo(item.tipo),
+            value: item.total,
+            color: COLORS[index % COLORS.length]
+        }));
 
-    const distribucionRiesgosData = estadisticas_patrones.distribucion_riesgos.map(item => ({
+    const distribucionRiesgosData = (estadisticas_patrones?.distribucion_riesgos || []).map(item => ({
         name: item.nivel_riesgo,
         value: item.total
     }));
 
-    const tiposUnicos = [...new Set(patrones_sospechosos.map(p => p.detalles.tipo))];
+    const tiposUnicos = [...new Set((patrones_sospechosos || []).filter(p => p?.detalles?.tipo).map(p => p.detalles.tipo))];
 
     return (
         <AppLayout>
@@ -162,7 +164,7 @@ export default function AuditoriaPatrones({ patrones_sospechosos, estadisticas_p
                 </div>
 
                 {/* Alertas Críticas */}
-                {alertas_activas.patrones_criticos > 0 && (
+                {(alertas_activas?.patrones_criticos ?? 0) > 0 && (
                     <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
@@ -180,7 +182,7 @@ export default function AuditoriaPatrones({ patrones_sospechosos, estadisticas_p
                                 <TrendingUp className="h-8 w-8 text-red-600" />
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">Total Patrones</p>
-                                    <p className="text-2xl font-bold">{estadisticas_patrones.total_patrones}</p>
+                                    <p className="text-2xl font-bold">{estadisticas_patrones?.total_patrones ?? 0}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -192,7 +194,7 @@ export default function AuditoriaPatrones({ patrones_sospechosos, estadisticas_p
                                 <Clock className="h-8 w-8 text-orange-600" />
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">Última Semana</p>
-                                    <p className="text-2xl font-bold">{estadisticas_patrones.patrones_ultima_semana}</p>
+                                    <p className="text-2xl font-bold">{estadisticas_patrones?.patrones_ultima_semana ?? 0}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -204,7 +206,7 @@ export default function AuditoriaPatrones({ patrones_sospechosos, estadisticas_p
                                 <AlertTriangle className="h-8 w-8 text-red-600" />
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">Críticos Activos</p>
-                                    <p className="text-2xl font-bold">{alertas_activas.patrones_criticos}</p>
+                                    <p className="text-2xl font-bold">{alertas_activas?.patrones_criticos ?? 0}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -216,7 +218,7 @@ export default function AuditoriaPatrones({ patrones_sospechosos, estadisticas_p
                                 <Search className="h-8 w-8 text-blue-600" />
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">Investigaciones</p>
-                                    <p className="text-2xl font-bold">{alertas_activas.investigaciones_pendientes}</p>
+                                    <p className="text-2xl font-bold">{alertas_activas?.investigaciones_pendientes ?? 0}</p>
                                 </div>
                             </div>
                         </CardContent>
