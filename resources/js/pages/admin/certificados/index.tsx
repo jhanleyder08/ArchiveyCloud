@@ -127,9 +127,13 @@ export default function CertificadosIndex({ certificados, estadisticas, usuarios
     };
 
     const handleDescargar = (certificadoId: number, formato: string) => {
-        setIsLoading(true);
-        window.location.href = route('admin.certificados.descargar', { certificado: certificadoId, formato });
-        setTimeout(() => setIsLoading(false), 2000);
+        const url = route('admin.certificados.descargar', { certificado: certificadoId, formato });
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', '');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const refreshData = () => {

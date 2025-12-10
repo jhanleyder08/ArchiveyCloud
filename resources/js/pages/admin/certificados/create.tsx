@@ -59,10 +59,13 @@ export default function CertificadosCreate({ usuarios, tipos_certificado, usos_p
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Actualizar los usos seleccionados en el formulario
-        setData('uso_permitido', usosSeleccionados);
+        // Actualizar los usos seleccionados antes de enviar
+        const submitData = {
+            ...data,
+            uso_permitido: usosSeleccionados
+        };
 
-        post(route('admin.certificados.store'), {
+        router.post(route('admin.certificados.store'), submitData, {
             forceFormData: true,
             onSuccess: () => {
                 reset();

@@ -102,7 +102,7 @@ class CertificadoDigitalController extends Controller
     public function create(): Response
     {
         $usuarios = User::select('id', 'name', 'email')
-            ->where('activo', true)
+            ->where('active', true)
             ->orderBy('name')
             ->get();
 
@@ -182,9 +182,11 @@ class CertificadoDigitalController extends Controller
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
                 'accion' => 'crear',
-                'modelo' => 'CertificadoDigital',
-                'modelo_id' => $certificado->id,
-                'detalles' => [
+                'entidad_type' => 'App\\Models\\CertificadoDigital',
+                'entidad_id' => $certificado->id,
+                'modulo' => 'certificados',
+                'descripcion' => 'Certificado digital creado',
+                'contexto_adicional' => [
                     'certificado' => $certificado->nombre_certificado,
                     'usuario_propietario' => $certificado->usuario->name,
                     'tipo' => $certificado->tipo_certificado
@@ -213,8 +215,8 @@ class CertificadoDigitalController extends Controller
         $validez = $certificado->verificarValidez();
         
         // Historial de auditoría
-        $historialAuditoria = PistaAuditoria::where('modelo', 'CertificadoDigital')
-            ->where('modelo_id', $certificado->id)
+        $historialAuditoria = PistaAuditoria::where('entidad_type', 'App\\Models\\CertificadoDigital')
+            ->where('entidad_id', $certificado->id)
             ->with('usuario:id,name')
             ->orderBy('created_at', 'desc')
             ->limit(20)
@@ -248,9 +250,11 @@ class CertificadoDigitalController extends Controller
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
                 'accion' => 'revocar',
-                'modelo' => 'CertificadoDigital',
-                'modelo_id' => $certificado->id,
-                'detalles' => [
+                'entidad_type' => 'App\\Models\\CertificadoDigital',
+                'entidad_id' => $certificado->id,
+                'modulo' => 'certificados',
+                'descripcion' => 'Certificado digital revocado',
+                'contexto_adicional' => [
                     'certificado' => $certificado->nombre_certificado,
                     'razon' => $request->razon_revocacion
                 ]
@@ -316,9 +320,11 @@ class CertificadoDigitalController extends Controller
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
                 'accion' => 'renovar',
-                'modelo' => 'CertificadoDigital',
-                'modelo_id' => $certificado->id,
-                'detalles' => [
+                'entidad_type' => 'App\\Models\\CertificadoDigital',
+                'entidad_id' => $certificado->id,
+                'modulo' => 'certificados',
+                'descripcion' => 'Certificado digital renovado',
+                'contexto_adicional' => [
                     'certificado_original' => $certificado->nombre_certificado,
                     'certificado_nuevo' => $nuevoCertificado->id,
                     'nueva_fecha_vencimiento' => $request->nueva_fecha_vencimiento
@@ -378,9 +384,11 @@ class CertificadoDigitalController extends Controller
             PistaAuditoria::create([
                 'usuario_id' => Auth::id(),
                 'accion' => 'descargar',
-                'modelo' => 'CertificadoDigital',
-                'modelo_id' => $certificado->id,
-                'detalles' => [
+                'entidad_type' => 'App\\Models\\CertificadoDigital',
+                'entidad_id' => $certificado->id,
+                'modulo' => 'certificados',
+                'descripcion' => 'Certificado digital descargado',
+                'contexto_adicional' => [
                     'certificado' => $certificado->nombre_certificado,
                     'formato' => $formato
                 ]

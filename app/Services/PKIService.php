@@ -65,7 +65,7 @@ class PKIService
             $infoCertificado = openssl_x509_parse($certificado);
 
             // Codificar certificado en Base64
-            $certificadoBase64 = base64_encode(openssl_x509_read($certificadoPEM));
+            $certificadoBase64 = base64_encode($certificadoPEM);
 
             // Limpiar recursos
             openssl_pkey_free($parClaves);

@@ -32,8 +32,8 @@ interface CertificadoDigital {
     proximo_a_vencer: boolean;
     razon_revocacion?: string;
     revocado_en?: string;
-    info_sujeto: Record<string, string>;
-    info_emisor: Record<string, string>;
+    info_sujeto?: Record<string, string> | null;
+    info_emisor?: Record<string, string> | null;
     usuario: {
         id: number;
         name: string;
@@ -68,12 +68,13 @@ interface Validez {
 interface HistorialAuditoria {
     id: number;
     accion: string;
-    detalles: Record<string, any>;
+    descripcion?: string;
+    contexto_adicional?: Record<string, any> | null;
     created_at: string;
-    usuario: {
+    usuario?: {
         id: number;
         name: string;
-    };
+    } | null;
 }
 
 interface Props {
@@ -145,7 +146,13 @@ export default function CertificadosShow({ certificado, estadisticas_uso, valide
     };
 
     const handleDescargar = (formato: string) => {
-        window.location.href = route('admin.certificados.descargar', { certificado: certificado.id, formato });
+        const url = route('admin.certificados.descargar', { certificado: certificado.id, formato });
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', '');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleRevocar = () => {
@@ -421,7 +428,7 @@ export default function CertificadosShow({ certificado, estadisticas_uso, valide
                                     <div>
                                         <Label className="text-sm font-medium text-gray-600">Sujeto (Subject)</Label>
                                         <p className="text-sm break-all">{certificado.sujeto}</p>
-                                        {Object.keys(certificado.info_sujeto).length > 0 && (
+                                        {certificado.info_sujeto && Object.keys(certificado.info_sujeto).length > 0 && (
                                             <div className="mt-2 space-y-1">
                                                 {Object.entries(certificado.info_sujeto).map(([key, value]) => (
                                                     <div key={key} className="text-xs">
@@ -434,7 +441,7 @@ export default function CertificadosShow({ certificado, estadisticas_uso, valide
                                     <div>
                                         <Label className="text-sm font-medium text-gray-600">Emisor (Issuer)</Label>
                                         <p className="text-sm break-all">{certificado.emisor}</p>
-                                        {Object.keys(certificado.info_emisor).length > 0 && (
+                                        {certificado.info_emisor && Object.keys(certificado.info_emisor).length > 0 && (
                                             <div className="mt-2 space-y-1">
                                                 {Object.entries(certificado.info_emisor).map(([key, value]) => (
                                                     <div key={key} className="text-xs">
@@ -584,16 +591,19 @@ export default function CertificadosShow({ certificado, estadisticas_uso, valide
                                                             {entrada.accion}
                                                         </Badge>
                                                         <span className="text-sm text-gray-600">
-                                                            por {entrada.usuario.name}
+                                                            por {entrada.usuario?.name || 'Sistema'}
                                                         </span>
                                                     </div>
                                                     <span className="text-xs text-gray-500">
                                                         {new Date(entrada.created_at).toLocaleString()}
                                                     </span>
                                                 </div>
-                                                {Object.keys(entrada.detalles).length > 0 && (
+                                                {entrada.descripcion && (
+                                                    <p className="mt-2 text-sm text-gray-700">{entrada.descripcion}</p>
+                                                )}
+                                                {entrada.contexto_adicional && Object.keys(entrada.contexto_adicional).length > 0 && (
                                                     <div className="mt-2 text-sm text-gray-600">
-                                                        {Object.entries(entrada.detalles).map(([key, value]) => (
+                                                        {Object.entries(entrada.contexto_adicional).map(([key, value]) => (
                                                             <div key={key}>
                                                                 <span className="font-medium">{key}:</span> {String(value)}
                                                             </div>
