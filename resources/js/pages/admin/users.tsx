@@ -1,3 +1,8 @@
+/**
+ * PÁGINA DE GESTIÓN DE USUARIOS
+ * Este componente React recibe datos del backend (Laravel) via Inertia.js
+ * Los datos llegan como PROPS del componente
+ */
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Users, Plus, Search, Filter, Edit, Trash2, UserCheck, UserX, Shield, AlertCircle } from 'lucide-react';
@@ -20,6 +25,8 @@ const breadcrumbItems = [
     { title: 'Gestión de usuarios', href: '/admin/users' },
 ];
 
+// INTERFAZ: Define la estructura de un Usuario
+// Esto debe coincidir con lo que envía el backend
 interface User {
     id: number;
     name: string;
@@ -28,8 +35,8 @@ interface User {
     active: boolean;
     created_at: string;
     updated_at: string;
-    role_id: number | null;
-    role?: {
+    role_id: number | null;      // ID del rol asignado
+    role?: {                      // Relación con el rol
         id: number;
         name: string;
     } | null;
@@ -72,32 +79,47 @@ interface Role {
     description: string;
 }
 
+// PROPS: Datos que vienen del backend (AdminUserController@index)
+// Estos datos se envían con Inertia::render() en Laravel
 interface Props {
-    users: PaginatedUsers;
-    stats: Stats;
-    roles: Role[];
-    filters: {
+    users: PaginatedUsers;  // Lista de usuarios paginada
+    stats: Stats;           // Estadísticas (total, activos, etc.)
+    roles: Role[];          // Lista de roles para el select
+    filters: {              // Filtros actuales de búsqueda
         search?: string;
         status?: string;
     };
 }
 
+// COMPONENTE PRINCIPAL
+// Recibe los datos del backend como props: { users, stats, roles, filters }
 export default function AdminUsers({ users, stats, roles, filters }: Props) {
+    // Obtener mensajes flash (éxito/error) del backend
     const { flash } = usePage<{ flash: { success?: string, error?: string } }>().props;
     const permissions = usePermissions();
     const isFirstRender = useRef(true);
     
+    // ESTADOS LOCALES del componente
     const [search, setSearch] = useState(filters.search || '');
     const [showDeleteModal, setShowDeleteModal] = useState<User | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState<User | null>(null);
-    const [createForm, setCreateForm] = useState({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
+    
+    // Estado del formulario de CREAR usuario
+    const [createForm, setCreateForm] = useState({ 
+        name: '', 
+        email: '', 
+        role_id: '',  // ← Rol seleccionado
+        password: '', 
+        password_confirmation: '', 
+        verify_email: false 
+    });
     const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
     const [editForm, setEditForm] = useState({ name: '', email: '', role_id: '', active: true });
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
 
-    // Auto-submit search with debounce - skip first render to avoid unnecessary reload
+    // BÚSQUEDA AUTOMÁTICA con debounce (espera 500ms después de escribir)
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
@@ -481,7 +503,8 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                     </div>
                 )}
 
-                {/* Create User Dialog */}
+                {/* MODAL PARA CREAR USUARIO */}
+                {/* Este formulario envía datos al backend con router.post() */}
                 <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
                     <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
@@ -490,21 +513,25 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                 Complete los datos para crear un nuevo usuario en el sistema.
                             </DialogDescription>
                         </DialogHeader>
+                        {/* FORMULARIO: Al enviar, usa router.post() de Inertia */}
                         <form onSubmit={(e) => {
                             e.preventDefault();
                             setCreateErrors({});
-                            console.log('Enviando formulario:', createForm);
+                            
+                            // ENVIAR DATOS AL BACKEND
+                            // router.post() envía los datos a AdminUserController@store
+                            // createForm contiene: { name, email, role_id, password, ... }
                             router.post('/admin/users', createForm, {
                                 preserveScroll: true,
+                                // Si el backend responde con éxito:
                                 onSuccess: () => {
-                                    console.log('Usuario creado exitosamente');
                                     setShowCreateModal(false);
                                     setCreateForm({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
-                                    // Forzar recarga de datos frescos
+                                    // Recargar lista de usuarios
                                     router.reload({ only: ['users', 'stats'] });
                                 },
+                                // Si hay errores de validación:
                                 onError: (errors) => {
-                                    console.log('Errores de validación:', errors);
                                     setCreateErrors(errors);
                                 }
                             });
@@ -541,6 +568,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                     />
                                     {createErrors.email && <InputError message={createErrors.email} />}
                                 </div>
+                                {/* SELECT DE ROL - Los roles vienen del backend (props.roles) */}
                                 <div className="grid gap-2">
                                     <Label htmlFor="create-role">Rol</Label>
                                     <Select
@@ -551,6 +579,7 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                             <SelectValue placeholder="Seleccionar rol" />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            {/* Iterar sobre los roles que vienen del backend */}
                                             {roles.map((role) => (
                                                 <SelectItem key={role.id} value={role.id.toString()}>
                                                     {role.name}

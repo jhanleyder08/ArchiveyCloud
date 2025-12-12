@@ -14,11 +14,16 @@ use Illuminate\Auth\Events\Registered;
 class AdminUserController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * LISTAR USUARIOS
+     * Este método obtiene todos los usuarios de la base de datos
+     * y los envía al frontend (React) usando Inertia.js
      */
     public function index()
     {
+        // 1. CONSULTAR USUARIOS con su rol relacionado
+        // User::with('role') = Obtener usuarios CON su rol (relación)
         $users = User::with('role')
+            // Filtro de búsqueda: si hay parámetro 'search' en la URL
             ->when(request('search'), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%");
@@ -38,7 +43,7 @@ class AdminUserController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        // Stats solo de usuarios activos (no eliminados)
+        // 2. ESTADÍSTICAS para mostrar en las tarjetas del dashboard
         $stats = [
             'total' => User::count(),
             'active' => User::whereNotNull('email_verified_at')->where('active', true)->count(),
@@ -47,21 +52,26 @@ class AdminUserController extends Controller
             'deleted' => User::onlyTrashed()->count(), // Usuarios eliminados
         ];
 
-        // Obtener todos los roles disponibles para los formularios
+        // 3. OBTENER ROLES para el select del formulario
+        // Solo roles activos, ordenados por jerarquía
         $roles = Role::where('activo', true)
             ->orderBy('nivel_jerarquico')
             ->get(['id', 'name', 'description']);
 
+        // 4. ENVIAR DATOS AL FRONTEND con Inertia.js
+        // 'admin/users' = ruta del componente React: resources/js/pages/admin/users.tsx
+        // Los datos se convierten en PROPS del componente React
         return Inertia::render('admin/users', [
-            'users' => $users,
-            'stats' => $stats,
-            'roles' => $roles,
-            'filters' => request()->only(['search', 'status']),
+            'users' => $users,       // Lista de usuarios paginada
+            'stats' => $stats,       // Estadísticas (total, activos, etc.)
+            'roles' => $roles,       // Lista de roles para el select
+            'filters' => request()->only(['search', 'status']), // Filtros actuales
         ]);
     }
 
     /**
-     * Show the form for creating a new resource.
+     * MOSTRAR FORMULARIO DE CREAR
+     * Muestra la página con el formulario para crear un nuevo usuario
      */
     public function create()
     {
@@ -73,16 +83,20 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * GUARDAR NUEVO USUARIO
+     * Recibe los datos del formulario desde React (via Inertia)
+     * Valida, crea el usuario en la BD y redirecciona
      */
     public function store(Request $request)
     {
+        // 1. VALIDAR DATOS del formulario
+        // Si la validación falla, Laravel devuelve los errores automáticamente
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,NULL,id,deleted_at,NULL',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role_id' => 'required|exists:roles,id',
-            'verify_email' => 'nullable|boolean', // Opcional: verificar email automáticamente
+            'name' => 'required|string|max:255',           // Nombre obligatorio
+            'email' => 'required|string|email|max:255|unique:users,email,NULL,id,deleted_at,NULL', // Email único
+            'password' => ['required', 'confirmed', Rules\Password::defaults()], // Contraseña confirmada
+            'role_id' => 'required|exists:roles,id',       // Rol debe existir en la tabla roles
+            'verify_email' => 'nullable|boolean',
         ], [
             'name.required' => 'El nombre es obligatorio',
             'email.required' => 'El email es obligatorio',
@@ -104,15 +118,14 @@ class AdminUserController extends Controller
                        $request->input('verify_email') === '1' ||
                        $request->boolean('verify_email'));
         
+        // 2. CREAR USUARIO en la base de datos
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role_id' => $roleId,
+            'password' => Hash::make($validated['password']), // Encriptar contraseña
+            'role_id' => $roleId,                             // Asignar rol
             'active' => true,
             'estado_cuenta' => User::ESTADO_ACTIVO,
-            // Si el admin marca verificar email, se verifica automáticamente
-            // Si no, se deja null para que el usuario verifique por correo
             'email_verified_at' => $verifyEmail ? now() : null,
         ]);
 
@@ -131,7 +144,8 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * VER DETALLE DE USUARIO
+     * Muestra la información completa de un usuario específico
      */
     public function show(User $user)
     {
@@ -143,7 +157,8 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * MOSTRAR FORMULARIO DE EDITAR
+     * Carga los datos del usuario para editarlos
      */
     public function edit(User $user)
     {
@@ -156,11 +171,13 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * ACTUALIZAR USUARIO (CAMBIAR ROL)
+     * Recibe los datos editados y actualiza en la BD
+     * Aquí es donde se cambia el rol del usuario
      */
     public function update(Request $request, User $user)
     {
-        
+        // 1. VALIDAR datos de edición
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id . ',id,deleted_at,NULL',
@@ -169,22 +186,24 @@ class AdminUserController extends Controller
             'active' => 'boolean',
         ]);
 
-        // Verificar si se está cambiando el rol
+        // 2. DETECTAR si se cambió el rol
         $roleChanged = $user->role_id != $request->role_id;
         $isCurrentUser = $user->id === auth()->id();
 
+        // 3. PREPARAR datos para actualizar
         $updateData = [
             'name' => $request->name,
             'email' => $request->email,
-            'role_id' => $request->role_id,
+            'role_id' => $request->role_id,  // ← AQUÍ SE CAMBIA EL ROL
             'active' => $request->boolean('active', true),
         ];
 
-        // Solo actualizar contraseña si se proporciona
+        // Solo actualizar contraseña si se proporciona una nueva
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
         }
 
+        // 4. GUARDAR cambios en la base de datos
         $user->update($updateData);
 
         $message = 'Usuario actualizado exitosamente.';
@@ -201,13 +220,15 @@ class AdminUserController extends Controller
             }
         }
 
+        // 5. REDIRECCIONAR con mensaje
         return redirect()->route('admin.users.index')
             ->with('success', $message);
     }
 
     /**
-     * Remove the specified resource from storage.
-     * Usa soft delete para mantener historial y permitir reutilizar emails
+     * ELIMINAR USUARIO
+     * Usa soft delete (borrado suave) para mantener historial
+     * El usuario se marca como eliminado pero no se borra de la BD
      */
     public function destroy(User $user)
     {
@@ -229,7 +250,8 @@ class AdminUserController extends Controller
     }
 
     /**
-     * Toggle user status (activate/deactivate)
+     * ACTIVAR/DESACTIVAR USUARIO
+     * Cambia el estado activo del usuario sin eliminarlo
      */
     public function toggleStatus(User $user)
     {

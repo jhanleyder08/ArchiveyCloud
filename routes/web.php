@@ -75,40 +75,54 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/capture-all', [App\Http\Controllers\EmailAccountController::class, 'captureAll'])->name('capture-all');
     });
 
-    // Administración
+    // =====================================================
+    // RUTAS DE ADMINISTRACIÓN
+    // Todas las rutas bajo /admin requieren autenticación
+    // =====================================================
     Route::prefix('admin')->name('admin.')->group(function () {
-        // Gestión de Usuarios - Protegido con permisos específicos
-        // IMPORTANTE: Las rutas más específicas deben ir primero
         
-        // Listado de usuarios
+        // =====================================================
+        // CRUD DE USUARIOS - Ejemplo de conexión Frontend/Backend
+        // =====================================================
+        
+        // LISTAR USUARIOS (GET /admin/users)
+        // Llama a: AdminUserController@index
+        // Renderiza: resources/js/pages/admin/users.tsx
         Route::middleware('permission:usuarios.ver')->group(function () {
             Route::get('users', [App\Http\Controllers\Admin\AdminUserController::class, 'index'])->name('users.index');
         });
         
-        // Crear usuario (ruta estática antes de rutas con parámetros)
+        // CREAR USUARIO
+        // GET /admin/users/create → Muestra formulario
+        // POST /admin/users → Guarda en BD (recibe datos del formulario React)
         Route::middleware('permission:usuarios.crear')->group(function () {
             Route::get('users/create', [App\Http\Controllers\Admin\AdminUserController::class, 'create'])->name('users.create');
             Route::post('users', [App\Http\Controllers\Admin\AdminUserController::class, 'store'])->name('users.store');
         });
         
-        // Editar usuario (rutas con sufijo antes de rutas solo con parámetro)
+        // EDITAR/ACTUALIZAR USUARIO (CAMBIAR ROL)
+        // GET /admin/users/{id}/edit → Muestra formulario con datos
+        // PUT /admin/users/{id} → Actualiza en BD
         Route::middleware('permission:usuarios.editar')->group(function () {
             Route::get('users/{user}/edit', [App\Http\Controllers\Admin\AdminUserController::class, 'edit'])->name('users.edit');
             Route::put('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'update'])->name('users.update');
             Route::patch('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'update']);
         });
         
-        // Toggle status
+        // ACTIVAR/DESACTIVAR USUARIO
+        // PATCH /admin/users/{id}/toggle-status
         Route::middleware('permission:usuarios.activar')->group(function () {
             Route::patch('users/{user}/toggle-status', [App\Http\Controllers\Admin\AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         });
         
-        // Eliminar usuario
+        // ELIMINAR USUARIO (Soft Delete)
+        // DELETE /admin/users/{id}
         Route::middleware('permission:usuarios.eliminar')->group(function () {
             Route::delete('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'destroy'])->name('users.destroy');
         });
         
-        // Ver usuario (ruta con solo parámetro al final)
+        // VER DETALLE DE USUARIO
+        // GET /admin/users/{id}
         Route::middleware('permission:usuarios.ver')->group(function () {
             Route::get('users/{user}', [App\Http\Controllers\Admin\AdminUserController::class, 'show'])->name('users.show');
         });
