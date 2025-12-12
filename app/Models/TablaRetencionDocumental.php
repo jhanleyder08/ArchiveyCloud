@@ -22,8 +22,11 @@ class TablaRetencionDocumental extends Model
         'codigo',
         'nombre',
         'descripcion',
-        'entidad',
-        'dependencia',
+        // Campos del formato oficial FOR-GDI-GDO-002
+        'codigo_unidad_administrativa',
+        'nombre_unidad_administrativa',
+        'codigo_dependencia',
+        'nombre_dependencia',
         'version',
         'fecha_aprobacion',
         'fecha_vigencia_inicio',
@@ -159,6 +162,14 @@ class TablaRetencionDocumental extends Model
     public function expedientes()
     {
         return $this->hasManyThrough(Expediente::class, SerieDocumental::class, 'trd_id', 'serie_id');
+    }
+
+    /**
+     * Relación con los tiempos de retención por nivel del CCD
+     */
+    public function tiemposRetencion()
+    {
+        return $this->hasMany(TRDTiempoRetencion::class, 'trd_id');
     }
 
     /**

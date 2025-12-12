@@ -1,559 +1,675 @@
-import AppLayout from '@/layouts/app-layout';
-import { Head, Link, router } from '@inertiajs/react';
-import { FileText, ArrowLeft, Edit, Copy, ToggleLeft, ToggleRight, FileDown, Trash2, Users, FolderOpen, FileBarChart, Calendar, User, Clock, Check, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { 
+    FolderTree, 
+    Plus, 
+    Edit, 
+    Trash2, 
+    ChevronDown, 
+    ChevronRight,
+    FileText,
+    Folder,
+    FolderOpen,
+    CheckCircle,
+    AlertCircle,
+    ArrowLeft,
+    Download,
+    Clock,
+    Calendar,
+    Save,
+    X
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-const breadcrumbItems = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Administración', href: '#' },
-    { title: 'Tablas de Retención Documental', href: '/admin/trd' },
-    { title: 'Detalle TRD', href: '#' },
-];
+interface CCDNivel {
+    id: number;
+    ccd_id: number;
+    parent_id?: number;
+    codigo: string;
+    nombre: string;
+    descripcion?: string;
+    nivel: number;
+    tipo_nivel: string;
+    orden: number;
+    activo: boolean;
+    hijos?: CCDNivel[];
+}
+
+interface TiempoRetencion {
+    id: number;
+    trd_id: number;
+    ccd_nivel_id: number;
+    retencion_archivo_gestion: number;
+    retencion_archivo_central: number;
+    disposicion_final: string;
+    soporte_fisico: boolean;
+    soporte_electronico: boolean;
+    soporte_hibrido: boolean;
+    procedimiento?: string;
+    observaciones?: string;
+}
+
+interface CCD {
+    id: number;
+    codigo: string;
+    nombre: string;
+    version: string;
+}
 
 interface TRD {
     id: number;
     codigo: string;
     nombre: string;
-    descripcion: string;
-    justificacion: string;
-    version: string;
+    descripcion?: string;
+    version: number;
     estado: string;
     vigente: boolean;
-    identificador_unico: string;
-    formato_archivo: string;
-    metadatos_asociados: any;
-    fecha_actualizacion: string;
-    fecha_aprobacion: string | null;
+    fecha_aprobacion?: string;
+    fecha_vigencia_inicio?: string;
+    fecha_vigencia_fin?: string;
     created_at: string;
+    updated_at: string;
+    cuadro_clasificacion?: CCD;
     creador?: {
         id: number;
         name: string;
     };
-    modificador?: {
-        id: number;
-        name: string;
-    };
-    series?: Array<{
-        id: number;
-        codigo: string;
-        nombre: string;
-        subseries?: Array<{
-            id: number;
-            codigo: string;
-            nombre: string;
-        }>;
-        tipologias?: Array<{
-            id: number;
-            codigo: string;
-            nombre: string;
-        }>;
-    }>;
-}
-
-interface Version {
-    id: number;
-    version: string;
-    estado: string;
-    vigente: boolean;
-    fecha_actualizacion: string;
-    created_at: string;
-}
-
-interface Stats {
-    series_count: number;
-    subseries_count: number;
-    expedientes_count: number;
-    documentos_count: number;
 }
 
 interface Props {
     trd: TRD;
-    versiones: Version[];
-    estadisticas: Stats;
+    estructura: CCDNivel[];
+    tiemposRetencion: Record<number, TiempoRetencion>;
+    estadisticas: {
+        series_count: number;
+        expedientes_count: number;
+        documentos_count: number;
+        estado_actual: string;
+        version_actual: number;
+        niveles_con_tiempos: number;
+        niveles_totales: number;
+    };
     tieneDocumentosAsociados: boolean;
 }
 
-export default function AdminTRDShow({ trd, versiones, estadisticas, tieneDocumentosAsociados }: Props) {
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
+// Componente para renderizar un nodo del árbol con tiempos de retención
+const TreeNodeWithRetention = ({ 
+    node, 
+    tiemposRetencion,
+    onEditTiempo,
+    onDeleteTiempo,
+    trdId
+}: { 
+    node: CCDNivel; 
+    tiemposRetencion: Record<number, TiempoRetencion>;
+    onEditTiempo: (node: CCDNivel, tiempo?: TiempoRetencion) => void;
+    onDeleteTiempo: (nivelId: number) => void;
+    trdId: number;
+}) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+    const hasChildren = node.hijos && node.hijos.length > 0;
+    const tiempoRetencion = tiemposRetencion[node.id];
+    const hasTiempo = !!tiempoRetencion;
 
-    const handleDelete = () => {
-        router.delete(`/admin/trd/${trd.id}`, {
+    const getTipoIcon = (tipo: string) => {
+        switch (tipo) {
+            case 'fondo':
+                return <FolderOpen className="h-4 w-4 text-blue-600" />;
+            case 'seccion':
+                return <Folder className="h-4 w-4 text-green-600" />;
+            case 'subseccion':
+                return <Folder className="h-4 w-4 text-yellow-600" />;
+            case 'serie':
+                return <FileText className="h-4 w-4 text-purple-600" />;
+            case 'subserie':
+                return <FileText className="h-4 w-4 text-pink-600" />;
+            default:
+                return <FileText className="h-4 w-4 text-gray-600" />;
+        }
+    };
+
+    const getTipoColor = (tipo: string) => {
+        const colors = {
+            'fondo': 'bg-blue-100 text-blue-800',
+            'seccion': 'bg-green-100 text-green-800',
+            'subseccion': 'bg-yellow-100 text-yellow-800',
+            'serie': 'bg-purple-100 text-purple-800',
+            'subserie': 'bg-pink-100 text-pink-800',
+        };
+        return colors[tipo as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    };
+
+    const getDisposicionColor = (disposicion: string) => {
+        const colors = {
+            'CT': 'bg-green-100 text-green-800',
+            'E': 'bg-red-100 text-red-800',
+            'D': 'bg-blue-100 text-blue-800',
+            'S': 'bg-yellow-100 text-yellow-800',
+            'M': 'bg-purple-100 text-purple-800',
+        };
+        return colors[disposicion as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    };
+
+    const getDisposicionTexto = (disposicion: string) => {
+        const textos = {
+            'CT': 'Conservación Total',
+            'E': 'Eliminación',
+            'D': 'Digitalización',
+            'S': 'Selección',
+            'M': 'Microfilmación',
+        };
+        return textos[disposicion as keyof typeof textos] || disposicion;
+    };
+
+    return (
+        <div className="ml-4">
+            <div className="flex items-start gap-2 py-2 group hover:bg-gray-50 rounded-md px-2 border-b border-gray-100">
+                {/* Expand/Collapse Button */}
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="p-0.5 hover:bg-gray-200 rounded mt-1"
+                    disabled={!hasChildren}
+                >
+                    {hasChildren ? (
+                        isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                        ) : (
+                            <ChevronRight className="h-4 w-4" />
+                        )
+                    ) : (
+                        <div className="w-4 h-4" />
+                    )}
+                </button>
+
+                {/* Icon */}
+                <div className="mt-1">
+                    {getTipoIcon(node.tipo_nivel)}
+                </div>
+
+                {/* Node Info */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{node.nombre}</span>
+                        <span className="text-xs text-gray-500">({node.codigo})</span>
+                        <Badge variant="outline" className={`text-xs ${getTipoColor(node.tipo_nivel)}`}>
+                            {node.tipo_nivel}
+                        </Badge>
+                        {!node.activo && (
+                            <Badge variant="outline" className="text-xs bg-red-100 text-red-800">
+                                Inactivo
+                            </Badge>
+                        )}
+                    </div>
+
+                    {/* Tiempos de Retención */}
+                    {hasTiempo && (
+                        <div className="mt-2 p-2 bg-blue-50 rounded-md border border-blue-200">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                <div>
+                                    <span className="font-semibold text-gray-600">AG:</span>
+                                    <span className="ml-1 text-gray-900">{tiempoRetencion.retencion_archivo_gestion} años</span>
+                                </div>
+                                <div>
+                                    <span className="font-semibold text-gray-600">AC:</span>
+                                    <span className="ml-1 text-gray-900">{tiempoRetencion.retencion_archivo_central} años</span>
+                                </div>
+                                <div>
+                                    <span className="font-semibold text-gray-600">Disposición:</span>
+                                    <Badge className={`ml-1 text-xs ${getDisposicionColor(tiempoRetencion.disposicion_final)}`}>
+                                        {tiempoRetencion.disposicion_final}
+                                    </Badge>
+                                </div>
+                                <div className="flex gap-1">
+                                    {tiempoRetencion.soporte_fisico && (
+                                        <Badge variant="outline" className="text-xs">F</Badge>
+                                    )}
+                                    {tiempoRetencion.soporte_electronico && (
+                                        <Badge variant="outline" className="text-xs">E</Badge>
+                                    )}
+                                    {tiempoRetencion.soporte_hibrido && (
+                                        <Badge variant="outline" className="text-xs">H</Badge>
+                                    )}
+                                </div>
+                            </div>
+                            {tiempoRetencion.procedimiento && (
+                                <div className="mt-1 text-xs text-gray-600">
+                                    <span className="font-semibold">Procedimiento:</span> {tiempoRetencion.procedimiento}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 mt-1">
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onEditTiempo(node, tiempoRetencion)}
+                        className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                        title={hasTiempo ? "Editar tiempo de retención" : "Agregar tiempo de retención"}
+                    >
+                        {hasTiempo ? <Edit className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                    </Button>
+                    {hasTiempo && (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onDeleteTiempo(node.id)}
+                            className="h-7 w-7 p-0 hover:bg-red-100 hover:text-red-600"
+                            title="Eliminar tiempo de retención"
+                        >
+                            <Trash2 className="h-3 w-3" />
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {/* Children */}
+            {isExpanded && hasChildren && (
+                <div className="border-l-2 border-gray-200 ml-2">
+                    {node.hijos!.map((child) => (
+                        <TreeNodeWithRetention
+                            key={child.id}
+                            node={child}
+                            tiemposRetencion={tiemposRetencion}
+                            onEditTiempo={onEditTiempo}
+                            onDeleteTiempo={onDeleteTiempo}
+                            trdId={trdId}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default function TRDShow({ trd, estructura, tiemposRetencion, estadisticas, tieneDocumentosAsociados }: Props) {
+    const [showTiempoModal, setShowTiempoModal] = useState(false);
+    const [selectedNivel, setSelectedNivel] = useState<CCDNivel | null>(null);
+    const [tiempoForm, setTiempoForm] = useState({
+        retencion_archivo_gestion: 0,
+        retencion_archivo_central: 0,
+        disposicion_final: 'CT',
+        soporte_fisico: false,
+        soporte_electronico: false,
+        soporte_hibrido: false,
+        procedimiento: '',
+        observaciones: '',
+    });
+
+    const breadcrumbItems = [
+        { title: 'Dashboard', href: '/dashboard' },
+        { title: 'Administración', href: '#' },
+        { title: 'Tablas de Retención Documental', href: '/admin/trd' },
+        { title: trd.nombre, href: '#' },
+    ];
+
+    const handleEditTiempo = (nivel: CCDNivel, tiempo?: TiempoRetencion) => {
+        setSelectedNivel(nivel);
+        if (tiempo) {
+            setTiempoForm({
+                retencion_archivo_gestion: tiempo.retencion_archivo_gestion,
+                retencion_archivo_central: tiempo.retencion_archivo_central,
+                disposicion_final: tiempo.disposicion_final,
+                soporte_fisico: tiempo.soporte_fisico,
+                soporte_electronico: tiempo.soporte_electronico,
+                soporte_hibrido: tiempo.soporte_hibrido,
+                procedimiento: tiempo.procedimiento || '',
+                observaciones: tiempo.observaciones || '',
+            });
+        } else {
+            setTiempoForm({
+                retencion_archivo_gestion: 0,
+                retencion_archivo_central: 0,
+                disposicion_final: 'CT',
+                soporte_fisico: false,
+                soporte_electronico: false,
+                soporte_hibrido: false,
+                procedimiento: '',
+                observaciones: '',
+            });
+        }
+        setShowTiempoModal(true);
+    };
+
+    const handleDeleteTiempo = (nivelId: number) => {
+        if (confirm('¿Está seguro de eliminar este tiempo de retención?')) {
+            router.delete(`/admin/trd/${trd.id}/tiempo-retencion/${nivelId}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Tiempo de retención eliminado exitosamente');
+                },
+                onError: () => {
+                    toast.error('Error al eliminar el tiempo de retención');
+                }
+            });
+        }
+    };
+
+    const submitTiempo = () => {
+        if (!selectedNivel) return;
+
+        router.post(`/admin/trd/${trd.id}/tiempo-retencion`, {
+            ccd_nivel_id: selectedNivel.id,
+            ...tiempoForm,
+        }, {
             preserveScroll: true,
-            onFinish: () => setShowDeleteModal(false)
-        });
-    };
-
-    const handleToggleVigencia = () => {
-        router.patch(`/admin/trd/${trd.id}/vigencia`, {}, {
-            preserveScroll: true
-        });
-    };
-
-    const handleDuplicate = () => {
-        router.post(`/admin/trd/${trd.id}/duplicate`);
-    };
-
-    const handleExport = (formato: string) => {
-        window.open(`/admin/trd/${trd.id}/export?formato=${formato}`, '_blank');
-    };
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            onSuccess: () => {
+                toast.success('Tiempo de retención guardado exitosamente');
+                setShowTiempoModal(false);
+                setSelectedNivel(null);
+            },
+            onError: (errors) => {
+                console.error('Errores:', errors);
+                toast.error('Error al guardar el tiempo de retención');
+            }
         });
     };
 
     const getEstadoBadge = (estado: string) => {
-        const config = {
-            'borrador': { color: 'bg-gray-100 text-gray-800', icon: Edit },
-            'revision': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-            'aprobada': { color: 'bg-green-100 text-green-800', icon: Check },
-            'vigente': { color: 'bg-blue-100 text-blue-800', icon: Check },
-            'historica': { color: 'bg-purple-100 text-purple-800', icon: FileBarChart },
-        }[estado] || { color: 'bg-gray-100 text-gray-800', icon: AlertCircle };
+        const colors = {
+            'borrador': 'bg-gray-100 text-gray-800',
+            'revision': 'bg-yellow-100 text-yellow-800',
+            'aprobada': 'bg-green-100 text-green-800',
+            'vigente': 'bg-blue-100 text-blue-800',
+            'historica': 'bg-purple-100 text-purple-800',
+        };
+        return colors[estado as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    };
 
-        const Icon = config.icon;
-
-        return (
-            <Badge className={`${config.color} font-medium flex items-center gap-1`}>
-                <Icon className="h-3 w-3" />
-                {estado.charAt(0).toUpperCase() + estado.slice(1)}
-            </Badge>
-        );
+    const formatDate = (date?: string) => {
+        if (!date) return 'No especificada';
+        return new Date(date).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbItems}>
-            <Head title={`${trd.nombre} - Detalle TRD`} />
+            <Head title={`TRD - ${trd.nombre}`} />
             
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link href="/admin/trd">
-                            <Button variant="outline" size="sm">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Volver
-                            </Button>
-                        </Link>
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/admin/trd"
+                        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Volver a TRDs
+                    </Link>
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <FileText className="h-8 w-8 text-[#2a3d83]" />
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <h1 className="text-2xl font-bold text-gray-900">{trd.nombre}</h1>
-                                {getEstadoBadge(trd.estado)}
-                                {trd.vigente && (
-                                    <Badge className="bg-blue-100 text-blue-800 font-medium flex items-center gap-1">
-                                        <ToggleRight className="h-3 w-3" />
-                                        Vigente
-                                    </Badge>
-                                )}
-                            </div>
-                            <p className="text-gray-600">
-                                {trd.codigo} • Versión {trd.version} • {trd.identificador_unico}
-                            </p>
+                            <h1 className="text-2xl font-semibold text-gray-900">
+                                {trd.nombre}
+                            </h1>
+                            <p className="text-sm text-gray-600">{trd.codigo} • Versión {trd.version}</p>
                         </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => handleExport('json')}
-                                    >
-                                        <FileDown className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Exportar TRD</p>
-                                </TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={handleDuplicate}
-                                    >
-                                        <Copy className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Duplicar TRD</p>
-                                </TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={handleToggleVigencia}
-                                        disabled={trd.estado !== 'aprobada' && !trd.vigente}
-                                    >
-                                        {trd.vigente ? (
-                                            <ToggleRight className="h-4 w-4 text-green-600" />
-                                        ) : (
-                                            <ToggleLeft className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{trd.vigente ? 'Desmarcar vigente' : 'Marcar vigente'}</p>
-                                </TooltipContent>
-                            </Tooltip>
-
-                            <Link href={`/admin/trd/${trd.id}/edit`}>
-                                <Button variant="outline" size="sm">
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                            </Link>
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => setShowDeleteModal(true)}
-                                        className="text-red-600 hover:text-red-700"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Eliminar TRD</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                </div>
-
-                {/* Alertas */}
-                {tieneDocumentosAsociados && (
-                    <Alert className="border-yellow-200 bg-yellow-50">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription className="text-yellow-800">
-                            <strong>Esta TRD tiene documentos asociados.</strong> Cualquier modificación debe 
-                            considerar el impacto en los documentos existentes.
-                        </AlertDescription>
-                    </Alert>
-                )}
-
-                {/* Estadísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <div className="bg-blue-100 rounded-full p-2">
-                                    <FolderOpen className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Series</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.series_count}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <div className="bg-green-100 rounded-full p-2">
-                                    <FolderOpen className="h-6 w-6 text-green-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Subseries</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.subseries_count}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <div className="bg-purple-100 rounded-full p-2">
-                                    <FileBarChart className="h-6 w-6 text-purple-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Expedientes</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.expedientes_count}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center">
-                                <div className="bg-orange-100 rounded-full p-2">
-                                    <FileText className="h-6 w-6 text-orange-600" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-600">Documentos</p>
-                                    <p className="text-2xl font-bold text-gray-900">{estadisticas.documentos_count}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Información Principal */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-[#2a3d83]" />
-                                    Información de la TRD
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {trd.descripcion && (
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-2">Descripción</h4>
-                                        <p className="text-gray-600 leading-relaxed">{trd.descripcion}</p>
-                                    </div>
-                                )}
-                                
-                                {trd.justificacion && (
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-2">Justificación</h4>
-                                        <p className="text-gray-600 leading-relaxed">{trd.justificacion}</p>
-                                    </div>
-                                )}
-
-                                <Separator />
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-1">Formato de Archivo</h4>
-                                        <p className="text-gray-600">{trd.formato_archivo || 'No especificado'}</p>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-1">Estado Actual</h4>
-                                        <div className="flex items-center gap-2">
-                                            {getEstadoBadge(trd.estado)}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {trd.metadatos_asociados && (
-                                    <div>
-                                        <h4 className="font-medium text-gray-900 mb-2">Metadatos Asociados</h4>
-                                        <pre className="bg-gray-50 p-3 rounded-md text-sm font-mono overflow-x-auto">
-                                            {JSON.stringify(trd.metadatos_asociados, null, 2)}
-                                        </pre>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Series Documentales */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <FolderOpen className="h-5 w-5 text-[#2a3d83]" />
-                                        Series Documentales
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Series asociadas a esta TRD ({trd.series?.length || 0})
-                                    </CardDescription>
-                                </div>
-                                <Link href={`/admin/series?trd=${trd.id}`}>
-                                    <Button variant="outline" size="sm">
-                                        Ver todas
-                                    </Button>
-                                </Link>
-                            </CardHeader>
-                            <CardContent>
-                                {trd.series && trd.series.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {trd.series.map((serie) => (
-                                            <Link 
-                                                key={serie.id} 
-                                                href={`/admin/series/${serie.id}`}
-                                                className="block border rounded-lg p-4 hover:bg-gray-50 hover:border-[#2a3d83] transition-all cursor-pointer"
-                                            >
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <FileText className="h-4 w-4 text-purple-600" />
-                                                        <h4 className="font-medium text-gray-900 hover:text-[#2a3d83]">{serie.nombre}</h4>
-                                                    </div>
-                                                    <Badge variant="outline" className="bg-purple-50">{serie.codigo}</Badge>
-                                                </div>
-                                                {serie.subseries && serie.subseries.length > 0 && (
-                                                    <div className="ml-6 mt-2">
-                                                        <p className="text-sm text-gray-600 mb-1">
-                                                            Subseries ({serie.subseries.length}):
-                                                        </p>
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {serie.subseries.slice(0, 5).map((subserie) => (
-                                                                <Badge key={subserie.id} variant="secondary" className="text-xs">
-                                                                    {subserie.codigo} - {subserie.nombre}
-                                                                </Badge>
-                                                            ))}
-                                                            {serie.subseries.length > 5 && (
-                                                                <Badge variant="secondary" className="text-xs">
-                                                                    +{serie.subseries.length - 5} más
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <FolderOpen className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                                        <p>No hay series asociadas a esta TRD</p>
-                                        <Link href="/admin/series/create">
-                                            <Button variant="outline" size="sm" className="mt-3">
-                                                Crear Serie
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Panel Lateral */}
-                    <div className="space-y-6">
-                        {/* Información del Sistema */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Información del Sistema</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <Calendar className="h-4 w-4 text-gray-500" />
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-900">Creado</p>
-                                        <p className="text-sm text-gray-600">{formatDate(trd.created_at)}</p>
-                                        {trd.creador && (
-                                            <p className="text-xs text-gray-500">por {trd.creador.name}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                    <Clock className="h-4 w-4 text-gray-500" />
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-900">Última Actualización</p>
-                                        <p className="text-sm text-gray-600">{formatDate(trd.fecha_actualizacion)}</p>
-                                        {trd.modificador && (
-                                            <p className="text-xs text-gray-500">por {trd.modificador.name}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {trd.fecha_aprobacion && (
-                                    <div className="flex items-center gap-3">
-                                        <Check className="h-4 w-4 text-green-500" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">Aprobado</p>
-                                            <p className="text-sm text-gray-600">{formatDate(trd.fecha_aprobacion)}</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <Separator />
-
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900 mb-1">ID Único</p>
-                                    <p className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                                        {trd.identificador_unico}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Historial de Versiones */}
-                        {versiones.length > 1 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Historial de Versiones</CardTitle>
-                                    <CardDescription>
-                                        {versiones.length} versiones disponibles
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        {versiones.slice(0, 5).map((version) => (
-                                            <div key={version.id} className="flex items-center justify-between p-2 rounded border">
-                                                <div>
-                                                    <p className="text-sm font-medium">v{version.version}</p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {formatDate(version.created_at)}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {getEstadoBadge(version.estado)}
-                                                    {version.vigente && (
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            Vigente
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {versiones.length > 5 && (
-                                            <p className="text-xs text-gray-500 text-center">
-                                                +{versiones.length - 5} versiones más
-                                            </p>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                    <div className="flex items-center gap-3">
+                        <Badge className={getEstadoBadge(trd.estado)}>
+                            {trd.estado}
+                        </Badge>
+                        {trd.vigente && (
+                            <Badge className="bg-green-100 text-green-800">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Vigente
+                            </Badge>
                         )}
+                        <Link href={`/admin/trd/${trd.id}/edit`}>
+                            <Button className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar TRD
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 
-                {/* Delete Confirmation Modal */}
-                <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-                    <DialogContent>
+                {/* Información General */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium text-gray-600">CCD Asociado</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {trd.cuadro_clasificacion ? (
+                                <div>
+                                    <p className="font-semibold">{trd.cuadro_clasificacion.nombre}</p>
+                                    <p className="text-sm text-gray-600">{trd.cuadro_clasificacion.codigo} • v{trd.cuadro_clasificacion.version}</p>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500">No asociado</p>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium text-gray-600">Fechas</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            <div>
+                                <span className="font-semibold">Aprobación:</span>
+                                <p className="text-gray-600">{formatDate(trd.fecha_aprobacion)}</p>
+                            </div>
+                            <div>
+                                <span className="font-semibold">Vigencia:</span>
+                                <p className="text-gray-600">
+                                    {formatDate(trd.fecha_vigencia_inicio)} - {formatDate(trd.fecha_vigencia_fin)}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium text-gray-600">Estadísticas</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span>Niveles con tiempos:</span>
+                                <span className="font-semibold">{estadisticas.niveles_con_tiempos} / {estadisticas.niveles_totales}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Series:</span>
+                                <span className="font-semibold">{estadisticas.series_count}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Expedientes:</span>
+                                <span className="font-semibold">{estadisticas.expedientes_count}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Estructura Jerárquica con Tiempos de Retención */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FolderTree className="h-5 w-5 text-[#2a3d83]" />
+                                    Estructura Jerárquica
+                                </CardTitle>
+                                <CardDescription>
+                                    Gestione la estructura del cuadro de clasificación documental con tiempos de retención
+                                </CardDescription>
+                            </div>
+                            <Button 
+                                variant="outline"
+                                onClick={() => window.location.href = `/admin/trd/${trd.id}/export-pdf`}
+                            >
+                                <Download className="h-4 w-4 mr-2" />
+                                Exportar PDF
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {estructura.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500">
+                                <FolderTree className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                                <p>No hay estructura configurada</p>
+                                <p className="text-sm">El CCD asociado no tiene niveles definidos</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-1">
+                                {estructura.map((nodo) => (
+                                    <TreeNodeWithRetention
+                                        key={nodo.id}
+                                        node={nodo}
+                                        tiemposRetencion={tiemposRetencion}
+                                        onEditTiempo={handleEditTiempo}
+                                        onDeleteTiempo={handleDeleteTiempo}
+                                        trdId={trd.id}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Modal para Agregar/Editar Tiempo de Retención */}
+                <Dialog open={showTiempoModal} onOpenChange={setShowTiempoModal}>
+                    <DialogContent className="sm:max-w-[600px]">
                         <DialogHeader>
-                            <DialogTitle>Confirmar Eliminación</DialogTitle>
+                            <DialogTitle>
+                                {selectedNivel && tiemposRetencion[selectedNivel.id] 
+                                    ? 'Editar Tiempo de Retención' 
+                                    : 'Agregar Tiempo de Retención'}
+                            </DialogTitle>
                             <DialogDescription>
-                                ¿Estás seguro de que deseas eliminar la TRD "{trd.nombre}"?
-                                Esta acción no se puede deshacer.
-                                {tieneDocumentosAsociados && (
-                                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                                        <strong className="text-red-800">Advertencia:</strong> Esta TRD tiene documentos asociados.
-                                    </div>
+                                {selectedNivel && (
+                                    <>
+                                        Nivel: <strong>{selectedNivel.nombre}</strong> ({selectedNivel.codigo})
+                                    </>
                                 )}
                             </DialogDescription>
                         </DialogHeader>
+                        <div className="space-y-4">
+                            {/* Tiempos de Retención */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Archivo de Gestión (AG) *</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        value={tiempoForm.retencion_archivo_gestion}
+                                        onChange={(e) => setTiempoForm({...tiempoForm, retencion_archivo_gestion: parseInt(e.target.value) || 0})}
+                                        placeholder="Años"
+                                    />
+                                    <p className="text-xs text-gray-500">Años en archivo de gestión</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Archivo Central (AC) *</Label>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        value={tiempoForm.retencion_archivo_central}
+                                        onChange={(e) => setTiempoForm({...tiempoForm, retencion_archivo_central: parseInt(e.target.value) || 0})}
+                                        placeholder="Años"
+                                    />
+                                    <p className="text-xs text-gray-500">Años en archivo central</p>
+                                </div>
+                            </div>
+
+                            {/* Disposición Final */}
+                            <div className="space-y-2">
+                                <Label>Disposición Final *</Label>
+                                <Select 
+                                    value={tiempoForm.disposicion_final} 
+                                    onValueChange={(value) => setTiempoForm({...tiempoForm, disposicion_final: value})}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="CT">CT - Conservación Total</SelectItem>
+                                        <SelectItem value="E">E - Eliminación</SelectItem>
+                                        <SelectItem value="D">D - Digitalización</SelectItem>
+                                        <SelectItem value="S">S - Selección</SelectItem>
+                                        <SelectItem value="M">M - Microfilmación</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Soportes */}
+                            <div className="space-y-2">
+                                <Label>Soportes</Label>
+                                <div className="flex gap-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="soporte-fisico"
+                                            checked={tiempoForm.soporte_fisico}
+                                            onCheckedChange={(checked) => setTiempoForm({...tiempoForm, soporte_fisico: checked as boolean})}
+                                        />
+                                        <Label htmlFor="soporte-fisico" className="font-normal">Físico</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="soporte-electronico"
+                                            checked={tiempoForm.soporte_electronico}
+                                            onCheckedChange={(checked) => setTiempoForm({...tiempoForm, soporte_electronico: checked as boolean})}
+                                        />
+                                        <Label htmlFor="soporte-electronico" className="font-normal">Electrónico</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="soporte-hibrido"
+                                            checked={tiempoForm.soporte_hibrido}
+                                            onCheckedChange={(checked) => setTiempoForm({...tiempoForm, soporte_hibrido: checked as boolean})}
+                                        />
+                                        <Label htmlFor="soporte-hibrido" className="font-normal">Híbrido</Label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Procedimiento */}
+                            <div className="space-y-2">
+                                <Label>Procedimiento</Label>
+                                <Textarea
+                                    value={tiempoForm.procedimiento}
+                                    onChange={(e) => setTiempoForm({...tiempoForm, procedimiento: e.target.value})}
+                                    placeholder="Descripción del procedimiento de disposición final"
+                                    rows={3}
+                                />
+                            </div>
+
+                            {/* Observaciones */}
+                            <div className="space-y-2">
+                                <Label>Observaciones</Label>
+                                <Textarea
+                                    value={tiempoForm.observaciones}
+                                    onChange={(e) => setTiempoForm({...tiempoForm, observaciones: e.target.value})}
+                                    placeholder="Observaciones adicionales"
+                                    rows={2}
+                                />
+                            </div>
+                        </div>
                         <DialogFooter>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setShowDeleteModal(false)}
-                            >
+                            <Button variant="outline" onClick={() => setShowTiempoModal(false)}>
+                                <X className="h-4 w-4 mr-2" />
                                 Cancelar
                             </Button>
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={handleDelete}
-                            >
-                                Eliminar
+                            <Button onClick={submitTiempo} className="bg-[#2a3d83] hover:bg-[#1e2b5f]">
+                                <Save className="h-4 w-4 mr-2" />
+                                Guardar
                             </Button>
                         </DialogFooter>
                     </DialogContent>

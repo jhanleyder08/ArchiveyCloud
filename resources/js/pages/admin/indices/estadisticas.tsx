@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Database, TrendingUp, Users, Calendar, HardDrive, Star, Archive, FileText, FolderOpen, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Database, TrendingUp, Users, Calendar, HardDrive, Star, Archive, FileText, FolderOpen, Clock, AlertTriangle, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 
 interface Estadisticas {
@@ -223,12 +223,12 @@ export default function IndicesEstadisticas({ estadisticas }: Props) {
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
-                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                        label={({ name, percent }: any) => `${name} ${((percent as number) * 100).toFixed(0)}%`}
                                         outerRadius={80}
                                         fill="#8884d8"
                                         dataKey="value"
                                     >
-                                        {datosPorTipo.map((entry, index) => (
+                                        {datosPorTipo.map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
@@ -256,7 +256,11 @@ export default function IndicesEstadisticas({ estadisticas }: Props) {
                                     <XAxis dataKey="name" />
                                     <YAxis />
                                     <Tooltip />
-                                    <Bar dataKey="value" fill={(entry) => getColorByEstado(entry.estado)} />
+                                    <Bar dataKey="value" fill="#3B82F6">
+                                        {datosConservacion.map((entry: { name: string; value: number; estado: string }, index: number) => (
+                                            <Cell key={`cell-estado-${index}`} fill={getColorByEstado(entry.estado)} />
+                                        ))}
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </CardContent>
@@ -331,12 +335,12 @@ export default function IndicesEstadisticas({ estadisticas }: Props) {
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
-                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                        label={({ name, percent }: any) => `${name} ${((percent as number) * 100).toFixed(0)}%`}
                                         outerRadius={80}
                                         fill="#8884d8"
                                         dataKey="value"
                                     >
-                                        {datosNivelAcceso.map((entry, index) => (
+                                        {datosNivelAcceso.map((entry: { name: string; value: number; nivel: string }, index: number) => (
                                             <Cell key={`cell-${index}`} fill={getColorByNivel(entry.nivel)} />
                                         ))}
                                     </Pie>

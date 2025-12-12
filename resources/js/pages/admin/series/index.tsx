@@ -19,14 +19,6 @@ interface TRD {
     nombre: string;
 }
 
-interface Retencion {
-    id: number;
-    serie_id: number;
-    retencion_archivo_gestion: number;
-    retencion_archivo_central: number;
-    disposicion_final: string;
-}
-
 interface SerieDocumental {
     id: number;
     codigo: string;
@@ -34,11 +26,17 @@ interface SerieDocumental {
     descripcion: string;
     trd_id: number;
     tabla_retencion?: TRD; // Relación del modelo (snake_case desde Inertia)
-    retencion?: Retencion; // Relación con tabla retenciones
-    tiempo_archivo_gestion?: number; // Campo no existe en BD - deprecated
-    tiempo_archivo_central?: number; // Campo no existe en BD - deprecated
-    disposicion_final?: string; // Campo no existe en BD - deprecated
-    area_responsable?: string; // Campo no existe en BD
+    // Campos directos de retención y disposición
+    soporte_fisico?: boolean;
+    soporte_electronico?: boolean;
+    retencion_gestion?: number;
+    retencion_central?: number;
+    disposicion_ct?: boolean;
+    disposicion_e?: boolean;
+    disposicion_d?: boolean;
+    disposicion_s?: boolean;
+    procedimiento?: string;
+    dependencia?: string;
     observaciones?: string;
     activa: boolean;
     subseries_count?: number;
@@ -106,11 +104,15 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
         trd_id: '',
         dependencia: '',
         orden: 0,
-        tiempo_archivo_gestion: 0,
-        tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
-        area_responsable: '',
-        observaciones: '',
+        soporte_fisico: false,
+        soporte_electronico: true,
+        retencion_gestion: 0,
+        retencion_central: 0,
+        disposicion_ct: false,
+        disposicion_e: false,
+        disposicion_d: false,
+        disposicion_s: false,
+        procedimiento: '',
         activa: true
     });
 
@@ -119,11 +121,16 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
         nombre: '',
         descripcion: '',
         trd_id: '',
-        tiempo_archivo_gestion: 0,
-        tiempo_archivo_central: 0,
-        disposicion_final: 'conservacion_total',
-        area_responsable: '',
-        observaciones: '',
+        dependencia: '',
+        soporte_fisico: false,
+        soporte_electronico: true,
+        retencion_gestion: 0,
+        retencion_central: 0,
+        disposicion_ct: false,
+        disposicion_e: false,
+        disposicion_d: false,
+        disposicion_s: false,
+        procedimiento: '',
         activa: true
     });
 
@@ -135,11 +142,16 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                 nombre: showEditModal.nombre || '',
                 descripcion: showEditModal.descripcion || '',
                 trd_id: showEditModal.trd_id?.toString() || '',
-                tiempo_archivo_gestion: showEditModal.tiempo_archivo_gestion || 0,
-                tiempo_archivo_central: showEditModal.tiempo_archivo_central || 0,
-                disposicion_final: showEditModal.disposicion_final || 'conservacion_total',
-                area_responsable: showEditModal.area_responsable || '',
-                observaciones: showEditModal.observaciones || '',
+                dependencia: showEditModal.dependencia || '',
+                soporte_fisico: showEditModal.soporte_fisico ?? false,
+                soporte_electronico: showEditModal.soporte_electronico ?? true,
+                retencion_gestion: showEditModal.retencion_gestion ?? 0,
+                retencion_central: showEditModal.retencion_central ?? 0,
+                disposicion_ct: showEditModal.disposicion_ct ?? false,
+                disposicion_e: showEditModal.disposicion_e ?? false,
+                disposicion_d: showEditModal.disposicion_d ?? false,
+                disposicion_s: showEditModal.disposicion_s ?? false,
+                procedimiento: showEditModal.procedimiento || '',
                 activa: showEditModal.activa ?? true
             });
         }
@@ -250,6 +262,34 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[disposicion as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
                 {disposicionesFinales[disposicion as keyof typeof disposicionesFinales] || disposicion}
             </span>
+        );
+    };
+
+    // Función para obtener disposición final desde campos booleanos
+    const getDisposicionFromFlags = (serie: SerieDocumental) => {
+        const disposiciones: { key: string; label: string; color: string }[] = [];
+        
+        if (serie.disposicion_ct) disposiciones.push({ key: 'CT', label: 'Conservación Total', color: 'bg-blue-100 text-blue-800' });
+        if (serie.disposicion_e) disposiciones.push({ key: 'E', label: 'Eliminación', color: 'bg-red-100 text-red-800' });
+        if (serie.disposicion_d) disposiciones.push({ key: 'D', label: 'Digitalización', color: 'bg-orange-100 text-orange-800' });
+        if (serie.disposicion_s) disposiciones.push({ key: 'S', label: 'Selección', color: 'bg-yellow-100 text-yellow-800' });
+        
+        if (disposiciones.length === 0) {
+            return <span className="text-sm text-gray-400">No configurada</span>;
+        }
+        
+        return (
+            <div className="flex flex-wrap gap-1">
+                {disposiciones.map(d => (
+                    <span 
+                        key={d.key} 
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${d.color}`}
+                        title={d.label}
+                    >
+                        {d.key}
+                    </span>
+                ))}
+            </div>
         );
     };
 
@@ -401,62 +441,104 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="create-tiempo-gestion">Tiempo Archivo Gestión (años) *</Label>
+                                        <Label htmlFor="create-tiempo-gestion">Retención Archivo Gestión (años) *</Label>
                                         <Input
                                             id="create-tiempo-gestion"
                                             type="number"
                                             min="0"
-                                            value={createForm.tiempo_archivo_gestion}
-                                            onChange={(e) => setCreateForm({...createForm, tiempo_archivo_gestion: parseInt(e.target.value) || 0})}
+                                            value={createForm.retencion_gestion}
+                                            onChange={(e) => setCreateForm({...createForm, retencion_gestion: parseInt(e.target.value) || 0})}
                                             required
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="create-tiempo-central">Tiempo Archivo Central (años) *</Label>
+                                        <Label htmlFor="create-tiempo-central">Retención Archivo Central (años) *</Label>
                                         <Input
                                             id="create-tiempo-central"
                                             type="number"
                                             min="0"
-                                            value={createForm.tiempo_archivo_central}
-                                            onChange={(e) => setCreateForm({...createForm, tiempo_archivo_central: parseInt(e.target.value) || 0})}
+                                            value={createForm.retencion_central}
+                                            onChange={(e) => setCreateForm({...createForm, retencion_central: parseInt(e.target.value) || 0})}
                                             required
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="create-disposicion">Disposición Final *</Label>
-                                        <Select value={createForm.disposicion_final} onValueChange={(value) => setCreateForm({...createForm, disposicion_final: value})}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar disposición" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {Object.entries(disposicionesFinales).map(([key, label]) => (
-                                                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                {/* Soporte Documental */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Soporte Documental</Label>
+                                    <div className="flex items-center gap-4">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={createForm.soporte_fisico}
+                                                onChange={(e) => setCreateForm({...createForm, soporte_fisico: e.target.checked})}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Físico (F)</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={createForm.soporte_electronico}
+                                                onChange={(e) => setCreateForm({...createForm, soporte_electronico: e.target.checked})}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Electrónico (E)</span>
+                                        </label>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="create-area">Área Responsable</Label>
-                                        <Input
-                                            id="create-area"
-                                            type="text"
-                                            value={createForm.area_responsable}
-                                            onChange={(e) => setCreateForm({...createForm, area_responsable: e.target.value})}
-                                            placeholder="Área responsable de la serie"
-                                        />
+                                </div>
+
+                                {/* Disposición Final */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Disposición Final *</Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={createForm.disposicion_ct}
+                                                onChange={(e) => setCreateForm({...createForm, disposicion_ct: e.target.checked})}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">CT - Conservación Total</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={createForm.disposicion_e}
+                                                onChange={(e) => setCreateForm({...createForm, disposicion_e: e.target.checked})}
+                                                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                            />
+                                            <span className="text-sm">E - Eliminación</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={createForm.disposicion_d}
+                                                onChange={(e) => setCreateForm({...createForm, disposicion_d: e.target.checked})}
+                                                className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                            />
+                                            <span className="text-sm">D - Digitalización</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={createForm.disposicion_s}
+                                                onChange={(e) => setCreateForm({...createForm, disposicion_s: e.target.checked})}
+                                                className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                                            />
+                                            <span className="text-sm">S - Selección</span>
+                                        </label>
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="create-observaciones">Observaciones</Label>
+                                    <Label htmlFor="create-procedimiento">Procedimiento</Label>
                                     <Textarea
-                                        id="create-observaciones"
-                                        value={createForm.observaciones}
-                                        onChange={(e) => setCreateForm({...createForm, observaciones: e.target.value})}
-                                        placeholder="Observaciones adicionales"
+                                        id="create-procedimiento"
+                                        value={createForm.procedimiento}
+                                        onChange={(e) => setCreateForm({...createForm, procedimiento: e.target.value})}
+                                        placeholder="Procedimiento para la disposición final"
                                         rows={2}
                                     />
                                 </div>
@@ -691,13 +773,14 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                {serie.retencion ? (
+                                                {(serie.retencion_gestion !== null && serie.retencion_gestion !== undefined) || 
+                                                 (serie.retencion_central !== null && serie.retencion_central !== undefined) ? (
                                                     <div className="text-sm">
                                                         <div className="text-gray-900 font-medium">
-                                                            AG: {serie.retencion.retencion_archivo_gestion} años
+                                                            AG: {serie.retencion_gestion ?? 0} años
                                                         </div>
                                                         <div className="text-gray-600 text-xs">
-                                                            AC: {serie.retencion.retencion_archivo_central} años
+                                                            AC: {serie.retencion_central ?? 0} años
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -705,11 +788,7 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                {serie.retencion && serie.retencion.disposicion_final ? (
-                                                    getDisposicionBadge(serie.retencion.disposicion_final)
-                                                ) : (
-                                                    <span className="text-sm text-gray-400">No configurada</span>
-                                                )}
+                                                {getDisposicionFromFlags(serie)}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {getEstadoBadge(serie.activa)}
@@ -929,62 +1008,105 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                 {/* Campos de Retención */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="edit-tiempo-gestion">Tiempo Archivo Gestión (años) *</Label>
+                                        <Label htmlFor="edit-tiempo-gestion">Retención Archivo Gestión (años) *</Label>
                                         <Input
                                             id="edit-tiempo-gestion"
                                             type="number"
                                             min="0"
-                                            value={editForm.tiempo_archivo_gestion}
-                                            onChange={(e) => setEditForm({...editForm, tiempo_archivo_gestion: parseInt(e.target.value) || 0})}
+                                            value={editForm.retencion_gestion}
+                                            onChange={(e) => setEditForm({...editForm, retencion_gestion: parseInt(e.target.value) || 0})}
                                             required
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="edit-tiempo-central">Tiempo Archivo Central (años) *</Label>
+                                        <Label htmlFor="edit-tiempo-central">Retención Archivo Central (años) *</Label>
                                         <Input
                                             id="edit-tiempo-central"
                                             type="number"
                                             min="0"
-                                            value={editForm.tiempo_archivo_central}
-                                            onChange={(e) => setEditForm({...editForm, tiempo_archivo_central: parseInt(e.target.value) || 0})}
+                                            value={editForm.retencion_central}
+                                            onChange={(e) => setEditForm({...editForm, retencion_central: parseInt(e.target.value) || 0})}
                                             required
                                         />
                                     </div>
                                 </div>
                                 
+                                {/* Soporte Documental */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-disposicion">Disposición Final *</Label>
-                                    <Select value={editForm.disposicion_final} onValueChange={(value) => setEditForm({...editForm, disposicion_final: value})}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar disposición final" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Object.entries(disposicionesFinales).map(([key, label]) => (
-                                                <SelectItem key={key} value={key}>
-                                                    {label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Label className="text-sm font-medium">Soporte Documental</Label>
+                                    <div className="flex items-center gap-4">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={editForm.soporte_fisico}
+                                                onChange={(e) => setEditForm({...editForm, soporte_fisico: e.target.checked})}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Físico (F)</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={editForm.soporte_electronico}
+                                                onChange={(e) => setEditForm({...editForm, soporte_electronico: e.target.checked})}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">Electrónico (E)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                {/* Disposición Final */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Disposición Final *</Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={editForm.disposicion_ct}
+                                                onChange={(e) => setEditForm({...editForm, disposicion_ct: e.target.checked})}
+                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm">CT - Conservación Total</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={editForm.disposicion_e}
+                                                onChange={(e) => setEditForm({...editForm, disposicion_e: e.target.checked})}
+                                                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                                            />
+                                            <span className="text-sm">E - Eliminación</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={editForm.disposicion_d}
+                                                onChange={(e) => setEditForm({...editForm, disposicion_d: e.target.checked})}
+                                                className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                            />
+                                            <span className="text-sm">D - Digitalización</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer p-2 border rounded hover:bg-gray-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={editForm.disposicion_s}
+                                                onChange={(e) => setEditForm({...editForm, disposicion_s: e.target.checked})}
+                                                className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                                            />
+                                            <span className="text-sm">S - Selección</span>
+                                        </label>
+                                    </div>
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-area-responsable">Área Responsable</Label>
-                                    <Input
-                                        id="edit-area-responsable"
-                                        type="text"
-                                        value={editForm.area_responsable}
-                                        onChange={(e) => setEditForm({...editForm, area_responsable: e.target.value})}
-                                    />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                    <Label htmlFor="edit-observaciones">Observaciones</Label>
+                                    <Label htmlFor="edit-procedimiento">Procedimiento</Label>
                                     <Textarea
-                                        id="edit-observaciones"
-                                        value={editForm.observaciones}
-                                        onChange={(e) => setEditForm({...editForm, observaciones: e.target.value})}
-                                        rows={3}
+                                        id="edit-procedimiento"
+                                        value={editForm.procedimiento}
+                                        onChange={(e) => setEditForm({...editForm, procedimiento: e.target.value})}
+                                        placeholder="Procedimiento para la disposición final"
+                                        rows={2}
                                     />
                                 </div>
                                 
@@ -1036,22 +1158,31 @@ export default function AdminSeriesIndex({ data, stats, trds, areas, flash }: Pr
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label className="text-sm font-medium text-gray-500">Tiempo Archivo Gestión</Label>
-                                        <p className="text-sm text-gray-900">{showViewModal.retencion?.retencion_archivo_gestion || 'N/A'} años</p>
+                                        <Label className="text-sm font-medium text-gray-500">Retención Archivo Gestión</Label>
+                                        <p className="text-sm text-gray-900">{showViewModal.retencion_gestion ?? 'N/A'} años</p>
                                     </div>
                                     <div>
-                                        <Label className="text-sm font-medium text-gray-500">Tiempo Archivo Central</Label>
-                                        <p className="text-sm text-gray-900">{showViewModal.retencion?.retencion_archivo_central || 'N/A'} años</p>
+                                        <Label className="text-sm font-medium text-gray-500">Retención Archivo Central</Label>
+                                        <p className="text-sm text-gray-900">{showViewModal.retencion_central ?? 'N/A'} años</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <Label className="text-sm font-medium text-gray-500">Disposición Final</Label>
-                                    <div className="mt-1">{showViewModal.retencion?.disposicion_final ? getDisposicionBadge(showViewModal.retencion.disposicion_final) : <span className="text-sm text-gray-500">No configurada</span>}</div>
-                                </div>
-                                {showViewModal.area_responsable && (
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label className="text-sm font-medium text-gray-500">Área Responsable</Label>
-                                        <p className="text-sm text-gray-900">{showViewModal.area_responsable}</p>
+                                        <Label className="text-sm font-medium text-gray-500">Soporte</Label>
+                                        <div className="flex gap-2 mt-1">
+                                            {showViewModal.soporte_fisico && <span className="px-2 py-0.5 bg-gray-100 text-gray-800 rounded text-xs">Físico</span>}
+                                            {showViewModal.soporte_electronico && <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">Electrónico</span>}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500">Disposición Final</Label>
+                                        <div className="mt-1">{getDisposicionFromFlags(showViewModal)}</div>
+                                    </div>
+                                </div>
+                                {showViewModal.procedimiento && (
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500">Procedimiento</Label>
+                                        <p className="text-sm text-gray-900">{showViewModal.procedimiento}</p>
                                     </div>
                                 )}
                                 <div className="grid grid-cols-2 gap-4">

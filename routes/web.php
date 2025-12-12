@@ -7,7 +7,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'two-factor'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
     // Ruta para extender sesión (actividad)
@@ -137,10 +137,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Gestión de Tablas de Retención Documental (TRD) - Protegido con permisos
         Route::prefix('trd')->name('trd.')->middleware('permission:trd.ver')->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminTRDController::class, 'index'])->name('index');
+            Route::get('/plantilla', [App\Http\Controllers\Admin\AdminTRDController::class, 'descargarPlantilla'])->name('plantilla');
             Route::get('/{trd}', [App\Http\Controllers\Admin\AdminTRDController::class, 'show'])->name('show');
+            // Exportar PDF con formato oficial FOR-GDI-GDO-002
+            Route::get('/{trd}/export-pdf', [App\Http\Controllers\Admin\AdminTRDController::class, 'exportarPDF'])->name('export-pdf');
             
             Route::middleware('permission:trd.crear')->group(function () {
                 Route::post('/', [App\Http\Controllers\Admin\AdminTRDController::class, 'store'])->name('store');
+                Route::post('/{trd}/importar', [App\Http\Controllers\Admin\AdminTRDController::class, 'importarSeries'])->name('importar');
+            });
+            
+            Route::middleware('permission:trd.editar')->group(function () {
+                // Guardar tiempos de retención por nivel del CCD
+                Route::post('/{trd}/tiempo-retencion', [App\Http\Controllers\Admin\AdminTRDController::class, 'guardarTiempoRetencion'])->name('guardar-tiempo');
+                Route::delete('/{trd}/tiempo-retencion/{nivelId}', [App\Http\Controllers\Admin\AdminTRDController::class, 'eliminarTiempoRetencion'])->name('eliminar-tiempo');
             });
             
             Route::middleware('permission:trd.editar')->group(function () {
@@ -434,6 +444,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'index'])->name('index');
             Route::get('/create', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'create'])->name('create');
             Route::post('/', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'store'])->name('store');
+            
+            // Rutas de generación automática desde TRD (deben ir antes de /{disposicion})
+            Route::get('/pendientes-trd', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'pendientesTRD'])->name('pendientes-trd');
+            Route::post('/generar-automaticas', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'generarAutomaticas'])->name('generar-automaticas');
+            Route::post('/expediente/{expediente}/generar', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'generarParaExpediente'])->name('generar-expediente');
+            Route::get('/expediente/{expediente}/configuracion-trd', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'getConfiguracionTRD'])->name('configuracion-trd');
+            
+            // Reportes
+            Route::get('/reportes', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'reportes'])->name('reportes');
+            
+            // Rutas con parámetro (deben ir al final)
             Route::get('/{disposicion}', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'show'])->name('show');
             Route::get('/{disposicion}/edit', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'edit'])->name('edit');
             Route::put('/{disposicion}', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'update'])->name('update');
@@ -444,9 +465,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('/{disposicion}/aprobar', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'aprobar'])->name('aprobar');
             Route::put('/{disposicion}/rechazar', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'rechazar'])->name('rechazar');
             Route::put('/{disposicion}/ejecutar', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'ejecutar'])->name('ejecutar');
-            
-            // Reportes
-            Route::get('/reportes/estadisticas', [App\Http\Controllers\Admin\AdminDisposicionController::class, 'reportes'])->name('reportes');
         });
         
         // Dashboard Ejecutivo Unificado - Protegido con permisos
@@ -513,6 +531,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/testing', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testing'])->name('testing');
             Route::post('/test-email', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testEmail'])->name('test-email');
             Route::post('/test-sms', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'testSms'])->name('test-sms');
+            Route::post('/send-custom-email', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'sendCustomEmail'])->name('send-custom-email');
             Route::get('/estadisticas', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'estadisticas'])->name('estadisticas');
             Route::get('/configuracion', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'configuracion'])->name('configuracion');
             Route::post('/configuracion', [App\Http\Controllers\Admin\ServiciosExternosController::class, 'actualizarConfiguracion'])->name('actualizar-configuracion');

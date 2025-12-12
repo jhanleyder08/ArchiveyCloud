@@ -16,6 +16,10 @@ class TRD extends Model
 
     protected $fillable = [
         'codigo',
+        'codigo_unidad_administrativa',
+        'nombre_unidad_administrativa',
+        'codigo_dependencia',
+        'nombre_dependencia',
         'ccd_id',
         'nombre',
         'descripcion',

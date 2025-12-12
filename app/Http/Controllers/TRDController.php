@@ -5,18 +5,23 @@ namespace App\Http\Controllers;
 use App\Models\TRD;
 use App\Models\CCD;
 use App\Services\TRDService;
+use App\Services\TRDImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Barryvdh\DomPDF\Facade\Pdf;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class TRDController extends Controller
 {
     protected $trdService;
+    protected $importService;
 
-    public function __construct(TRDService $trdService)
+    public function __construct(TRDService $trdService, TRDImportService $importService)
     {
         $this->trdService = $trdService;
+        $this->importService = $importService;
     }
 
     /**
@@ -78,7 +83,13 @@ class TRDController extends Controller
             'ccd_id' => 'required|exists:cuadros_clasificacion,id',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
+            // Campos del formato oficial FOR-GDI-GDO-002
+            'codigo_unidad_administrativa' => 'nullable|string|max:20',
+            'nombre_unidad_administrativa' => 'nullable|string|max:255',
+            'codigo_dependencia' => 'nullable|string|max:20',
+            'nombre_dependencia' => 'nullable|string|max:255',
             'version' => 'nullable|string|max:20',
+            'fecha_aprobacion' => 'nullable|date',
             'fecha_vigencia_inicio' => 'nullable|date',
             'fecha_vigencia_fin' => 'nullable|date|after:fecha_vigencia_inicio',
             'metadata' => 'nullable|array',
@@ -140,7 +151,13 @@ class TRDController extends Controller
             'codigo' => 'required|string|max:50|unique:trds,codigo,' . $trd->id,
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
+            // Campos del formato oficial FOR-GDI-GDO-002
+            'codigo_unidad_administrativa' => 'nullable|string|max:20',
+            'nombre_unidad_administrativa' => 'nullable|string|max:255',
+            'codigo_dependencia' => 'nullable|string|max:20',
+            'nombre_dependencia' => 'nullable|string|max:255',
             'version' => 'nullable|string|max:20',
+            'fecha_aprobacion' => 'nullable|date',
             'fecha_vigencia_inicio' => 'nullable|date',
             'fecha_vigencia_fin' => 'nullable|date|after:fecha_vigencia_inicio',
             'metadata' => 'nullable|array',
@@ -300,6 +317,101 @@ class TRDController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al exportar TRD', ['error' => $e->getMessage()]);
             return back()->with('error', 'Error al exportar TRD: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exportar TRD a PDF con formato oficial FOR-GDI-GDO-002
+     * Basado en el formato del Hospital Universitario del Valle
+     */
+    public function exportarPDF(TRD $trd)
+    {
+        try {
+            // Cargar relaciones necesarias
+            $trd->load([
+                'series.subseries.tiposDocumentales',
+                'series.tiposDocumentales',
+                'series.retenciones',
+                'series.subseries.retenciones',
+            ]);
+
+            $pdf = Pdf::loadView('pdf.trd-formato-oficial', [
+                'trd' => $trd
+            ]);
+            
+            // Configurar página horizontal para mejor visualización de la tabla
+            $pdf->setPaper('letter', 'landscape');
+            
+            $nombreArchivo = 'TRD_' . $trd->codigo . '_v' . str_pad($trd->version, 2, '0', STR_PAD_LEFT) . '.pdf';
+
+            return $pdf->download($nombreArchivo);
+        } catch (\Exception $e) {
+            Log::error('Error al exportar TRD a PDF', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Importar series desde Excel/CSV a una TRD existente
+     */
+    public function importarSeries(Request $request, TRD $trd)
+    {
+        $request->validate([
+            'archivo' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ], [
+            'archivo.required' => 'Debe seleccionar un archivo',
+            'archivo.mimes' => 'El archivo debe ser Excel (.xlsx, .xls) o CSV',
+            'archivo.max' => 'El archivo no puede superar 10MB',
+        ]);
+
+        try {
+            $archivo = $request->file('archivo');
+            $extension = strtolower($archivo->getClientOriginalExtension());
+
+            if ($extension === 'csv') {
+                $results = $this->importService->importFromCSV($archivo, $trd);
+            } else {
+                $results = $this->importService->importFromExcel($archivo, $trd);
+            }
+
+            $mensaje = "Importación completada: {$results['series_creadas']} series y {$results['subseries_creadas']} subseries creadas.";
+            
+            if (!empty($results['errores'])) {
+                $mensaje .= " Se encontraron " . count($results['errores']) . " errores.";
+                Log::warning('Errores en importación TRD', ['errores' => $results['errores']]);
+            }
+
+            return redirect()
+                ->route('admin.trd.show', $trd->id)
+                ->with('success', $mensaje);
+
+        } catch (\Exception $e) {
+            Log::error('Error al importar series', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error al importar: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descargar plantilla Excel para importación
+     */
+    public function descargarPlantilla()
+    {
+        try {
+            $spreadsheet = $this->importService->generateTemplate();
+            
+            $writer = new Xlsx($spreadsheet);
+            $filename = 'Plantilla_TRD_Importacion.xlsx';
+            
+            $temp = tempnam(sys_get_temp_dir(), 'trd');
+            $writer->save($temp);
+            
+            return response()->download($temp, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al generar plantilla', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Error al generar plantilla: ' . $e->getMessage());
         }
     }
 

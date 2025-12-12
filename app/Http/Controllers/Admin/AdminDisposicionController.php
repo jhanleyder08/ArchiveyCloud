@@ -8,6 +8,7 @@ use App\Models\Expediente;
 use App\Models\Documento;
 use App\Models\User;
 use App\Models\PistaAuditoria;
+use App\Services\DisposicionAutomaticaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -16,10 +17,13 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class AdminDisposicionController extends Controller
 {
-    public function __construct()
+    protected DisposicionAutomaticaService $disposicionService;
+
+    public function __construct(DisposicionAutomaticaService $disposicionService)
     {
         $this->middleware('auth');
         $this->middleware('verified');
+        $this->disposicionService = $disposicionService;
     }
 
     /**
@@ -68,9 +72,14 @@ class AdminDisposicionController extends Controller
             'total_disposiciones' => DisposicionFinal::count(),
             'pendientes' => DisposicionFinal::where('estado', DisposicionFinal::ESTADO_PENDIENTE)->count(),
             'en_revision' => DisposicionFinal::where('estado', DisposicionFinal::ESTADO_EN_REVISION)->count(),
+            'aprobadas' => DisposicionFinal::where('estado', DisposicionFinal::ESTADO_APROBADO)->count(),
+            'ejecutadas' => DisposicionFinal::where('estado', DisposicionFinal::ESTADO_EJECUTADO)->count(),
             'vencidas' => DisposicionFinal::vencidas()->count(),
             'proximas_vencer' => DisposicionFinal::proximasAVencer(30)->count(),
         ];
+
+        // Estadísticas de expedientes pendientes de disposición (desde TRD)
+        $estadisticasTRD = $this->disposicionService->getEstadisticasDisposicionesPendientes();
 
         // Próximas a vencer (30 días)
         $proximasVencer = DisposicionFinal::with(['expediente', 'documento', 'responsable'])
@@ -86,9 +95,30 @@ class AdminDisposicionController extends Controller
                 return $disposicion;
             });
 
+        // Expedientes que requieren disposición según TRD
+        $expedientesPendientesTRD = $this->disposicionService->getExpedientesParaDisposicion(90)
+            ->take(10)
+            ->map(function ($exp) {
+                return [
+                    'id' => $exp->id,
+                    'codigo' => $exp->codigo,
+                    'titulo' => $exp->titulo,
+                    'fecha_cierre' => $exp->fecha_cierre?->format('Y-m-d'),
+                    'fecha_eliminacion' => $exp->fecha_eliminacion?->format('Y-m-d'),
+                    'dias_para_disposicion' => $exp->dias_para_disposicion,
+                    'ya_vencido' => $exp->ya_vencido,
+                    'tipo_disposicion_sugerido' => $exp->tipo_disposicion_sugerido,
+                    'serie' => $exp->serie?->nombre,
+                    'subserie' => $exp->subserie?->nombre,
+                    'responsable' => $exp->responsable?->name,
+                ];
+            });
+
         return Inertia::render('admin/disposiciones/index', [
             'disposiciones' => $disposiciones,
             'estadisticas' => $estadisticas,
+            'estadisticasTRD' => $estadisticasTRD,
+            'expedientesPendientesTRD' => $expedientesPendientesTRD,
             'proximasVencer' => $proximasVencer,
             'filtros' => $request->only(['estado', 'tipo_disposicion', 'fecha_inicio', 'fecha_fin', 'responsable']),
         ]);
@@ -568,5 +598,119 @@ class AdminDisposicionController extends Controller
             'disposicionesPorEstado' => $disposicionesPorEstado,
             'timelineEjecuciones' => $timelineEjecuciones,
         ]);
+    }
+
+    /**
+     * Vista de expedientes pendientes de disposición según TRD
+     */
+    public function pendientesTRD(Request $request)
+    {
+        $diasAnticipacion = $request->input('dias', 90);
+        
+        $expedientes = $this->disposicionService->getExpedientesParaDisposicion($diasAnticipacion)
+            ->map(function ($exp) {
+                return [
+                    'id' => $exp->id,
+                    'codigo' => $exp->codigo,
+                    'titulo' => $exp->titulo,
+                    'fecha_cierre' => $exp->fecha_cierre?->format('Y-m-d'),
+                    'fecha_eliminacion' => $exp->fecha_eliminacion?->format('Y-m-d'),
+                    'dias_para_disposicion' => $exp->dias_para_disposicion,
+                    'ya_vencido' => $exp->ya_vencido,
+                    'tipo_disposicion_sugerido' => $exp->tipo_disposicion_sugerido,
+                    'serie' => $exp->serie?->nombre,
+                    'subserie' => $exp->subserie?->nombre,
+                    'responsable' => $exp->responsable?->name,
+                    'info_retencion' => $exp->info_retencion,
+                ];
+            });
+
+        $estadisticasTRD = $this->disposicionService->getEstadisticasDisposicionesPendientes();
+
+        return Inertia::render('admin/disposiciones/pendientes-trd', [
+            'expedientes' => $expedientes,
+            'estadisticasTRD' => $estadisticasTRD,
+            'diasAnticipacion' => $diasAnticipacion,
+        ]);
+    }
+
+    /**
+     * Generar disposiciones automáticas desde TRD
+     */
+    public function generarAutomaticas(Request $request)
+    {
+        $validated = $request->validate([
+            'expediente_ids' => 'nullable|array',
+            'expediente_ids.*' => 'exists:expedientes,id',
+            'generar_todos_vencidos' => 'nullable|boolean',
+        ]);
+
+        $expedienteIds = $validated['expediente_ids'] ?? [];
+        $generarTodos = $validated['generar_todos_vencidos'] ?? false;
+
+        // Si no se especifican IDs y se quiere generar todos, dejar vacío el array
+        if ($generarTodos) {
+            $expedienteIds = [];
+        }
+
+        $resultados = $this->disposicionService->generarDisposicionesAutomaticas(
+            $expedienteIds,
+            auth()->id()
+        );
+
+        $mensaje = "Proceso completado: {$resultados['exitosos']} disposiciones creadas";
+        if ($resultados['fallidos'] > 0) {
+            $mensaje .= ", {$resultados['fallidos']} con errores";
+        }
+        if ($resultados['omitidos'] > 0) {
+            $mensaje .= ", {$resultados['omitidos']} omitidos";
+        }
+
+        return redirect()->back()->with([
+            'success' => $mensaje,
+            'resultados' => $resultados,
+        ]);
+    }
+
+    /**
+     * Generar disposición para un expediente específico (AJAX)
+     */
+    public function generarParaExpediente(Request $request, Expediente $expediente)
+    {
+        try {
+            $resultado = $this->disposicionService->crearDisposicionParaExpediente(
+                $expediente,
+                auth()->id()
+            );
+
+            if ($resultado['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Disposición creada exitosamente',
+                    'disposicion_id' => $resultado['disposicion_id'],
+                    'tipo_disposicion' => $resultado['tipo_disposicion'],
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => $resultado['razon'],
+                ], 422);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear disposición: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener configuración TRD de un expediente (AJAX)
+     */
+    public function getConfiguracionTRD(Expediente $expediente)
+    {
+        $resumen = $this->disposicionService->getResumenConfiguracionTRD($expediente);
+        
+        return response()->json($resumen);
     }
 }

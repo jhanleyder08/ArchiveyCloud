@@ -81,6 +81,30 @@ interface Estadisticas {
     vencidas: number;
 }
 
+interface EstadisticasTRD {
+    vencidos_sin_disposicion: number;
+    proximos_30_dias: number;
+    proximos_60_dias: number;
+    proximos_90_dias: number;
+    total_pendientes: number;
+    total_con_fecha_eliminacion: number;
+    por_tipo_disposicion: Record<string, number>;
+}
+
+interface ExpedientePendienteTRD {
+    id: number;
+    codigo: string;
+    titulo: string;
+    fecha_cierre: string;
+    fecha_eliminacion: string;
+    dias_para_disposicion: number;
+    ya_vencido: boolean;
+    tipo_disposicion_sugerido: string;
+    serie: string;
+    subserie: string;
+    responsable: string;
+}
+
 interface Props {
     disposiciones: {
         data: DisposicionFinal[];
@@ -90,6 +114,8 @@ interface Props {
         total: number;
     };
     estadisticas: Estadisticas;
+    estadisticasTRD: EstadisticasTRD;
+    expedientesPendientesTRD: ExpedientePendienteTRD[];
     proximasVencer: DisposicionFinal[];
     filtros: {
         tipo_disposicion?: string;
@@ -126,7 +152,7 @@ const estadoIcons: Record<string, React.ReactNode> = {
     cancelado: <AlertTriangle className="h-4 w-4" />,
 };
 
-export default function DisposicionesIndex({ disposiciones, estadisticas, proximasVencer, filtros }: Props) {
+export default function DisposicionesIndex({ disposiciones, estadisticas, estadisticasTRD, expedientesPendientesTRD, proximasVencer, filtros }: Props) {
     const { data, setData, get, processing } = useForm({
         tipo_disposicion: filtros.tipo_disposicion || 'todos',
         estado: filtros.estado || 'todos',
@@ -283,6 +309,130 @@ export default function DisposicionesIndex({ disposiciones, estadisticas, proxim
                             </div>
                         </AlertDescription>
                     </Alert>
+                )}
+
+                {/* Expedientes Pendientes de Disposición según TRD */}
+                {estadisticasTRD && (estadisticasTRD.total_pendientes > 0 || estadisticasTRD.total_con_fecha_eliminacion > 0) && (
+                    <Card className="border-blue-200 bg-blue-50/30">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center space-x-2 text-[#2a3d83]">
+                                        <FileText className="h-5 w-5" />
+                                        <span>Expedientes Pendientes de Disposición (TRD)</span>
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {estadisticasTRD.total_pendientes > 0 
+                                            ? 'Expedientes que han cumplido su tiempo de retención según la Tabla de Retención Documental'
+                                            : `${estadisticasTRD.total_con_fecha_eliminacion} expediente(s) con fecha de disposición configurada en la TRD`
+                                        }
+                                    </CardDescription>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    {estadisticasTRD.vencidos_sin_disposicion > 0 && (
+                                        <Badge variant="destructive" className="text-sm">
+                                            {estadisticasTRD.vencidos_sin_disposicion} vencidos
+                                        </Badge>
+                                    )}
+                                    {estadisticasTRD.proximos_30_dias > 0 && (
+                                        <Badge variant="outline" className="text-sm border-orange-300 text-orange-700">
+                                            {estadisticasTRD.proximos_30_dias} próximos (30 días)
+                                        </Badge>
+                                    )}
+                                    {estadisticasTRD.total_con_fecha_eliminacion > 0 && estadisticasTRD.total_pendientes === 0 && (
+                                        <Badge variant="outline" className="text-sm border-green-300 text-green-700">
+                                            ✓ Todo al día
+                                        </Badge>
+                                    )}
+                                    <Button size="sm" className="bg-[#2a3d83] hover:bg-[#1e2b5f]" asChild>
+                                        <Link href="/admin/disposiciones/pendientes-trd">
+                                            Ver Todos
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        {expedientesPendientesTRD && expedientesPendientesTRD.length > 0 ? (
+                            <CardContent>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Código</TableHead>
+                                                <TableHead>Título</TableHead>
+                                                <TableHead>Serie/Subserie</TableHead>
+                                                <TableHead>Vencimiento</TableHead>
+                                                <TableHead>Disposición Sugerida</TableHead>
+                                                <TableHead className="text-right">Acción</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {expedientesPendientesTRD.slice(0, 5).map((exp) => (
+                                                <TableRow key={exp.id} className={exp.ya_vencido ? 'bg-red-50' : ''}>
+                                                    <TableCell className="font-medium">{exp.codigo}</TableCell>
+                                                    <TableCell className="max-w-xs truncate">{exp.titulo}</TableCell>
+                                                    <TableCell>
+                                                        <div className="text-sm">
+                                                            <p>{exp.serie || 'Sin serie'}</p>
+                                                            {exp.subserie && <p className="text-gray-500">{exp.subserie}</p>}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="space-y-1">
+                                                            <span className={exp.ya_vencido ? 'text-red-600 font-medium' : ''}>
+                                                                {exp.fecha_eliminacion ? new Date(exp.fecha_eliminacion).toLocaleDateString('es-ES') : 'N/A'}
+                                                            </span>
+                                                            {exp.ya_vencido ? (
+                                                                <p className="text-xs text-red-600 font-medium">¡Vencido!</p>
+                                                            ) : exp.dias_para_disposicion <= 30 ? (
+                                                                <p className="text-xs text-orange-600">En {exp.dias_para_disposicion} días</p>
+                                                            ) : null}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {exp.tipo_disposicion_sugerido && (
+                                                            <Badge variant="outline" className={tipoColors[exp.tipo_disposicion_sugerido] || 'bg-gray-100'}>
+                                                                {exp.tipo_disposicion_sugerido.replace(/_/g, ' ')}
+                                                            </Badge>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button size="sm" variant="outline" className="text-[#2a3d83]" asChild>
+                                                            <Link href={`/admin/disposiciones/create?expediente_id=${exp.id}`}>
+                                                                <Plus className="h-4 w-4 mr-1" />
+                                                                Crear
+                                                            </Link>
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                {expedientesPendientesTRD.length > 5 && (
+                                    <div className="mt-4 text-center">
+                                        <Button variant="link" className="text-[#2a3d83]" asChild>
+                                            <Link href="/admin/disposiciones/pendientes-trd">
+                                                Ver los {expedientesPendientesTRD.length - 5} expedientes restantes →
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        ) : (
+                            <CardContent>
+                                <div className="text-center py-6">
+                                    <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+                                    <p className="text-gray-600">
+                                        No hay expedientes con disposición pendiente en los próximos 90 días.
+                                    </p>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Los expedientes tienen sus fechas de disposición configuradas correctamente en la TRD.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        )}
+                    </Card>
                 )}
 
                 {/* Filtros */}

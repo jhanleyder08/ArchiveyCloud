@@ -45,7 +45,7 @@ class IndiceElectronicoService
             'subserie_documental' => $expediente->subserie?->codigo,
             'fecha_inicio' => $expediente->fecha_apertura,
             'fecha_fin' => $expediente->fecha_cierre,
-            'responsable' => $expediente->usuarioResponsable?->name,
+            'responsable' => $expediente->responsable?->name,
             'ubicacion_fisica' => $expediente->ubicacion_fisica,
             'ubicacion_digital' => $expediente->ubicacion_digital,
             'nivel_acceso' => $expediente->nivel_acceso ?? 'publico',
@@ -132,7 +132,7 @@ class IndiceElectronicoService
                 'descripcion' => $entidad->descripcion,
                 'metadatos' => $metadatos,
                 'fecha_fin' => $entidad->fecha_cierre,
-                'responsable' => $entidad->usuarioResponsable?->name,
+                'responsable' => $entidad->responsable?->name,
                 'ubicacion_fisica' => $entidad->ubicacion_fisica,
                 'cantidad_folios' => $this->calcularFoliosExpediente($entidad),
                 'fecha_ultima_actualizacion' => now(),
@@ -171,7 +171,7 @@ class IndiceElectronicoService
 
         switch ($tipo) {
             case 'expedientes':
-                $expedientes = Expediente::with(['serie', 'subserie', 'usuarioResponsable'])->get();
+                $expedientes = Expediente::with(['serie', 'subserie', 'responsable'])->get();
                 
                 foreach ($expedientes as $expediente) {
                     try {
@@ -340,8 +340,8 @@ class IndiceElectronicoService
             'codigo' => $expediente->codigo,
             'estado' => $expediente->estado,
             'prioridad' => $expediente->prioridad,
-            'fecha_apertura' => $expediente->fecha_apertura?->toISOString(),
-            'fecha_cierre' => $expediente->fecha_cierre?->toISOString(),
+            'fecha_apertura' => $this->formatearFecha($expediente->fecha_apertura),
+            'fecha_cierre' => $this->formatearFecha($expediente->fecha_cierre),
             'total_documentos' => $expediente->documentos()->count(),
             'configuracion' => [
                 'permite_documentos_electronicos' => $expediente->permite_documentos_electronicos,
@@ -360,13 +360,30 @@ class IndiceElectronicoService
             'tipologia_documental_id' => $documento->tipologia_documental_id,
             'formato' => $documento->formato,
             'tamano_bytes' => $documento->tamano_bytes,
-            'fecha_documento' => $documento->fecha_documento?->toISOString(),
-            'fecha_captura' => $documento->fecha_captura?->toISOString(),
-            'fecha_creacion' => $documento->created_at?->toISOString(),
-            'fecha_modificacion' => $documento->updated_at?->toISOString(),
+            'fecha_documento' => $this->formatearFecha($documento->fecha_documento),
+            'fecha_captura' => $this->formatearFecha($documento->fecha_captura),
+            'fecha_creacion' => $this->formatearFecha($documento->created_at),
+            'fecha_modificacion' => $this->formatearFecha($documento->updated_at),
             'firmado_digitalmente' => $documento->firmado_digitalmente ?? false,
             'total_firmas' => $documento->total_firmas ?? 0,
         ];
+    }
+    
+    /**
+     * Formatea una fecha de forma segura
+     */
+    private function formatearFecha($fecha): ?string
+    {
+        if ($fecha === null) {
+            return null;
+        }
+        if ($fecha instanceof \Carbon\Carbon || $fecha instanceof \DateTime) {
+            return $fecha->toISOString();
+        }
+        if (is_string($fecha)) {
+            return $fecha;
+        }
+        return null;
     }
 
     private function generarPalabrasClave(string $texto): array

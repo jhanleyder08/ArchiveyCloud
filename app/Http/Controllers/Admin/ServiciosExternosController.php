@@ -102,7 +102,7 @@ class ServiciosExternosController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Error en test de email', [
+            \Log::error('Error en test de email', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -111,6 +111,134 @@ class ServiciosExternosController extends Controller
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Enviar correo personalizado
+     */
+    public function sendCustomEmail(Request $request)
+    {
+        $request->validate([
+            'destinatario_tipo' => 'required|in:usuario,manual',
+            'user_id' => 'nullable|exists:users,id',
+            'email_manual' => 'nullable|email',
+            'asunto' => 'required|string|max:200',
+            'mensaje' => 'required|string|max:5000',
+            'prioridad' => 'required|in:baja,media,alta,urgente'
+        ]);
+
+        // Determinar destinatario
+        $emailDestinatario = null;
+        $nombreDestinatario = 'Usuario Externo';
+        $userId = null;
+
+        if ($request->destinatario_tipo === 'usuario') {
+            if (!$request->user_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes seleccionar un usuario destinatario'
+                ], 422);
+            }
+            $usuario = User::findOrFail($request->user_id);
+            $emailDestinatario = $usuario->email;
+            $nombreDestinatario = $usuario->name;
+            $userId = $usuario->id;
+        } else {
+            if (!$request->email_manual) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes ingresar un correo electrónico'
+                ], 422);
+            }
+            $emailDestinatario = $request->email_manual;
+        }
+
+        try {
+            // Crear notificación si es un usuario del sistema
+            if ($userId) {
+                $notificacion = Notificacion::create([
+                    'user_id' => $userId,
+                    'tipo' => 'correo_personalizado',
+                    'titulo' => $request->asunto,
+                    'mensaje' => $request->mensaje,
+                    'prioridad' => $request->prioridad,
+                    'estado' => 'pendiente',
+                    'es_automatica' => false,
+                    'accion_url' => null,
+                    'datos' => json_encode([
+                        'enviado_por' => auth()->user()->name,
+                        'email_enviado_por' => auth()->user()->email,
+                        'personalizado' => true,
+                        'timestamp' => now()->toISOString()
+                    ])
+                ]);
+
+                // Enviar usando el servicio de email
+                $enviado = $this->emailService->enviarNotificacion($notificacion);
+            } else {
+                // Para correos externos, enviar directamente con Mail
+                $enviado = $this->enviarCorreoExterno($emailDestinatario, $request->asunto, $request->mensaje, $request->prioridad);
+            }
+
+            return response()->json([
+                'success' => $enviado,
+                'message' => $enviado 
+                    ? "Correo enviado exitosamente a {$emailDestinatario}" 
+                    : 'Error enviando el correo',
+                'detalles' => [
+                    'destinatario' => $emailDestinatario,
+                    'nombre' => $nombreDestinatario,
+                    'asunto' => $request->asunto,
+                    'prioridad' => $request->prioridad,
+                    'timestamp' => now()->format('d/m/Y H:i:s')
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error enviando correo personalizado', [
+                'error' => $e->getMessage(),
+                'destinatario' => $emailDestinatario,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Enviar correo a destinatario externo
+     */
+    private function enviarCorreoExterno(string $email, string $asunto, string $mensaje, string $prioridad): bool
+    {
+        try {
+            \Mail::send([], [], function ($mail) use ($email, $asunto, $mensaje, $prioridad) {
+                $prioridadEmoji = match($prioridad) {
+                    'urgente' => '🔴',
+                    'alta' => '🟠',
+                    'media' => '🟡',
+                    default => '🔵'
+                };
+
+                $htmlContent = view('emails.correo-personalizado', [
+                    'mensaje' => $mensaje,
+                    'prioridad' => $prioridad,
+                    'prioridadEmoji' => $prioridadEmoji,
+                    'remitente' => auth()->user()->name,
+                    'fecha' => now()->format('d/m/Y H:i:s')
+                ])->render();
+
+                $mail->to($email)
+                    ->subject("{$prioridadEmoji} {$asunto}")
+                    ->html($htmlContent);
+            });
+
+            return true;
+        } catch (\Exception $e) {
+            \Log::error('Error en enviarCorreoExterno: ' . $e->getMessage());
+            throw $e;
         }
     }
 

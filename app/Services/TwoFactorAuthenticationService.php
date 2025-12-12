@@ -174,7 +174,7 @@ class TwoFactorAuthenticationService
     }
 
     /**
-     * Generar QR Code para configuración
+     * Generar QR Code para configuración (devuelve data URI para usar en <img src="">)
      */
     public function getQRCodeUrl(User $user): string
     {
@@ -187,11 +187,15 @@ class TwoFactorAuthenticationService
         $secret = decrypt($twoFactor->secret);
         $appName = config('app.name', 'SGDEA');
 
-        return $this->google2fa->getQRCodeUrl(
+        // Generar el SVG del QR code
+        $svg = $this->google2fa->getQRCodeInline(
             $appName,
             $user->email,
             $secret
         );
+
+        // Convertir a data URI para usar directamente en <img src="">
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
     /**

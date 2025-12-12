@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -9,13 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, FileText, GitBranch, Users, Calendar, Clock, X, Plus } from 'lucide-react';
+import { AlertCircle, FileText, GitBranch, Users, Calendar, Clock, X, Plus, Search, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Documento {
     id: number;
     nombre: string;
     codigo: string;
+    fecha?: string;
     expediente?: {
         numero: string;
         titulo: string;
@@ -32,6 +33,7 @@ interface Usuario {
 interface Props {
     documento?: Documento;
     usuarios_disponibles?: Usuario[];
+    documentos_disponibles?: Documento[];
 }
 
 interface FormData {
@@ -43,10 +45,11 @@ interface FormData {
     dias_vencimiento: number;
 }
 
-export default function WorkflowCreate({ documento, usuarios_disponibles = [] }: Props) {
-    const usuariosDisponibles = usuarios_disponibles; // Alias para usar en el código
+export default function WorkflowCreate({ documento, usuarios_disponibles = [], documentos_disponibles = [] }: Props) {
+    const usuariosDisponibles = usuarios_disponibles;
     const [aprobadoresSeleccionados, setAprobadoresSeleccionados] = useState<Usuario[]>([]);
-    const [mostrarBuscarDocumento, setMostrarBuscarDocumento] = useState(!documento);
+    const [documentoSeleccionado, setDocumentoSeleccionado] = useState<Documento | null>(documento || null);
+    const [busquedaDocumento, setBusquedaDocumento] = useState('');
     
     const { data, setData, post, processing, errors } = useForm<FormData>({
         documento_id: documento?.id.toString() || '',
@@ -56,6 +59,24 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [] }:
         requiere_unanime: false,
         dias_vencimiento: 7
     });
+
+    // Filtrar documentos por búsqueda
+    const documentosFiltrados = useMemo(() => {
+        if (!busquedaDocumento.trim()) return documentos_disponibles.slice(0, 20);
+        const busqueda = busquedaDocumento.toLowerCase();
+        return documentos_disponibles.filter(doc => 
+            doc.nombre.toLowerCase().includes(busqueda) ||
+            doc.codigo.toLowerCase().includes(busqueda) ||
+            doc.expediente?.titulo?.toLowerCase().includes(busqueda) ||
+            doc.expediente?.numero?.toLowerCase().includes(busqueda)
+        ).slice(0, 20);
+    }, [documentos_disponibles, busquedaDocumento]);
+
+    const seleccionarDocumento = (doc: Documento) => {
+        setDocumentoSeleccionado(doc);
+        setData('documento_id', doc.id.toString());
+        setBusquedaDocumento('');
+    };
 
     const prioridades = [
         { valor: 4, etiqueta: 'Crítica', color: 'text-red-600' },
@@ -67,13 +88,15 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [] }:
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (aprobadoresSeleccionados.length === 0) {
+        if (aprobadoresSeleccionados.length === 0 || !documentoSeleccionado) {
             return;
         }
 
         post('/admin/workflow', {
-            ...data,
-            aprobadores: aprobadoresSeleccionados.map(u => u.id)
+            preserveScroll: true,
+            onBefore: () => {
+                // Los aprobadores ya están actualizados en data via agregarAprobador
+            }
         });
     };
 
@@ -132,23 +155,29 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [] }:
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {documento ? (
-                                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    {documentoSeleccionado ? (
+                                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                                             <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h4 className="font-medium text-blue-900">{documento.nombre}</h4>
-                                                    <p className="text-sm text-blue-700">{documento.codigo}</p>
-                                                    {documento.expediente && (
-                                                        <p className="text-sm text-blue-600 mt-1">
-                                                            Expediente: {documento.expediente.numero} - {documento.expediente.titulo}
-                                                        </p>
-                                                    )}
+                                                <div className="flex items-start gap-3">
+                                                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                                                    <div>
+                                                        <h4 className="font-medium text-green-900">{documentoSeleccionado.nombre}</h4>
+                                                        <p className="text-sm text-green-700">Código: {documentoSeleccionado.codigo}</p>
+                                                        {documentoSeleccionado.expediente && (
+                                                            <p className="text-sm text-green-600 mt-1">
+                                                                Expediente: {documentoSeleccionado.expediente.numero} - {documentoSeleccionado.expediente.titulo}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <Button
                                                     type="button"
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={() => setMostrarBuscarDocumento(true)}
+                                                    onClick={() => {
+                                                        setDocumentoSeleccionado(null);
+                                                        setData('documento_id', '');
+                                                    }}
                                                 >
                                                     Cambiar
                                                 </Button>
@@ -156,17 +185,60 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [] }:
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            <Label htmlFor="documento_id">Documento *</Label>
-                                            <Input
-                                                id="documento_id"
-                                                placeholder="Buscar documento por nombre o código..."
-                                                className={errors.documento_id ? 'border-red-500' : ''}
-                                            />
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                <Input
+                                                    placeholder="Buscar documento por nombre, código o expediente..."
+                                                    value={busquedaDocumento}
+                                                    onChange={(e) => setBusquedaDocumento(e.target.value)}
+                                                    className={`pl-10 ${errors.documento_id ? 'border-red-500' : ''}`}
+                                                />
+                                            </div>
                                             {errors.documento_id && (
                                                 <p className="text-sm text-red-600">{errors.documento_id}</p>
                                             )}
+                                            
+                                            {/* Lista de documentos */}
+                                            <div className="max-h-64 overflow-y-auto border rounded-lg divide-y">
+                                                {documentosFiltrados.length > 0 ? (
+                                                    documentosFiltrados.map((doc) => (
+                                                        <div 
+                                                            key={doc.id}
+                                                            className="p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                                                            onClick={() => seleccionarDocumento(doc)}
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <div>
+                                                                    <p className="font-medium text-gray-900">{doc.nombre}</p>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <Badge variant="outline" className="text-xs">{doc.codigo}</Badge>
+                                                                        {doc.expediente && (
+                                                                            <span className="text-xs text-gray-500">
+                                                                                Exp: {doc.expediente.numero}
+                                                                            </span>
+                                                                        )}
+                                                                        {doc.fecha && (
+                                                                            <span className="text-xs text-gray-400">{doc.fecha}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <Button type="button" variant="ghost" size="sm">
+                                                                    <Plus className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="p-8 text-center text-gray-500">
+                                                        <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                                                        <p>No se encontraron documentos</p>
+                                                        <p className="text-sm">Intenta con otra búsqueda</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
                                             <p className="text-sm text-gray-500">
-                                                Nota: La búsqueda de documentos se implementará próximamente
+                                                Mostrando {documentosFiltrados.length} de {documentos_disponibles.length} documentos disponibles
                                             </p>
                                         </div>
                                     )}
@@ -382,7 +454,7 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [] }:
                                 <Button 
                                     type="submit" 
                                     className="w-full" 
-                                    disabled={processing || !documento || aprobadoresSeleccionados.length === 0}
+                                    disabled={processing || !documentoSeleccionado || aprobadoresSeleccionados.length === 0}
                                 >
                                     {processing ? 'Creando...' : 'Iniciar Workflow'}
                                 </Button>

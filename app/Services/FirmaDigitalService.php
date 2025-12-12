@@ -8,6 +8,7 @@ use App\Models\FirmaDigital;
 use App\Models\CertificadoDigital;
 use App\Models\SolicitudFirma;
 use App\Models\FirmanteSolicitud;
+use App\Models\Notificacion;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -349,8 +350,9 @@ class FirmaDigitalService
         ]);
 
         // Crear firmantes
+        $firmantesCreados = [];
         foreach ($firmantes as $index => $firmante) {
-            FirmanteSolicitud::create([
+            $firmanteCreado = FirmanteSolicitud::create([
                 'solicitud_firma_id' => $solicitud->id,
                 'usuario_id' => $firmante['usuario_id'],
                 'orden' => $firmante['orden'] ?? $index + 1,
@@ -358,9 +360,137 @@ class FirmaDigitalService
                 'rol_firmante' => $firmante['rol'] ?? FirmanteSolicitud::ROL_APROBADOR,
                 'estado' => FirmanteSolicitud::ESTADO_PENDIENTE
             ]);
+            $firmantesCreados[] = $firmanteCreado;
         }
+        
+        // Notificar a los firmantes según el tipo de flujo
+        $this->notificarFirmantes($solicitud, $firmantesCreados, $documento, $solicitante);
+        
+        // Notificar al solicitante que su solicitud fue enviada
+        $this->notificarSolicitante($solicitud, $firmantesCreados, $documento, $solicitante);
 
         return $solicitud;
+    }
+    
+    /**
+     * Notificar a los firmantes sobre una nueva solicitud de firma
+     */
+    private function notificarFirmantes(
+        SolicitudFirma $solicitud,
+        array $firmantesCreados,
+        Documento $documento,
+        User $solicitante
+    ): void {
+        $tipoFlujo = $solicitud->tipo_flujo;
+        
+        // Ordenar firmantes por orden
+        usort($firmantesCreados, fn($a, $b) => $a->orden <=> $b->orden);
+        
+        // Determinar a quién notificar según el tipo de flujo
+        $firmantesANotificar = [];
+        
+        if ($tipoFlujo === SolicitudFirma::FLUJO_SECUENCIAL) {
+            // Solo notificar al primer firmante
+            $firmantesANotificar = [reset($firmantesCreados)];
+        } else {
+            // Flujo paralelo o mixto: notificar a todos
+            $firmantesANotificar = $firmantesCreados;
+        }
+        
+        foreach ($firmantesANotificar as $firmante) {
+            try {
+                // Crear notificación para el firmante
+                Notificacion::create([
+                    'user_id' => $firmante->usuario_id,
+                    'tipo' => 'solicitud_firma',
+                    'titulo' => 'Nueva solicitud de firma',
+                    'mensaje' => "Has recibido una solicitud de firma de {$solicitante->name} para el documento: {$documento->titulo}",
+                    'prioridad' => $this->mapearPrioridad($solicitud->prioridad),
+                    'accion_url' => "/admin/firmas/solicitudes/{$solicitud->id}",
+                    'datos' => [
+                        'solicitud_id' => $solicitud->id,
+                        'documento_id' => $documento->id,
+                        'documento_titulo' => $documento->titulo,
+                        'solicitante_id' => $solicitante->id,
+                        'solicitante_nombre' => $solicitante->name,
+                        'prioridad' => $solicitud->prioridad,
+                        'fecha_limite' => $solicitud->fecha_limite?->toISOString(),
+                        'rol_firmante' => $firmante->rol_firmante,
+                        'icono' => 'FileSignature',
+                    ],
+                    'estado' => 'pendiente',
+                    'es_automatica' => true,
+                    'relacionado_id' => $solicitud->id,
+                    'relacionado_tipo' => SolicitudFirma::class,
+                ]);
+                
+                // Actualizar estado del firmante a notificado
+                $firmante->update([
+                    'estado' => FirmanteSolicitud::ESTADO_NOTIFICADO,
+                    'notificado_en' => now(),
+                ]);
+                
+                Log::info("Notificación de firma enviada al usuario {$firmante->usuario_id} para solicitud {$solicitud->id}");
+                
+            } catch (\Exception $e) {
+                Log::error("Error al notificar firmante {$firmante->usuario_id}: " . $e->getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Mapear prioridad de solicitud a prioridad de notificación
+     */
+    private function mapearPrioridad(string $prioridad): string
+    {
+        return match($prioridad) {
+            'urgente' => 'critica',
+            'alta' => 'alta',
+            'normal' => 'media',
+            'baja' => 'baja',
+            default => 'media',
+        };
+    }
+    
+    /**
+     * Notificar al solicitante que su solicitud fue enviada
+     */
+    private function notificarSolicitante(
+        SolicitudFirma $solicitud,
+        array $firmantesCreados,
+        Documento $documento,
+        User $solicitante
+    ): void {
+        try {
+            $nombresFirmantes = collect($firmantesCreados)->map(function($f) {
+                return User::find($f->usuario_id)?->name ?? 'Usuario desconocido';
+            })->join(', ');
+            
+            Notificacion::create([
+                'user_id' => $solicitante->id,
+                'tipo' => 'solicitud_firma_enviada',
+                'titulo' => 'Solicitud de firma enviada',
+                'mensaje' => "Tu solicitud de firma para el documento '{$documento->titulo}' ha sido enviada a: {$nombresFirmantes}",
+                'prioridad' => 'baja',
+                'accion_url' => "/admin/firmas/solicitudes/{$solicitud->id}",
+                'datos' => [
+                    'solicitud_id' => $solicitud->id,
+                    'documento_id' => $documento->id,
+                    'documento_titulo' => $documento->titulo,
+                    'firmantes' => $nombresFirmantes,
+                    'icono' => 'Send',
+                ],
+                'estado' => 'pendiente',
+                'es_automatica' => true,
+                'relacionado_id' => $solicitud->id,
+                'relacionado_tipo' => SolicitudFirma::class,
+            ]);
+            
+            Log::info("Notificación de confirmación enviada al solicitante {$solicitante->id} para solicitud {$solicitud->id}");
+            
+        } catch (\Exception $e) {
+            Log::error("Error al notificar solicitante {$solicitante->id}: " . $e->getMessage());
+        }
     }
 
     /**

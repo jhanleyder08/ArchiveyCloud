@@ -14,6 +14,13 @@ import {
     SelectTrigger, 
     SelectValue 
 } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { 
     Bell,
     BellRing,
@@ -33,7 +40,8 @@ import {
     RefreshCw,
     ChevronLeft,
     ChevronRight,
-    Loader2
+    Loader2,
+    X
 } from 'lucide-react';
 
 interface Notificacion {
@@ -139,6 +147,16 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
     };
 
     const [isLoading, setIsLoading] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [notificacionSeleccionada, setNotificacionSeleccionada] = useState<Notificacion | null>(null);
+
+    const verDetalleNotificacion = (notificacion: Notificacion) => {
+        if (notificacion.estado === 'pendiente') {
+            marcarComoLeida(notificacion.id);
+        }
+        setNotificacionSeleccionada(notificacion);
+        setModalOpen(true);
+    };
 
     const marcarComoLeida = async (id: number) => {
         setIsLoading(true);
@@ -411,12 +429,27 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <div className="flex items-center gap-2">
-                                                        {notificacion.accion_url && (
-                                                            <Link href={notificacion.accion_url}>
-                                                                <button className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors">
-                                                                    <Eye className="h-4 w-4" />
-                                                                </button>
-                                                            </Link>
+                                                        {notificacion.accion_url ? (
+                                                            <button 
+                                                                onClick={() => {
+                                                                    if (notificacion.estado === 'pendiente') {
+                                                                        marcarComoLeida(notificacion.id);
+                                                                    }
+                                                                    router.visit(notificacion.accion_url!);
+                                                                }}
+                                                                className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                                title="Ver detalle"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button 
+                                                                onClick={() => verDetalleNotificacion(notificacion)}
+                                                                className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+                                                                title="Ver mensaje"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </button>
                                                         )}
                                                         {notificacion.estado === 'pendiente' && (
                                                             <button 
@@ -509,6 +542,54 @@ export default function NotificacionesIndex({ notificaciones, estadisticas, filt
                         </div>
                     </div>
                 )}
+
+                {/* Modal de detalle de notificación */}
+                <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+                    <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col">
+                        <DialogHeader className="flex-shrink-0">
+                            <DialogTitle className="flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-blue-100">
+                                    <Bell className="h-5 w-5 text-[#2a3d83]" />
+                                </div>
+                                <span className="text-[#2a3d83] line-clamp-2">{notificacionSeleccionada?.titulo}</span>
+                            </DialogTitle>
+                            <DialogDescription>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <Badge className={prioridadColors[notificacionSeleccionada?.prioridad || 'media']}>
+                                        {notificacionSeleccionada?.prioridad}
+                                    </Badge>
+                                    <span className="text-sm text-gray-500">
+                                        {notificacionSeleccionada?.created_at && formatearFecha(notificacionSeleccionada.created_at)}
+                                    </span>
+                                </div>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 flex-1 overflow-y-auto min-h-0">
+                            <div className="bg-gray-50 rounded-lg p-4 border">
+                                <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                                    {notificacionSeleccionada?.mensaje}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2 border-t flex-shrink-0">
+                            <Button variant="outline" onClick={() => setModalOpen(false)}>
+                                Cerrar
+                            </Button>
+                            {notificacionSeleccionada?.accion_url && (
+                                <Button 
+                                    onClick={() => {
+                                        setModalOpen(false);
+                                        router.visit(notificacionSeleccionada.accion_url!);
+                                    }}
+                                    className="bg-[#2a3d83] hover:bg-[#1e2b5f]"
+                                >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Ver Detalle
+                                </Button>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

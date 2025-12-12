@@ -32,7 +32,7 @@ class TwoFactorChallengeController extends Controller
             $this->twoFactorService->sendCodeViaEmail($user);
         }
 
-        return Inertia::render('Auth/TwoFactorChallenge', [
+        return Inertia::render('auth/TwoFactorChallenge', [
             'method' => $method,
         ]);
     }

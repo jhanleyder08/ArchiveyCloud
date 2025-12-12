@@ -116,11 +116,38 @@ class WorkflowController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'cargo']);
         
+        // Obtener IDs de documentos con workflow activo
+        $documentosConWorkflowActivo = WorkflowInstancia::whereIn('estado', ['en_proceso', 'pausado'])
+            ->where('entidad_type', 'App\\Models\\Documento')
+            ->pluck('entidad_id')
+            ->toArray();
+        
+        // Obtener documentos disponibles para workflow (sin workflow activo)
+        $documentosDisponibles = Documento::with(['expediente:id,codigo,titulo'])
+            ->whereNotIn('id', $documentosConWorkflowActivo)
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get(['id', 'titulo', 'codigo_documento', 'expediente_id', 'created_at'])
+            ->map(function ($doc) {
+                return [
+                    'id' => $doc->id,
+                    'nombre' => $doc->titulo,
+                    'codigo' => $doc->codigo_documento ?? 'DOC-' . $doc->id,
+                    'expediente' => $doc->expediente ? [
+                        'numero' => $doc->expediente->codigo,
+                        'titulo' => $doc->expediente->titulo
+                    ] : null,
+                    'fecha' => $doc->created_at?->format('d/m/Y') ?? ''
+                ];
+            });
+        
         return Inertia::render('admin/workflow/create', [
             'entidad' => $entidad ? $this->formatearEntidad($entidad, $tipoEntidad) : null,
+            'documento' => $entidad && $tipoEntidad === 'documento' ? $this->formatearEntidad($entidad, $tipoEntidad) : null,
             'tipo_entidad' => $tipoEntidad,
             'workflows_disponibles' => $workflowsDisponibles,
-            'usuarios_disponibles' => $usuariosDisponibles
+            'usuarios_disponibles' => $usuariosDisponibles,
+            'documentos_disponibles' => $documentosDisponibles
         ]);
     }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/toast';
-import { FileText, Plus, Search, Eye, Edit, Copy, ToggleLeft, ToggleRight, Trash2, CheckCircle } from 'lucide-react';
+import { FileText, Plus, Search, Eye, Edit, Copy, ToggleLeft, ToggleRight, Trash2, CheckCircle, Upload, Download, FileSpreadsheet } from 'lucide-react';
 import { useEffect } from 'react';
 
 interface CCD {
@@ -106,6 +106,10 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState<TRD | null>(null);
     const [showViewModal, setShowViewModal] = useState<TRD | null>(null);
+    const [showImportModal, setShowImportModal] = useState<TRD | null>(null);
+    const [importFile, setImportFile] = useState<File | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Interceptar flash messages y mostrarlos como toasts
     useEffect(() => {
@@ -121,8 +125,11 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
         ccd_id: '',
         nombre: '',
         descripcion: '',
-        entidad: '',
-        dependencia: '',
+        // Campos del formato oficial FOR-GDI-GDO-002
+        codigo_unidad_administrativa: '',
+        nombre_unidad_administrativa: '',
+        codigo_dependencia: '',
+        nombre_dependencia: '',
         fecha_aprobacion: '',
         fecha_vigencia_inicio: '',
         fecha_vigencia_fin: '',
@@ -135,8 +142,10 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
         codigo: '',
         nombre: '',
         descripcion: '',
-        entidad: '',
-        dependencia: '',
+        codigo_unidad_administrativa: '',
+        nombre_unidad_administrativa: '',
+        codigo_dependencia: '',
+        nombre_dependencia: '',
         fecha_aprobacion: '',
         fecha_vigencia_inicio: '',
         fecha_vigencia_fin: '',
@@ -152,8 +161,10 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                 codigo: showEditModal.codigo || '',
                 nombre: showEditModal.nombre || '',
                 descripcion: showEditModal.descripcion || '',
-                entidad: showEditModal.entidad || '',
-                dependencia: showEditModal.dependencia || '',
+                codigo_unidad_administrativa: (showEditModal as any).codigo_unidad_administrativa || '',
+                nombre_unidad_administrativa: (showEditModal as any).nombre_unidad_administrativa || '',
+                codigo_dependencia: (showEditModal as any).codigo_dependencia || '',
+                nombre_dependencia: (showEditModal as any).nombre_dependencia || '',
                 fecha_aprobacion: showEditModal.fecha_aprobacion ? new Date(showEditModal.fecha_aprobacion).toISOString().split('T')[0] : '',
                 fecha_vigencia_inicio: showEditModal.fecha_vigencia_inicio ? new Date(showEditModal.fecha_vigencia_inicio).toISOString().split('T')[0] : '',
                 fecha_vigencia_fin: showEditModal.fecha_vigencia_fin ? new Date(showEditModal.fecha_vigencia_fin).toISOString().split('T')[0] : '',
@@ -250,6 +261,48 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
         });
     };
 
+    // Función para manejar la importación de series desde Excel/CSV
+    const handleImportSeries = (trd: TRD) => {
+        if (!importFile) {
+            toast.error('Seleccione un archivo Excel o CSV');
+            return;
+        }
+
+        setIsImporting(true);
+        const formData = new FormData();
+        formData.append('archivo', importFile);
+
+        router.post(`/admin/trd/${trd.id}/importar`, formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Series importadas exitosamente');
+                setShowImportModal(null);
+                setImportFile(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            },
+            onError: (errors) => {
+                const errorMessage = Object.values(errors)[0] as string;
+                toast.error(errorMessage || 'Error al importar series');
+            },
+            onFinish: () => {
+                setIsImporting(false);
+            }
+        });
+    };
+
+    // Función para descargar plantilla de importación
+    const handleDownloadTemplate = () => {
+        window.location.href = '/admin/trd/plantilla';
+    };
+
+    // Función para exportar TRD a PDF
+    const handleExportPDF = (trd: TRD) => {
+        window.location.href = `/admin/trd/${trd.id}/export-pdf`;
+    };
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('es-ES', {
             year: 'numeric',
@@ -305,13 +358,31 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                             Gestión de Tablas de Retención Documental
                         </h1>
                     </div>
-                    <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-                        <DialogTrigger asChild>
-                            <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
-                                <Plus className="h-4 w-4" />
-                                Nueva TRD
-                            </Button>
-                        </DialogTrigger>
+                    <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleDownloadTemplate}
+                                        className="flex items-center gap-2 px-3 py-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Plantilla Excel
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Descargar plantilla para importar series</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+                            <DialogTrigger asChild>
+                                <Button className="flex items-center gap-2 px-4 py-2 bg-[#2a3d83] text-white rounded-lg hover:bg-[#1e2b5f] transition-colors">
+                                    <Plus className="h-4 w-4" />
+                                    Nueva TRD
+                                </Button>
+                            </DialogTrigger>
                         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             <DialogHeader>
                                 <DialogTitle className="text-xl font-semibold text-gray-900">Crear Nueva TRD</DialogTitle>
@@ -327,24 +398,26 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                     toast.error('Debe seleccionar un CCD');
                                     return;
                                 }
-                                if (!createForm.codigo || !createForm.nombre || !createForm.descripcion || !createForm.entidad || !createForm.fecha_aprobacion || !createForm.fecha_vigencia_inicio) {
+                                if (!createForm.codigo || !createForm.nombre || !createForm.codigo_unidad_administrativa || !createForm.nombre_unidad_administrativa) {
                                     toast.error('Por favor complete todos los campos requeridos');
                                     return;
                                 }
                                 
-                                // Preparar datos para enviar, asegurando tipos correctos
+                                // Preparar datos para enviar según formato oficial FOR-GDI-GDO-002
                                 const formData = {
                                     codigo: createForm.codigo.trim(),
                                     ccd_id: parseInt(createForm.ccd_id),
                                     nombre: createForm.nombre.trim(),
-                                    descripcion: createForm.descripcion.trim(),
-                                    entidad: createForm.entidad.trim(),
-                                    dependencia: createForm.dependencia?.trim() || '',
-                                    fecha_aprobacion: createForm.fecha_aprobacion,
-                                    fecha_vigencia_inicio: createForm.fecha_vigencia_inicio,
+                                    descripcion: createForm.descripcion?.trim() || '',
+                                    // Campos del formato oficial
+                                    codigo_unidad_administrativa: createForm.codigo_unidad_administrativa.trim(),
+                                    nombre_unidad_administrativa: createForm.nombre_unidad_administrativa.trim(),
+                                    codigo_dependencia: createForm.codigo_dependencia?.trim() || '',
+                                    nombre_dependencia: createForm.nombre_dependencia?.trim() || '',
+                                    fecha_aprobacion: createForm.fecha_aprobacion || null,
+                                    fecha_vigencia_inicio: createForm.fecha_vigencia_inicio || null,
                                     fecha_vigencia_fin: createForm.fecha_vigencia_fin || null,
                                     observaciones_generales: createForm.observaciones_generales?.trim() || null,
-                                    // Enviar version como string para evitar problemas de tipo
                                     version: String(createForm.version || 1),
                                     estado: createForm.estado,
                                 };
@@ -360,8 +433,10 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                             ccd_id: '',
                                             nombre: '',
                                             descripcion: '',
-                                            entidad: '',
-                                            dependencia: '',
+                                            codigo_unidad_administrativa: '',
+                                            nombre_unidad_administrativa: '',
+                                            codigo_dependencia: '',
+                                            nombre_dependencia: '',
                                             fecha_aprobacion: '',
                                             fecha_vigencia_inicio: '',
                                             fecha_vigencia_fin: '',
@@ -369,7 +444,6 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                             version: 1,
                                             estado: 'borrador'
                                         });
-                                        // El servidor redirige automáticamente, no necesitamos hacer nada más
                                     },
                                     onError: (errors) => {
                                         console.error('Error al crear TRD:', errors);
@@ -418,95 +492,137 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="create-codigo">Código *</Label>
+                                        <Label htmlFor="create-codigo">Código TRD *</Label>
                                         <Input
                                             id="create-codigo"
                                             type="text"
                                             value={createForm.codigo}
                                             onChange={(e) => setCreateForm({...createForm, codigo: e.target.value})}
-                                            placeholder="Ej: TRD-001"
+                                            placeholder="Ej: FOR-GDI-GDO-002"
                                             required
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="create-entidad">Entidad *</Label>
+                                        <Label htmlFor="create-version">Versión *</Label>
                                         <Input
-                                            id="create-entidad"
-                                            type="text"
-                                            value={createForm.entidad}
-                                            onChange={(e) => setCreateForm({...createForm, entidad: e.target.value})}
-                                            placeholder="Nombre de la entidad"
+                                            id="create-version"
+                                            type="number"
+                                            min="1"
+                                            value={createForm.version}
+                                            onChange={(e) => setCreateForm({...createForm, version: parseInt(e.target.value) || 1})}
+                                            placeholder="01"
                                             required
                                         />
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="create-nombre">Nombre *</Label>
+                                    <Label htmlFor="create-nombre">Nombre de la TRD *</Label>
                                     <Input
                                         id="create-nombre"
                                         type="text"
                                         value={createForm.nombre}
                                         onChange={(e) => setCreateForm({...createForm, nombre: e.target.value})}
-                                        placeholder="Nombre de la TRD"
+                                        placeholder="Ej: TABLAS DE RETENCIÓN DOCUMENTAL"
                                         required
                                     />
                                 </div>
 
+                                {/* UNIDAD ADMINISTRATIVA - Según formato oficial */}
+                                <div className="p-3 bg-gray-50 rounded-lg border space-y-3">
+                                    <p className="text-sm font-semibold text-gray-700">📁 Unidad Administrativa</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="create-codigo-unidad">Código *</Label>
+                                            <Input
+                                                id="create-codigo-unidad"
+                                                type="text"
+                                                value={createForm.codigo_unidad_administrativa}
+                                                onChange={(e) => setCreateForm({...createForm, codigo_unidad_administrativa: e.target.value})}
+                                                placeholder="Ej: 110"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-3">
+                                            <Label htmlFor="create-nombre-unidad">Nombre *</Label>
+                                            <Input
+                                                id="create-nombre-unidad"
+                                                type="text"
+                                                value={createForm.nombre_unidad_administrativa}
+                                                onChange={(e) => setCreateForm({...createForm, nombre_unidad_administrativa: e.target.value})}
+                                                placeholder="Ej: SUBGERENCIA DE SERVICIOS DE SALUD"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* DEPENDENCIA PRODUCTORA - Según formato oficial */}
+                                <div className="p-3 bg-gray-50 rounded-lg border space-y-3">
+                                    <p className="text-sm font-semibold text-gray-700">🏢 Dependencia Productora</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="create-codigo-dependencia">Código</Label>
+                                            <Input
+                                                id="create-codigo-dependencia"
+                                                type="text"
+                                                value={createForm.codigo_dependencia}
+                                                onChange={(e) => setCreateForm({...createForm, codigo_dependencia: e.target.value})}
+                                                placeholder="Ej: 111"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-3">
+                                            <Label htmlFor="create-nombre-dependencia">Nombre</Label>
+                                            <Input
+                                                id="create-nombre-dependencia"
+                                                type="text"
+                                                value={createForm.nombre_dependencia}
+                                                onChange={(e) => setCreateForm({...createForm, nombre_dependencia: e.target.value})}
+                                                placeholder="Ej: OFICINA COORDINADORA DE URGENCIAS Y EMERGENCIAS"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
-                                    <Label htmlFor="create-descripcion">Descripción *</Label>
+                                    <Label htmlFor="create-descripcion">Descripción</Label>
                                     <Textarea
                                         id="create-descripcion"
                                         value={createForm.descripcion}
                                         onChange={(e) => setCreateForm({...createForm, descripcion: e.target.value})}
                                         placeholder="Descripción de la TRD"
-                                        rows={3}
-                                        required
+                                        rows={2}
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="create-dependencia">Dependencia</Label>
-                                    <Input
-                                        id="create-dependencia"
-                                        type="text"
-                                        value={createForm.dependencia}
-                                        onChange={(e) => setCreateForm({...createForm, dependencia: e.target.value})}
-                                        placeholder="Dependencia responsable"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="create-fecha-aprobacion">Fecha de Aprobación *</Label>
+                                        <Label htmlFor="create-fecha-aprobacion">Fecha de Emisión</Label>
                                         <Input
                                             id="create-fecha-aprobacion"
                                             type="date"
                                             value={createForm.fecha_aprobacion}
                                             onChange={(e) => setCreateForm({...createForm, fecha_aprobacion: e.target.value})}
-                                            required
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="create-fecha-vigencia-inicio">Fecha Vigencia Inicio *</Label>
+                                        <Label htmlFor="create-fecha-vigencia-inicio">Fecha Vigencia Inicio</Label>
                                         <Input
                                             id="create-fecha-vigencia-inicio"
                                             type="date"
                                             value={createForm.fecha_vigencia_inicio}
                                             onChange={(e) => setCreateForm({...createForm, fecha_vigencia_inicio: e.target.value})}
-                                            required
                                         />
                                     </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="create-fecha-vigencia-fin">Fecha Vigencia Fin</Label>
-                                    <Input
-                                        id="create-fecha-vigencia-fin"
-                                        type="date"
-                                        value={createForm.fecha_vigencia_fin}
-                                        onChange={(e) => setCreateForm({...createForm, fecha_vigencia_fin: e.target.value})}
-                                    />
+                                    <div className="space-y-2">
+                                        <Label htmlFor="create-fecha-vigencia-fin">Fecha Vigencia Fin</Label>
+                                        <Input
+                                            id="create-fecha-vigencia-fin"
+                                            type="date"
+                                            value={createForm.fecha_vigencia_fin}
+                                            onChange={(e) => setCreateForm({...createForm, fecha_vigencia_fin: e.target.value})}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -516,38 +632,24 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                         value={createForm.observaciones_generales}
                                         onChange={(e) => setCreateForm({...createForm, observaciones_generales: e.target.value})}
                                         placeholder="Observaciones adicionales"
-                                        rows={3}
+                                        rows={2}
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="create-version">Versión *</Label>
-                                        <Input
-                                            id="create-version"
-                                            type="number"
-                                            min="1"
-                                            value={createForm.version}
-                                            onChange={(e) => setCreateForm({...createForm, version: parseInt(e.target.value) || 1})}
-                                            placeholder="1"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="create-estado">Estado *</Label>
-                                        <Select value={createForm.estado} onValueChange={(value) => setCreateForm({...createForm, estado: value})}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar estado" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {Object.entries(estados)
-                                                    .filter(([key]) => key !== 'vigente') // Excluir "vigente" del select
-                                                    .map(([key, label]) => (
-                                                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                                                    ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="create-estado">Estado Inicial</Label>
+                                    <Select value={createForm.estado} onValueChange={(value) => setCreateForm({...createForm, estado: value})}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Seleccionar estado" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(estados)
+                                                .filter(([key]) => key !== 'vigente')
+                                                .map(([key, label]) => (
+                                                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <DialogFooter>
@@ -568,6 +670,7 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                             </form>
                         </DialogContent>
                     </Dialog>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -746,15 +849,15 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                                     <div className="flex items-center gap-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <button
-                                                                    onClick={() => setShowViewModal(trd)}
-                                                                    className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors"
+                                                                <Link
+                                                                    href={`/admin/trd/${trd.id}`}
+                                                                    className="p-2 rounded-md text-[#2a3d83] hover:text-[#1e2b5f] hover:bg-blue-50 transition-colors inline-flex"
                                                                 >
                                                                     <Eye className="h-4 w-4" />
-                                                                </button>
+                                                                </Link>
                                                             </TooltipTrigger>
                                                             <TooltipContent>
-                                                                <p>Ver detalles</p>
+                                                                <p>Ver estructura y tiempos de retención</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                         
@@ -769,6 +872,34 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                                             </TooltipTrigger>
                                                             <TooltipContent>
                                                                 <p>Editar TRD</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    onClick={() => setShowImportModal(trd)}
+                                                                    className="p-2 rounded-md text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
+                                                                >
+                                                                    <Upload className="h-4 w-4" />
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Importar Series (Excel/CSV)</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    onClick={() => handleExportPDF(trd)}
+                                                                    className="p-2 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                                                                >
+                                                                    <FileText className="h-4 w-4" />
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Exportar PDF (Formato Oficial)</p>
                                                             </TooltipContent>
                                                         </Tooltip>
                                                         
@@ -1247,6 +1378,154 @@ export default function AdminTRDIndex({ trds, stats, ccds = [], flash }: Props) 
                                 className="bg-[#2a3d83] hover:bg-[#1e2b5f]"
                             >
                                 Editar TRD
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modal de Importación de Series */}
+                <Dialog open={showImportModal !== null} onOpenChange={(open) => !open && setShowImportModal(null)}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                                <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                                Importar Series Documentales
+                            </DialogTitle>
+                            <DialogDescription className="text-sm text-gray-600">
+                                Importe series documentales desde un archivo Excel (.xlsx, .xls) o CSV para la TRD: <strong>{showImportModal?.nombre}</strong>
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-4">
+                            {/* Zona de carga de archivo */}
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            // Validar tamaño (max 10MB)
+                                            if (file.size > 10 * 1024 * 1024) {
+                                                toast.error('El archivo no debe superar 10MB');
+                                                e.target.value = '';
+                                                return;
+                                            }
+                                            setImportFile(file);
+                                        }
+                                    }}
+                                    className="hidden"
+                                    id="import-file-input"
+                                />
+                                <label
+                                    htmlFor="import-file-input"
+                                    className="cursor-pointer"
+                                >
+                                    <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                                    <p className="text-sm text-gray-600 mb-2">
+                                        <span className="font-semibold text-emerald-600">Haga clic para seleccionar</span> o arrastre el archivo aquí
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        Formatos soportados: Excel (.xlsx, .xls) o CSV (máx. 10MB)
+                                    </p>
+                                </label>
+                            </div>
+
+                            {/* Archivo seleccionado */}
+                            {importFile && (
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                                        <div>
+                                            <p className="text-sm font-medium text-emerald-900">{importFile.name}</p>
+                                            <p className="text-xs text-emerald-600">
+                                                {(importFile.size / 1024).toFixed(2)} KB
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setImportFile(null);
+                                            if (fileInputRef.current) {
+                                                fileInputRef.current.value = '';
+                                            }
+                                        }}
+                                        className="text-emerald-600 hover:text-emerald-800"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Descargar plantilla */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <Download className="h-5 w-5 text-blue-600 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-medium text-blue-900 mb-1">¿Necesita la plantilla?</p>
+                                        <p className="text-xs text-blue-700 mb-2">
+                                            Descargue la plantilla Excel con el formato correcto para importar series documentales.
+                                        </p>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleDownloadTemplate}
+                                            className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                                        >
+                                            <Download className="h-4 w-4 mr-1" />
+                                            Descargar Plantilla
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Información sobre columnas */}
+                            <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                <p className="font-semibold mb-1">Columnas esperadas en el archivo:</p>
+                                <ul className="list-disc list-inside space-y-0.5">
+                                    <li>Código Serie, Nombre Serie (requeridos)</li>
+                                    <li>Código Subserie, Nombre Subserie (opcionales)</li>
+                                    <li>Soporte Físico (F), Soporte Electrónico (E)</li>
+                                    <li>Retención Gestión, Retención Central (años)</li>
+                                    <li>Disposición Final (CT, E, D, S)</li>
+                                    <li>Procedimiento</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setShowImportModal(null);
+                                    setImportFile(null);
+                                    if (fileInputRef.current) {
+                                        fileInputRef.current.value = '';
+                                    }
+                                }}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => showImportModal && handleImportSeries(showImportModal)}
+                                disabled={!importFile || isImporting}
+                                className="bg-emerald-600 hover:bg-emerald-700"
+                            >
+                                {isImporting ? (
+                                    <>
+                                        <span className="animate-spin mr-2">⏳</span>
+                                        Importando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="h-4 w-4 mr-1" />
+                                        Importar Series
+                                    </>
+                                )}
                             </Button>
                         </DialogFooter>
                     </DialogContent>

@@ -89,7 +89,7 @@ class NotificacionService
         // Simular expedientes muy antiguos que requieren cierre
         $expedientesVencidos = Expediente::where('fecha_apertura', '<', Carbon::now()->subYears(2))
             ->where('fecha_cierre', null)
-            ->where('estado_ciclo_vida', 'tramite')
+            ->where('estado', 'en_tramite')
             ->limit(3) // Limitar para pruebas
             ->get();
 

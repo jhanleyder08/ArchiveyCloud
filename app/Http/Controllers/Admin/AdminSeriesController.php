@@ -10,6 +10,8 @@ use App\Models\SubserieDocumental;
 use App\Models\Expediente;
 use App\Models\Documento;
 use App\Models\User;
+use App\Models\TRDTiempoRetencion;
+use App\Models\CCDNivel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,9 +28,6 @@ class AdminSeriesController extends Controller
         $query = SerieDocumental::with([
             'tablaRetencion' => function($q) {
                 $q->select('id', 'codigo', 'nombre');
-            },
-            'retencion' => function($q) {
-                $q->select('id', 'serie_id', 'retencion_archivo_gestion', 'retencion_archivo_central', 'disposicion_final');
             }
         ])->withCount(['subseries', 'expedientes']);
 
@@ -64,6 +63,45 @@ class AdminSeriesController extends Controller
         $series = $query->orderBy('codigo')
                        ->paginate(15)
                        ->withQueryString();
+
+        // Enriquecer series con datos de retención del TRD (desde trd_tiempos_retencion)
+        $series->getCollection()->transform(function ($serie) {
+            // Obtener el CCD asociado al TRD de la serie
+            $trd = TablaRetencionDocumental::find($serie->trd_id);
+            if (!$trd) {
+                return $serie;
+            }
+            
+            // Buscar TODOS los ccd_niveles con ese código de serie en el CCD asociado al TRD
+            $ccdNivelesIds = CCDNivel::where('codigo', $serie->codigo)
+                ->where('tipo_nivel', 'serie')
+                ->where('ccd_id', $trd->ccd_id)
+                ->pluck('id');
+            
+            if ($ccdNivelesIds->isEmpty()) {
+                return $serie;
+            }
+            
+            // Buscar el primer tiempo de retención configurado para cualquiera de estos niveles
+            $tiempoRetencion = TRDTiempoRetencion::whereIn('ccd_nivel_id', $ccdNivelesIds)
+                ->where('trd_id', $serie->trd_id)
+                ->first();
+            
+            if ($tiempoRetencion) {
+                // Sobrescribir con datos del TRD
+                $serie->retencion_gestion = $tiempoRetencion->retencion_archivo_gestion;
+                $serie->retencion_central = $tiempoRetencion->retencion_archivo_central;
+                $serie->disposicion_ct = $tiempoRetencion->disposicion_final === 'CT';
+                $serie->disposicion_e = $tiempoRetencion->disposicion_final === 'E';
+                $serie->disposicion_d = $tiempoRetencion->disposicion_final === 'D';
+                $serie->disposicion_s = $tiempoRetencion->disposicion_final === 'S';
+                $serie->soporte_fisico = $tiempoRetencion->soporte_fisico;
+                $serie->soporte_electronico = $tiempoRetencion->soporte_electronico;
+                $serie->procedimiento = $tiempoRetencion->procedimiento;
+            }
+            
+            return $serie;
+        });
 
         // Estadísticas
         $stats = [
@@ -105,7 +143,7 @@ class AdminSeriesController extends Controller
             $requestData['trd_id'] = is_numeric($requestData['trd_id']) ? (int)$requestData['trd_id'] : $requestData['trd_id'];
         }
         
-        // Validar primero los campos básicos
+        // Validar campos
         $validated = validator($requestData, [
             'nombre' => 'required|string|max:255',
             'descripcion' => 'required|string',
@@ -113,8 +151,17 @@ class AdminSeriesController extends Controller
             'codigo' => 'nullable|string|max:50',
             'dependencia' => 'nullable|string|max:255',
             'orden' => 'nullable|integer|min:0',
-            'observaciones' => 'nullable|string',
-            'activa' => 'nullable|boolean'
+            'activa' => 'nullable|boolean',
+            // Campos de retención y disposición
+            'soporte_fisico' => 'nullable|boolean',
+            'soporte_electronico' => 'nullable|boolean',
+            'retencion_gestion' => 'nullable|integer|min:0',
+            'retencion_central' => 'nullable|integer|min:0',
+            'disposicion_ct' => 'nullable|boolean',
+            'disposicion_e' => 'nullable|boolean',
+            'disposicion_d' => 'nullable|boolean',
+            'disposicion_s' => 'nullable|boolean',
+            'procedimiento' => 'nullable|string',
         ], [
             'trd_id.required' => 'Debe seleccionar una TRD',
             'trd_id.exists' => 'La TRD seleccionada no existe',
@@ -123,8 +170,6 @@ class AdminSeriesController extends Controller
         ])->validate();
 
         // Validar la combinación única de trd_id y codigo
-        // IMPORTANTE: No usar whereNull('deleted_at') porque la restricción UNIQUE 
-        // de la base de datos NO considera soft deletes
         if (!empty($validated['codigo'])) {
             $existente = SerieDocumental::withTrashed()
                 ->where('trd_id', $validated['trd_id'])
@@ -132,7 +177,6 @@ class AdminSeriesController extends Controller
                 ->exists();
             
             if ($existente) {
-                // Verificar si está eliminada
                 $serieExistente = SerieDocumental::withTrashed()
                     ->where('trd_id', $validated['trd_id'])
                     ->where('codigo', $validated['codigo'])
@@ -150,24 +194,12 @@ class AdminSeriesController extends Controller
             }
         }
 
-        // Campos de auditoría no existen en la tabla - eliminados
-
         try {
             \Log::info('STORE SERIE - Datos validados:', $validated);
             
             $serie = SerieDocumental::create($validated);
             
             \Log::info('STORE SERIE - Serie creada:', $serie->toArray());
-
-            // Crear registro de retención si se proporcionaron datos
-            if ($request->filled('retencion_archivo_gestion') || $request->filled('retencion_archivo_central') || $request->filled('disposicion_final')) {
-                $serie->retencion()->create([
-                    'retencion_archivo_gestion' => $request->input('retencion_archivo_gestion', 0),
-                    'retencion_archivo_central' => $request->input('retencion_archivo_central', 0),
-                    'disposicion_final' => $request->input('disposicion_final', 'conservacion_total'),
-                ]);
-                \Log::info('STORE SERIE - Retención creada para la serie');
-            }
 
             return redirect()->route('admin.series.index')
                            ->with('success', "Serie documental '{$serie->nombre}' creada exitosamente.");
@@ -236,8 +268,6 @@ class AdminSeriesController extends Controller
     {
         \Log::info('UPDATE SERIE - ID: ' . ($series->id ?? 'NULL'));
         \Log::info('UPDATE SERIE - Datos recibidos:', $request->all());
-        \Log::info('UPDATE SERIE - Codigo actual: ' . ($series->codigo ?? 'NULL'));
-        \Log::info('UPDATE SERIE - Serie completa:', $series->toArray());
         
         $validated = $request->validate([
             'codigo' => ['nullable', 'string', 'max:50', Rule::unique('series_documentales', 'codigo')->ignore($series->id)->whereNull('deleted_at')],
@@ -245,9 +275,17 @@ class AdminSeriesController extends Controller
             'descripcion' => 'required|string',
             'trd_id' => 'required|exists:tablas_retencion_documental,id',
             'dependencia' => 'nullable|string|max:255',
-            'orden' => 'nullable|integer|min:0',
-            'observaciones' => 'nullable|string',
-            'activa' => 'nullable|boolean'
+            'activa' => 'nullable|boolean',
+            // Campos de retención y disposición
+            'soporte_fisico' => 'nullable|boolean',
+            'soporte_electronico' => 'nullable|boolean',
+            'retencion_gestion' => 'nullable|integer|min:0',
+            'retencion_central' => 'nullable|integer|min:0',
+            'disposicion_ct' => 'nullable|boolean',
+            'disposicion_e' => 'nullable|boolean',
+            'disposicion_d' => 'nullable|boolean',
+            'disposicion_s' => 'nullable|boolean',
+            'procedimiento' => 'nullable|string',
         ]);
 
         try {

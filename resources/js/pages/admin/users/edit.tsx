@@ -3,6 +3,18 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, User, Mail, Lock, Shield, Eye, EyeOff, UserCheck, UserX } from 'lucide-react';
 import { useState } from 'react';
 
+// Función para formatear fecha ISO a yyyy-MM-dd para inputs de fecha
+const formatDateForInput = (dateString: string | null | undefined): string => {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        return date.toISOString().split('T')[0];
+    } catch {
+        return '';
+    }
+};
+
 const breadcrumbItems = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Administración', href: '#' },
@@ -55,8 +67,8 @@ export default function EditUser({ user, roles }: Props) {
         telefono: user.telefono || '',
         cargo: user.cargo || '',
         dependencia: user.dependencia || '',
-        fecha_ingreso: user.fecha_ingreso || '',
-        fecha_vencimiento_cuenta: user.fecha_vencimiento_cuenta || '',
+        fecha_ingreso: formatDateForInput(user.fecha_ingreso),
+        fecha_vencimiento_cuenta: formatDateForInput(user.fecha_vencimiento_cuenta),
     });
 
     const handleSubmit = (e: React.FormEvent) => {

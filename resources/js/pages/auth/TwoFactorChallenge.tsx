@@ -53,8 +53,11 @@ export default function TwoFactorChallenge({ method }: Props) {
             const response = await axios.post('/two-factor/verify', { code });
 
             if (response.data.success) {
-                // Redirigir al dashboard
-                window.location.href = response.data.redirect || '/dashboard';
+                // Usar router.visit de Inertia para mantener la sesión
+                router.visit(response.data.redirect || '/dashboard', {
+                    preserveState: false,
+                    replace: true,
+                });
             }
         } catch (error: any) {
             setAlert({
@@ -62,7 +65,6 @@ export default function TwoFactorChallenge({ method }: Props) {
                 message: error.response?.data?.message || 'Código inválido. Por favor intenta nuevamente.',
             });
             setCode('');
-        } finally {
             setLoading(false);
         }
     };

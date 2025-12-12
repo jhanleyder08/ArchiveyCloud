@@ -71,6 +71,17 @@ class ExpedienteController extends Controller
         $expedientes = $query->orderBy('created_at', 'desc')
             ->paginate(15);
 
+        // Transformar documentos_count a numero_documentos y calcular tamaño total
+        $expedientes->getCollection()->transform(function ($expediente) {
+            $expediente->numero_documentos = $expediente->documentos_count ?? 0;
+            
+            // Calcular tamaño total de documentos en bytes
+            $expediente->tamano_total_bytes = $expediente->documentos()
+                ->sum('tamano_bytes') ?? 0;
+            
+            return $expediente;
+        });
+
         // Estadísticas
         $estadisticas = [
             'total' => Expediente::count(),

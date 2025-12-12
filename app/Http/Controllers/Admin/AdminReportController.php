@@ -45,13 +45,24 @@ class AdminReportController extends Controller
             ->whereYear('created_at', Carbon::now()->year)
             ->count();
         
+        // Calcular tamaño en múltiples unidades para mejor visualización
+        $tamanoTotalBytes = Documento::sum('tamano_bytes') ?? 0;
+        $tamanoTotalMB = round($tamanoTotalBytes / (1024 * 1024), 2);
+        $tamanoTotalGB = round($tamanoTotalBytes / (1024 * 1024 * 1024), 2);
+        
         $metricas = [
             'total_expedientes' => Expediente::count(),
             'total_documentos' => $totalDocumentos,
             'expedientes_abiertos' => Expediente::where('estado', 'en_tramite')->count(),
             'expedientes_cerrados' => Expediente::whereIn('estado', ['inactivo', 'historico'])->count(),
             'documentos_mes_actual' => $documentosMesActual,
-            'tamaño_total_gb' => round((Documento::sum('tamano_bytes') ?? 0) / (1024 * 1024 * 1024), 2),
+            'tamaño_total_gb' => $tamanoTotalGB,
+            'tamaño_total_mb' => $tamanoTotalMB,
+            'tamaño_total_bytes' => $tamanoTotalBytes,
+            'unidad_almacenamiento' => $tamanoTotalGB >= 1 ? 'GB' : ($tamanoTotalMB >= 1 ? 'MB' : 'KB'),
+            'tamaño_formateado' => $tamanoTotalGB >= 1 
+                ? $tamanoTotalGB . ' GB' 
+                : ($tamanoTotalMB >= 1 ? $tamanoTotalMB . ' MB' : round($tamanoTotalBytes / 1024, 2) . ' KB'),
         ];
 
         // Expedientes por estado (últimos 12 meses)

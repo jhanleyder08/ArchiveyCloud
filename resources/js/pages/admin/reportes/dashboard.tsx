@@ -57,6 +57,10 @@ interface Metricas {
     expedientes_cerrados: number;
     documentos_mes_actual: number;
     tamaño_total_gb: number;
+    tamaño_total_mb: number;
+    tamaño_total_bytes: number;
+    unidad_almacenamiento: string;
+    tamaño_formateado: string;
 }
 
 interface ExpedientesPorEstado {
@@ -457,9 +461,9 @@ export default function ReportesDashboard({
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-gray-600">Almacenamiento</p>
-                                <p className="text-2xl font-semibold text-gray-900">{metricas.tamaño_total_gb} GB</p>
+                                <p className="text-2xl font-semibold text-gray-900">{metricas.tamaño_formateado || `${metricas.tamaño_total_gb} GB`}</p>
                                 <p className="text-xs text-gray-500 mt-1">
-                                    {metricas.total_documentos > 0 ? Math.round(metricas.tamaño_total_gb / metricas.total_documentos * 1024) : 0} MB promedio
+                                    {metricas.total_documentos > 0 ? (metricas.tamaño_total_mb / metricas.total_documentos).toFixed(2) : 0} MB promedio
                                 </p>
                             </div>
                             <div className="p-3 bg-blue-100 rounded-full">
@@ -841,7 +845,7 @@ export default function ReportesDashboard({
                                     <div className="text-center p-4 bg-orange-50 rounded-lg">
                                         <HardDrive className="h-8 w-8 text-orange-600 mx-auto mb-2" />
                                         <p className="text-2xl font-bold text-gray-900">
-                                            {metricas.tamaño_total_gb} GB
+                                            {metricas.tamaño_formateado || `${metricas.tamaño_total_gb} GB`}
                                         </p>
                                         <p className="text-sm text-gray-600">Almacenamiento</p>
                                     </div>

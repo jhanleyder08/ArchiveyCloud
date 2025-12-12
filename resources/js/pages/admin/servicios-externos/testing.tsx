@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
     ArrowLeft, 
     Mail, 
@@ -18,7 +20,9 @@ import {
     User,
     Phone,
     Send,
-    Loader2
+    Loader2,
+    PenLine,
+    FileText
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -44,10 +48,23 @@ export default function ServiciosExternosTesting({ usuarios }: Props) {
     const [phoneNumber, setPhoneNumber] = useState<string>('');
     const [emailLoading, setEmailLoading] = useState(false);
     const [smsLoading, setSmsLoading] = useState(false);
+    const [customEmailLoading, setCustomEmailLoading] = useState(false);
     const [emailResult, setEmailResult] = useState<TestResult | null>(null);
     const [smsResult, setSmsResult] = useState<TestResult | null>(null);
+    const [customEmailResult, setCustomEmailResult] = useState<TestResult | null>(null);
+    
+    // Estados para correo personalizado
+    const [customEmail, setCustomEmail] = useState({
+        destinatario_tipo: 'usuario', // 'usuario' o 'manual'
+        user_id: '',
+        email_manual: '',
+        asunto: '',
+        mensaje: '',
+        prioridad: 'media'
+    });
 
     const selectedUser = usuarios.find(user => user.id.toString() === selectedUserId);
+    const customSelectedUser = usuarios.find(user => user.id.toString() === customEmail.user_id);
 
     const testEmail = async () => {
         if (!selectedUserId) {
@@ -74,6 +91,61 @@ export default function ServiciosExternosTesting({ usuarios }: Props) {
             });
         } finally {
             setEmailLoading(false);
+        }
+    };
+
+    const sendCustomEmail = async () => {
+        // Validaciones
+        if (customEmail.destinatario_tipo === 'usuario' && !customEmail.user_id) {
+            setCustomEmailResult({ success: false, message: 'Por favor selecciona un usuario destinatario' });
+            return;
+        }
+        if (customEmail.destinatario_tipo === 'manual' && !customEmail.email_manual) {
+            setCustomEmailResult({ success: false, message: 'Por favor ingresa un correo electrónico' });
+            return;
+        }
+        if (!customEmail.asunto.trim()) {
+            setCustomEmailResult({ success: false, message: 'Por favor ingresa un asunto para el correo' });
+            return;
+        }
+        if (!customEmail.mensaje.trim()) {
+            setCustomEmailResult({ success: false, message: 'Por favor ingresa el mensaje del correo' });
+            return;
+        }
+
+        setCustomEmailLoading(true);
+        setCustomEmailResult(null);
+
+        try {
+            const response = await axios.post('/admin/servicios-externos/send-custom-email', {
+                destinatario_tipo: customEmail.destinatario_tipo,
+                user_id: customEmail.user_id || null,
+                email_manual: customEmail.email_manual || null,
+                asunto: customEmail.asunto,
+                mensaje: customEmail.mensaje,
+                prioridad: customEmail.prioridad
+            });
+
+            setCustomEmailResult(response.data);
+            
+            // Limpiar formulario si fue exitoso
+            if (response.data.success) {
+                setCustomEmail({
+                    destinatario_tipo: 'usuario',
+                    user_id: '',
+                    email_manual: '',
+                    asunto: '',
+                    mensaje: '',
+                    prioridad: 'media'
+                });
+            }
+        } catch (error: any) {
+            setCustomEmailResult({
+                success: false,
+                message: error.response?.data?.message || 'Error enviando el correo personalizado'
+            });
+        } finally {
+            setCustomEmailLoading(false);
         }
     };
 
@@ -162,90 +234,282 @@ export default function ServiciosExternosTesting({ usuarios }: Props) {
                 <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                        <strong>Importante:</strong> Los emails y SMS de prueba se envían realmente a los destinatarios seleccionados. 
+                        <strong>Importante:</strong> Los emails y SMS se envían realmente a los destinatarios seleccionados. 
                         Usa esta funcionalidad solo para testing en ambientes de desarrollo o con usuarios de prueba.
                     </AlertDescription>
                 </Alert>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Test Email */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <Mail className="h-5 w-5 text-blue-600" />
-                                <span>Probar Email</span>
-                            </CardTitle>
-                            <CardDescription>
-                                Envía un email de prueba a un usuario específico
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="usuario-select">Usuario Destinatario</Label>
-                                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                                    <SelectTrigger id="usuario-select">
-                                        <SelectValue placeholder="Selecciona un usuario..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {usuarios.map((usuario) => (
-                                            <SelectItem key={usuario.id} value={usuario.id.toString()}>
-                                                <div className="flex items-center space-x-2">
-                                                    <User className="h-4 w-4" />
-                                                    <span>{usuario.name}</span>
-                                                    <Badge variant="outline" className="ml-auto">
-                                                        {usuario.email}
-                                                    </Badge>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                <Tabs defaultValue="custom" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="custom" className="flex items-center gap-2">
+                            <PenLine className="h-4 w-4" />
+                            Correo Personalizado
+                        </TabsTrigger>
+                        <TabsTrigger value="test-email" className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            Prueba Rápida Email
+                        </TabsTrigger>
+                        <TabsTrigger value="test-sms" className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            Prueba SMS
+                        </TabsTrigger>
+                    </TabsList>
 
-                            {selectedUser && (
-                                <div className="p-3 bg-blue-50 rounded-lg space-y-2">
-                                    <div className="flex items-center space-x-2">
-                                        <User className="h-4 w-4 text-blue-600" />
-                                        <span className="font-medium">{selectedUser.name}</span>
+                    {/* Tab: Correo Personalizado */}
+                    <TabsContent value="custom" className="mt-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center space-x-2">
+                                    <PenLine className="h-5 w-5 text-purple-600" />
+                                    <span>Crear Correo Personalizado</span>
+                                </CardTitle>
+                                <CardDescription>
+                                    Redacta y envía un correo electrónico con asunto y contenido personalizado
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Destinatario */}
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label>Tipo de Destinatario</Label>
+                                            <Select 
+                                                value={customEmail.destinatario_tipo} 
+                                                onValueChange={(val) => setCustomEmail({...customEmail, destinatario_tipo: val, user_id: '', email_manual: ''})}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="usuario">Usuario del Sistema</SelectItem>
+                                                    <SelectItem value="manual">Correo Manual</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {customEmail.destinatario_tipo === 'usuario' ? (
+                                            <div className="space-y-2">
+                                                <Label>Seleccionar Usuario</Label>
+                                                <Select 
+                                                    value={customEmail.user_id} 
+                                                    onValueChange={(val) => setCustomEmail({...customEmail, user_id: val})}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecciona un usuario..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {usuarios.map((usuario) => (
+                                                            <SelectItem key={usuario.id} value={usuario.id.toString()}>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <User className="h-4 w-4" />
+                                                                    <span>{usuario.name}</span>
+                                                                    <Badge variant="outline" className="ml-2 text-xs">
+                                                                        {usuario.email}
+                                                                    </Badge>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email-manual">Correo Electrónico</Label>
+                                                <Input
+                                                    id="email-manual"
+                                                    type="email"
+                                                    placeholder="ejemplo@correo.com"
+                                                    value={customEmail.email_manual}
+                                                    onChange={(e) => setCustomEmail({...customEmail, email_manual: e.target.value})}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            <Label>Prioridad</Label>
+                                            <Select 
+                                                value={customEmail.prioridad} 
+                                                onValueChange={(val) => setCustomEmail({...customEmail, prioridad: val})}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="baja">🔵 Baja</SelectItem>
+                                                    <SelectItem value="media">🟡 Media</SelectItem>
+                                                    <SelectItem value="alta">🟠 Alta</SelectItem>
+                                                    <SelectItem value="urgente">🔴 Urgente</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Preview del destinatario */}
+                                        {(customSelectedUser || customEmail.email_manual) && (
+                                            <div className="p-3 bg-purple-50 rounded-lg space-y-2 border border-purple-200">
+                                                <div className="flex items-center space-x-2">
+                                                    <Mail className="h-4 w-4 text-purple-600" />
+                                                    <span className="font-medium text-purple-900">
+                                                        {customEmail.destinatario_tipo === 'usuario' 
+                                                            ? customSelectedUser?.name 
+                                                            : 'Correo externo'}
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm text-purple-700">
+                                                    {customEmail.destinatario_tipo === 'usuario' 
+                                                        ? customSelectedUser?.email 
+                                                        : customEmail.email_manual}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                        <Mail className="h-3 w-3" />
-                                        <span>{selectedUser.email}</span>
+
+                                    {/* Contenido del correo */}
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="asunto">Asunto del Correo *</Label>
+                                            <Input
+                                                id="asunto"
+                                                placeholder="Ej: Notificación importante - ArchiveyCloud"
+                                                value={customEmail.asunto}
+                                                onChange={(e) => setCustomEmail({...customEmail, asunto: e.target.value})}
+                                                maxLength={200}
+                                            />
+                                            <p className="text-xs text-gray-500">{customEmail.asunto.length}/200 caracteres</p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="mensaje">Mensaje *</Label>
+                                            <Textarea
+                                                id="mensaje"
+                                                placeholder="Escribe el contenido del correo aquí..."
+                                                value={customEmail.mensaje}
+                                                onChange={(e) => setCustomEmail({...customEmail, mensaje: e.target.value})}
+                                                rows={6}
+                                                maxLength={5000}
+                                            />
+                                            <p className="text-xs text-gray-500">{customEmail.mensaje.length}/5000 caracteres</p>
+                                        </div>
                                     </div>
                                 </div>
-                            )}
 
-                            <Button 
-                                onClick={testEmail} 
-                                disabled={emailLoading || !selectedUserId}
-                                className="w-full"
-                            >
-                                {emailLoading ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                    <Send className="h-4 w-4 mr-2" />
+                                <div className="flex items-center gap-4 pt-4 border-t">
+                                    <Button 
+                                        onClick={sendCustomEmail} 
+                                        disabled={customEmailLoading}
+                                        className="flex-1"
+                                    >
+                                        {customEmailLoading ? (
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Send className="h-4 w-4 mr-2" />
+                                        )}
+                                        Enviar Correo Personalizado
+                                    </Button>
+                                    <Button 
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setCustomEmail({
+                                                destinatario_tipo: 'usuario',
+                                                user_id: '',
+                                                email_manual: '',
+                                                asunto: '',
+                                                mensaje: '',
+                                                prioridad: 'media'
+                                            });
+                                            setCustomEmailResult(null);
+                                        }}
+                                    >
+                                        Limpiar
+                                    </Button>
+                                </div>
+
+                                {renderResult(customEmailResult, 'Correo Personalizado')}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Tab: Test Email Rápido */}
+                    <TabsContent value="test-email" className="mt-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center space-x-2">
+                                    <Mail className="h-5 w-5 text-blue-600" />
+                                    <span>Probar Email Rápido</span>
+                                </CardTitle>
+                                <CardDescription>
+                                    Envía un email de prueba predefinido a un usuario específico
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="usuario-select">Usuario Destinatario</Label>
+                                    <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                                        <SelectTrigger id="usuario-select">
+                                            <SelectValue placeholder="Selecciona un usuario..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {usuarios.map((usuario) => (
+                                                <SelectItem key={usuario.id} value={usuario.id.toString()}>
+                                                    <div className="flex items-center space-x-2">
+                                                        <User className="h-4 w-4" />
+                                                        <span>{usuario.name}</span>
+                                                        <Badge variant="outline" className="ml-auto">
+                                                            {usuario.email}
+                                                        </Badge>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {selectedUser && (
+                                    <div className="p-3 bg-blue-50 rounded-lg space-y-2">
+                                        <div className="flex items-center space-x-2">
+                                            <User className="h-4 w-4 text-blue-600" />
+                                            <span className="font-medium">{selectedUser.name}</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                            <Mail className="h-3 w-3" />
+                                            <span>{selectedUser.email}</span>
+                                        </div>
+                                    </div>
                                 )}
-                                Enviar Email de Prueba
-                            </Button>
 
-                            {renderResult(emailResult, 'Email')}
+                                <Button 
+                                    onClick={testEmail} 
+                                    disabled={emailLoading || !selectedUserId}
+                                    className="w-full"
+                                >
+                                    {emailLoading ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Send className="h-4 w-4 mr-2" />
+                                    )}
+                                    Enviar Email de Prueba
+                                </Button>
 
-                            <div className="text-xs text-gray-500 space-y-1">
-                                <p><strong>Asunto:</strong> 📋 Prueba desde Interfaz Web - ArchiveyCloud</p>
-                                <p><strong>Contenido:</strong> Email de prueba enviado desde la interfaz de administración</p>
-                                <p><strong>Prioridad:</strong> Media</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                {renderResult(emailResult, 'Email')}
 
-                    {/* Test SMS */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <MessageSquare className="h-5 w-5 text-green-600" />
-                                <span>Probar SMS</span>
-                            </CardTitle>
-                            <CardDescription>
+                                <div className="text-xs text-gray-500 space-y-1 p-3 bg-gray-50 rounded-lg">
+                                    <p><strong>Asunto:</strong> 📋 Prueba desde Interfaz Web - ArchiveyCloud</p>
+                                    <p><strong>Contenido:</strong> Email de prueba enviado desde la interfaz de administración</p>
+                                    <p><strong>Prioridad:</strong> Media</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Tab: Test SMS */}
+                    <TabsContent value="test-sms" className="mt-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center space-x-2">
+                                    <MessageSquare className="h-5 w-5 text-green-600" />
+                                    <span>Probar SMS</span>
+                                </CardTitle>
+                                <CardDescription>
                                 Envía un SMS de prueba a un número específico
                             </CardDescription>
                         </CardHeader>
@@ -292,33 +556,45 @@ export default function ServiciosExternosTesting({ usuarios }: Props) {
 
                             {renderResult(smsResult, 'SMS')}
 
-                            <div className="text-xs text-gray-500 space-y-1">
+                            <div className="text-xs text-gray-500 space-y-1 p-3 bg-gray-50 rounded-lg">
                                 <p><strong>Mensaje:</strong> 🚨 ArchiveyCloud: Prueba SMS - Ver: [URL]</p>
                                 <p><strong>Longitud:</strong> ~60 caracteres</p>
-                                <p><strong>Ambiente:</strong> {process.env.NODE_ENV === 'development' ? 'Simulado (local)' : 'Envío real'}</p>
+                                <p><strong>Ambiente:</strong> Simulado en desarrollo / Envío real en producción</p>
                             </div>
                         </CardContent>
-                    </Card>
-                </div>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
 
                 {/* Información adicional */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Información sobre las Pruebas</CardTitle>
+                        <CardTitle>Información sobre los Servicios de Email</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                            <div>
+                                <h4 className="font-semibold mb-2 flex items-center">
+                                    <PenLine className="h-4 w-4 mr-2 text-purple-600" />
+                                    Correo Personalizado
+                                </h4>
+                                <ul className="space-y-1 text-gray-600">
+                                    <li>• Permite escribir asunto y mensaje propios</li>
+                                    <li>• Envía a usuarios o correos externos</li>
+                                    <li>• Selección de prioridad del mensaje</li>
+                                    <li>• Ideal para comunicaciones específicas</li>
+                                </ul>
+                            </div>
                             <div>
                                 <h4 className="font-semibold mb-2 flex items-center">
                                     <Mail className="h-4 w-4 mr-2 text-blue-600" />
                                     Email de Prueba
                                 </h4>
                                 <ul className="space-y-1 text-gray-600">
-                                    <li>• Se envía usando la configuración actual de email</li>
-                                    <li>• Respeta los límites de throttling (5 emails/hora)</li>
-                                    <li>• Crea una notificación real en el sistema</li>
-                                    <li>• Incluye información del remitente y timestamp</li>
-                                    <li>• Usa el template HTML profesional</li>
+                                    <li>• Usa la configuración actual de email</li>
+                                    <li>• Respeta límites de throttling</li>
+                                    <li>• Crea notificación en el sistema</li>
+                                    <li>• Usa template HTML profesional</li>
                                 </ul>
                             </div>
                             <div>
@@ -327,11 +603,10 @@ export default function ServiciosExternosTesting({ usuarios }: Props) {
                                     SMS de Prueba
                                 </h4>
                                 <ul className="space-y-1 text-gray-600">
-                                    <li>• Solo funciona en ambiente de producción</li>
+                                    <li>• Solo funciona en producción</li>
                                     <li>• En desarrollo se simula el envío</li>
-                                    <li>• Respeta los límites de throttling (3 SMS/día)</li>
-                                    <li>• Formatea automáticamente el número</li>
-                                    <li>• Requiere configuración del proveedor SMS</li>
+                                    <li>• Respeta límites de throttling</li>
+                                    <li>• Requiere configuración SMS</li>
                                 </ul>
                             </div>
                         </div>

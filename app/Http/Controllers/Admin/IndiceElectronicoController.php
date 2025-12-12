@@ -92,7 +92,7 @@ class IndiceElectronicoController extends Controller
         $entidadRelacionada = null;
         switch ($indice->tipo_entidad) {
             case 'expediente':
-                $entidadRelacionada = Expediente::with(['serie', 'subserie', 'usuarioResponsable', 'documentos'])
+                $entidadRelacionada = Expediente::with(['serie', 'subserie', 'responsable', 'documentos'])
                     ->find($indice->entidad_id);
                 break;
             case 'documento':
