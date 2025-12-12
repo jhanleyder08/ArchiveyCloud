@@ -40,12 +40,18 @@ import {
     RefreshCw,
 } from 'lucide-react';
 
+interface AlmacenamientoInfo {
+    valor: number;
+    unidad: string;
+    bytes?: number;
+}
+
 interface MetricasGenerales {
     total_documentos: number;
     total_expedientes: number;
     total_usuarios: number;
     total_series: number;
-    almacenamiento_total: number;
+    almacenamiento_total: AlmacenamientoInfo;
     indices_generados: number;
 }
 
@@ -229,9 +235,11 @@ export default function DashboardEjecutivo({
                                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{metricas_generales.almacenamiento_total} GB</div>
+                                <div className="text-2xl font-bold">
+                                    {metricas_generales.almacenamiento_total?.valor ?? 0} {metricas_generales.almacenamiento_total?.unidad ?? 'MB'}
+                                </div>
                                 <p className="text-xs text-muted-foreground">
-                                    Proy. 12m: {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses} GB
+                                    Proy. 12m: {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses?.valor ?? 0} {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses?.unidad ?? 'MB'}
                                 </p>
                             </CardContent>
                         </Card>
@@ -365,13 +373,43 @@ export default function DashboardEjecutivo({
                                         </ResponsiveContainer>
                                     </CardContent>
                                 </Card>
+
+                                {/* Distribución de Workflows */}
+                                {distribucion_trabajo.workflows_por_estado && distribucion_trabajo.workflows_por_estado.length > 0 && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Distribución de Workflows</CardTitle>
+                                            <CardDescription>Por estado actual</CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <ResponsiveContainer width="100%" height={200}>
+                                                <PieChart>
+                                                    <Pie
+                                                        data={distribucion_trabajo.workflows_por_estado}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        outerRadius={80}
+                                                        fill="#ffc658"
+                                                        dataKey="total"
+                                                        nameKey="estado"
+                                                    >
+                                                        {distribucion_trabajo.workflows_por_estado.map((entry: any, index: number) => (
+                                                            <Cell key={`cell-wf-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </CardContent>
+                                    </Card>
+                                )}
                             </div>
 
                             {/* Crecimiento Mensual */}
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Tendencia de Crecimiento</CardTitle>
-                                    <CardDescription>Documentos y expedientes por mes</CardDescription>
+                                    <CardDescription>Documentos, expedientes y workflows por mes</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <ResponsiveContainer width="100%" height={300}>
@@ -380,8 +418,9 @@ export default function DashboardEjecutivo({
                                             <XAxis dataKey="mes" />
                                             <YAxis />
                                             <Tooltip />
-                                            <Area type="monotone" dataKey="documentos" stackId="1" stroke="#8884d8" fill="#8884d8" />
-                                            <Area type="monotone" dataKey="expedientes" stackId="1" stroke="#82ca9d" fill="#82ca9d" />
+                                            <Area type="monotone" dataKey="documentos" stackId="1" stroke="#8884d8" fill="#8884d8" name="Documentos" />
+                                            <Area type="monotone" dataKey="expedientes" stackId="1" stroke="#82ca9d" fill="#82ca9d" name="Expedientes" />
+                                            <Area type="monotone" dataKey="workflows" stackId="1" stroke="#ffc658" fill="#ffc658" name="Workflows" />
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </CardContent>
@@ -480,20 +519,26 @@ export default function DashboardEjecutivo({
                                         <div className="space-y-4">
                                             <div className="flex justify-between">
                                                 <span>Actual</span>
-                                                <span className="font-medium">{tendencias.proyeccion_almacenamiento?.actual_gb} GB</span>
+                                                <span className="font-medium">
+                                                    {tendencias.proyeccion_almacenamiento?.actual?.valor ?? 0} {tendencias.proyeccion_almacenamiento?.actual?.unidad ?? 'MB'}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>3 meses</span>
-                                                <span className="font-medium">{tendencias.proyeccion_almacenamiento?.proyeccion_3_meses} GB</span>
+                                                <span className="font-medium">
+                                                    {tendencias.proyeccion_almacenamiento?.proyeccion_3_meses?.valor ?? 0} {tendencias.proyeccion_almacenamiento?.proyeccion_3_meses?.unidad ?? 'MB'}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>6 meses</span>
-                                                <span className="font-medium">{tendencias.proyeccion_almacenamiento?.proyeccion_6_meses} GB</span>
+                                                <span className="font-medium">
+                                                    {tendencias.proyeccion_almacenamiento?.proyeccion_6_meses?.valor ?? 0} {tendencias.proyeccion_almacenamiento?.proyeccion_6_meses?.unidad ?? 'MB'}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>12 meses</span>
                                                 <span className="font-medium text-orange-600">
-                                                    {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses} GB
+                                                    {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses?.valor ?? 0} {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses?.unidad ?? 'MB'}
                                                 </span>
                                             </div>
                                         </div>
@@ -591,6 +636,39 @@ export default function DashboardEjecutivo({
                                     </CardContent>
                                 </Card>
                             </div>
+
+                            {/* Workflows Urgentes */}
+                            {alertas_criticas.workflows_urgentes && alertas_criticas.workflows_urgentes.length > 0 && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center space-x-2">
+                                            <Activity className="h-5 w-5 text-orange-500" />
+                                            <span>Workflows Urgentes</span>
+                                        </CardTitle>
+                                        <CardDescription>Workflows pendientes por más de 15 días</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {alertas_criticas.workflows_urgentes.map((workflow: any) => (
+                                                <div key={workflow.id} className="flex items-center justify-between p-3 border border-orange-200 rounded-lg bg-orange-50">
+                                                    <div>
+                                                        <div className="font-medium">{workflow.workflow?.nombre || 'Sin nombre'}</div>
+                                                        <div className="text-sm text-gray-600">
+                                                            Iniciado por: {workflow.usuario_iniciador?.name || 'Sistema'}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <Badge variant="secondary">{workflow.estado}</Badge>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            Paso: {workflow.paso_actual || 1}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
                         </TabsContent>
                     </Tabs>
                 </div>

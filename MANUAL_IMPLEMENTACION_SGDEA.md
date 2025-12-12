@@ -1,7 +1,7 @@
 # 📘 Manual Técnico de Implementación - ArchiveyCloud SGDEA
 
 **Sistema de Gestión Documental Electrónico de Archivo**  
-**Versión:** 1.0.0  
+**Versión:** 1.0.1  
 **Fecha:** Diciembre 2025  
 **Clasificación:** Documento Técnico - Desarrolladores
 
@@ -77,7 +77,8 @@
 | Captura de Correos | ✅ Completo | 100% |
 | Roles y Permisos | ✅ Completo | 100% |
 | Dashboard Ejecutivo | ✅ Completo | 100% |
-| **TOTAL SISTEMA** | **✅ Operativo** | **~85%** |
+| Visualización Dinámica Almacenamiento | ✅ Completo | 100% |
+| **TOTAL SISTEMA** | **✅ Operativo** | **~90%** |
 
 ---
 
@@ -719,9 +720,10 @@ php artisan user:create-admin --email=admin@archiveycloud.com
 
 | Tabla | Descripción | Campos Clave |
 |-------|-------------|--------------|
-| `documentos` | Documentos principales | id, nombre, tipo_documental_id, hash_integridad |
-| `firmas_digitales` | Firmas de documentos | documento_id, certificado_id, timestamp |
-| `versiones_documento` | Versionado | documento_id, version, ruta_archivo |
+| `documentos` | Documentos principales | id, codigo_documento, titulo, expediente_id, tamano_bytes |
+| `firmas_digitales` | Firmas de documentos | documento_id, user_id, tipo_firma, hash_documento |
+| `conversiones_formato` | Conversiones de formato | documento_id, formato_origen, formato_destino |
+
 
 #### Módulo Email
 
@@ -1672,6 +1674,115 @@ function AdminPanel() {
 
 ---
 
+### 7.8 Módulo Dashboard Ejecutivo
+
+#### Descripción
+Panel de control ejecutivo con métricas, KPIs, alertas críticas y visualización dinámica del almacenamiento del sistema.
+
+#### Archivos del Módulo
+
+| Tipo | Archivo | Descripción |
+|------|---------|-------------|
+| **Controlador** | `app/Http/Controllers/Admin/DashboardEjecutivoController.php` | Lógica del dashboard |
+| **Frontend** | `resources/js/pages/admin/dashboard-ejecutivo/index.tsx` | Interfaz de usuario |
+| **Servicio PDF** | `app/Services/DashboardPdfService.php` | Exportación a PDF |
+
+#### Métricas Principales
+
+```php
+// DashboardEjecutivoController.php - Métricas retornadas
+private function obtenerMetricasGenerales()
+{
+    return [
+        'total_documentos' => Documento::count(),
+        'total_expedientes' => Expediente::count(),
+        'total_usuarios' => User::where('active', true)->count(),
+        'total_series' => SerieDocumental::where('activa', true)->count(),
+        'almacenamiento_total' => $this->calcularAlmacenamientoTotal(),
+        'indices_generados' => IndiceElectronico::count(),
+    ];
+}
+```
+
+#### Visualización Dinámica de Almacenamiento
+
+El sistema muestra el almacenamiento en **MB o GB dinámicamente** según el tamaño:
+
+```php
+/**
+ * Calcular almacenamiento total (retorna array con valor y unidad)
+ */
+private function calcularAlmacenamientoTotal()
+{
+    $total_bytes = Documento::sum('tamano_bytes') ?? 0;
+    $total_mb = $total_bytes / (1024 * 1024);
+    $total_gb = $total_mb / 1024;
+    
+    // Si es menor a 1 GB, mostrar en MB
+    if ($total_gb < 1) {
+        return [
+            'valor' => round($total_mb, 2),
+            'unidad' => 'MB',
+            'bytes' => $total_bytes,
+        ];
+    }
+    
+    return [
+        'valor' => round($total_gb, 2),
+        'unidad' => 'GB',
+        'bytes' => $total_bytes,
+    ];
+}
+```
+
+#### Frontend con Unidades Dinámicas
+
+```tsx
+// index.tsx - Visualización dinámica
+interface AlmacenamientoInfo {
+    valor: number;
+    unidad: string;
+    bytes?: number;
+}
+
+// En el componente
+<div className="text-2xl font-bold">
+    {metricas_generales.almacenamiento_total?.valor ?? 0} {metricas_generales.almacenamiento_total?.unidad ?? 'MB'}
+</div>
+<p className="text-xs text-muted-foreground">
+    Proy. 12m: {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses?.valor ?? 0} {tendencias.proyeccion_almacenamiento?.proyeccion_12_meses?.unidad ?? 'MB'}
+</p>
+```
+
+#### Proyección de Almacenamiento
+
+El sistema calcula proyecciones basadas en el crecimiento promedio de los últimos 3 meses:
+
+```php
+private function calcularProyeccionAlmacenamiento()
+{
+    $crecimiento_mensual = []; // Últimos 3 meses
+    $promedio_crecimiento = array_sum($crecimiento_mensual) / 3;
+    
+    return [
+        'actual' => $this->calcularAlmacenamientoTotal(),
+        'proyeccion_3_meses' => $this->formatearAlmacenamiento($proy_3m),
+        'proyeccion_6_meses' => $this->formatearAlmacenamiento($proy_6m),
+        'proyeccion_12_meses' => $this->formatearAlmacenamiento($proy_12m),
+    ];
+}
+```
+
+#### Endpoints del Dashboard
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/admin/dashboard-ejecutivo` | Vista del dashboard |
+| GET | `/admin/dashboard-ejecutivo/exportar-pdf` | Exportar a PDF |
+| POST | `/admin/dashboard-ejecutivo/datos-grafico` | Datos para gráficos AJAX |
+
+---
+
 ## 8. API REST
 
 ### 8.1 Autenticación
@@ -2447,8 +2558,17 @@ php artisan activitylog:clean --days=365
 
 ---
 
+## 📈 Historial de Versiones del Manual
+
+| Versión | Fecha | Cambios |
+|---------|-------|---------|
+| 1.0.0 | Diciembre 2025 | Versión inicial completa |
+| 1.0.1 | Diciembre 2025 | Añadido módulo Dashboard Ejecutivo (7.8), visualización dinámica de almacenamiento, actualización estructura tabla documentos |
+
+---
+
 **Fin del Manual Técnico de Implementación**  
-**Versión 1.0.0 - Diciembre 2025**
+**Versión 1.0.1 - Diciembre 2025**
 
 *Generado automáticamente consolidando la documentación existente del proyecto ArchiveyCloud SGDEA.*
 

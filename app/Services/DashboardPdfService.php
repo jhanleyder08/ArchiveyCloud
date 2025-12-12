@@ -243,7 +243,7 @@ class DashboardPdfService
                     <div class="metric-label">Series Documentales</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">' . number_format($metricas['almacenamiento_total'], 2) . ' GB</div>
+                    <div class="metric-value">' . number_format($metricas['almacenamiento_total']['valor'] ?? 0, 2) . ' ' . ($metricas['almacenamiento_total']['unidad'] ?? 'MB') . '</div>
                     <div class="metric-label">Almacenamiento Total</div>
                 </div>
                 <div class="metric-card">

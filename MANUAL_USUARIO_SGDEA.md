@@ -1,7 +1,7 @@
 # 📘 MANUAL DE USUARIO COMPLETO - ArchiveyCloud SGDEA
 
 **Sistema de Gestión Documental y Electrónica de Archivos**  
-**Versión:** 1.0.0  
+**Versión:** 1.0.1  
 **Fecha:** Diciembre 2025  
 **Desarrollado para:** Hospital Universitario del Valle / Entidades Colombianas  
 **Cumplimiento:** Normativa AGN Colombia - 169 Requerimientos Implementados
@@ -258,21 +258,45 @@ La **Autenticación de Dos Factores** agrega una capa extra de seguridad a su cu
 
 ## 4. Panel de Control (Dashboard)
 
-### 3.1 Vista General
+### 4.1 Vista General
 
 El dashboard muestra un resumen de la información más relevante según su rol:
 
 #### Dashboard Ejecutivo (Super Admin/Admin)
-- 📊 **Estadísticas Generales:**
-  - Total de expedientes activos
-  - Documentos capturados este mes
-  - Transferencias pendientes
-  - Alertas de retención
 
-- 📈 **Gráficos:**
-  - Distribución de documentos por serie
-  - Tendencias de captura
-  - Estado de expedientes
+**Acceso:** `/admin/dashboard-ejecutivo`
+
+El Dashboard Ejecutivo proporciona una **visión integral del sistema** con métricas en tiempo real:
+
+**📊 Métricas Principales (6 tarjetas):**
+- **Documentos:** Total de documentos + documentos procesados esta semana
+- **Expedientes:** Total de expedientes + expedientes creados esta semana
+- **Usuarios Activos:** Usuarios con cuenta activa + productivos este mes
+- **Series Documentales:** Total de series activas
+- **Almacenamiento:** Espacio utilizado con unidad dinámica (MB/GB)
+- **Cumplimiento:** Porcentaje de cumplimiento normativo
+
+**💡 Visualización de Almacenamiento Inteligente:**
+
+El sistema muestra el almacenamiento en la unidad más apropiada:
+- Si es **menor a 1 GB**: Muestra en **MB** (ej: "45.39 MB")
+- Si es **mayor a 1 GB**: Muestra en **GB** (ej: "2.5 GB")
+
+También incluye **proyecciones** de almacenamiento a 3, 6 y 12 meses.
+
+**📈 Pestañas del Dashboard:**
+
+| Pestaña | Contenido |
+|---------|-----------|
+| **Resumen Ejecutivo** | KPIs del sistema, distribución de expedientes, tendencias |
+| **Cumplimiento** | Porcentaje general, cumplimiento por series |
+| **Productividad** | Usuarios más activos del mes |
+| **Tendencias** | Proyección de almacenamiento, tipos de documentos |
+| **Alertas** | Expedientes urgentes, notificaciones críticas |
+
+**⚙️ Funciones Adicionales:**
+- **Auto-refresh:** Actualización automática cada 5 minutos
+- **Exportar PDF:** Generar reporte completo del dashboard
 
 #### Dashboard Usuario
 - 📁 **Mis Expedientes:** Expedientes asignados
@@ -280,7 +304,7 @@ El dashboard muestra un resumen de la información más relevante según su rol:
 - ⏰ **Tareas Pendientes:** Aprobaciones, transferencias, etc.
 - 🔔 **Notificaciones:** Alertas y mensajes del sistema
 
-### 3.2 Navegación
+### 4.2 Navegación
 
 **Menú Lateral (Sidebar):**
 - 🏠 **Inicio:** Dashboard principal
@@ -2150,12 +2174,13 @@ Este manual es propiedad exclusiva de ArchiveyCloud y está protegido por leyes 
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
 | 1.0.0 | Diciembre 2025 | Versión inicial completa |
+| 1.0.1 | Diciembre 2025 | Actualización Dashboard Ejecutivo: visualización dinámica de almacenamiento (MB/GB), proyecciones mejoradas |
 
 ---
 
 **Fin del Manual de Usuario**  
-**Versión 1.0.0 - Diciembre 2025**  
-**Total de páginas: ~80 páginas**  
+**Versión 1.0.1 - Diciembre 2025**  
+**Total de páginas: ~85 páginas**  
 **Secciones: 28 capítulos**
 
 ---

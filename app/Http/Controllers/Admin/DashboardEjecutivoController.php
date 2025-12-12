@@ -8,8 +8,8 @@ use App\Models\Documento;
 use App\Models\User;
 use App\Models\Notificacion;
 use App\Models\DisposicionFinal;
-use App\Models\PrestamoConsulta;
-use App\Models\WorkflowDocumento;
+use App\Models\Prestamo;
+use App\Models\WorkflowInstancia;
 use App\Models\SerieDocumental;
 use App\Models\IndiceElectronico;
 use Illuminate\Http\Request;
@@ -78,7 +78,7 @@ class DashboardEjecutivoController extends Controller
             'total_usuarios' => User::where('active', true)->count(),
             'total_series' => SerieDocumental::where('activa', true)->count(),
             'almacenamiento_total' => $this->calcularAlmacenamientoTotal(),
-            'indices_generados' => 0, // IndiceElectronico::count() - Temporalmente 0 si no existe la tabla
+            'indices_generados' => IndiceElectronico::count(),
         ];
     }
 
@@ -101,17 +101,20 @@ class DashboardEjecutivoController extends Controller
             'expedientes_proximo_vencimiento' => Expediente::where('estado', 'semiactivo')
                 ->whereDate('created_at', '<', $hoy->copy()->subYears(2))->count(),
             
-            // Flujos de trabajo (temporalmente 0 si no existe WorkflowDocumento)
-            'workflows_pendientes' => 0, // WorkflowDocumento::where('estado', 'pendiente')->count(),
-            'workflows_vencidos' => 0, // WorkflowDocumento::where('estado', 'pendiente')->count(),
+            // Flujos de trabajo - WorkflowInstancia
+            'workflows_pendientes' => WorkflowInstancia::whereIn('estado', ['pendiente', 'en_proceso'])->count(),
+            'workflows_vencidos' => WorkflowInstancia::whereIn('estado', ['pendiente', 'en_proceso'])
+                ->whereRaw('DATEDIFF(NOW(), created_at) > 30')->count(),
             
-            // Préstamos y consultas (temporalmente 0 si no existe PrestamoConsulta) 
-            'prestamos_activos' => 0, // PrestamoConsulta::where('estado', 'prestado')->count(),
-            'prestamos_vencidos' => 0, // PrestamoConsulta::where('estado', 'prestado')->count(),
+            // Préstamos y consultas - Prestamo
+            'prestamos_activos' => Prestamo::where('estado', 'prestado')->count(),
+            'prestamos_vencidos' => Prestamo::where('estado', 'prestado')
+                ->whereDate('fecha_devolucion_esperada', '<', $hoy)->count(),
             
-            // Disposición final (temporalmente 0 si no existe DisposicionFinal)
-            'disposiciones_pendientes' => 0, // DisposicionFinal::where('estado', 'pendiente')->count(),
-            'disposiciones_vencidas' => 0, // DisposicionFinal::where('estado', 'pendiente')->count(),
+            // Disposición final - DisposicionFinal
+            'disposiciones_pendientes' => DisposicionFinal::whereIn('estado', ['pendiente', 'en_revision'])->count(),
+            'disposiciones_vencidas' => DisposicionFinal::whereIn('estado', ['pendiente', 'en_revision'])
+                ->whereDate('fecha_vencimiento_retencion', '<', $hoy)->count(),
         ];
     }
 
@@ -133,7 +136,13 @@ class DashboardEjecutivoController extends Controller
                 ->limit(5)
                 ->get(),
             
-            'workflows_urgentes' => [], // Temporalmente vacío hasta implementar WorkflowDocumento
+            // Workflows urgentes: pendientes o en proceso por más de 15 días
+            'workflows_urgentes' => WorkflowInstancia::with(['workflow', 'usuarioIniciador'])
+                ->whereIn('estado', ['pendiente', 'en_proceso'])
+                ->whereRaw('DATEDIFF(NOW(), created_at) > 15')
+                ->latest()
+                ->limit(5)
+                ->get(),
         ];
     }
 
@@ -183,7 +192,9 @@ class DashboardEjecutivoController extends Controller
                 'expedientes' => Expediente::whereYear('created_at', $fecha->year)
                     ->whereMonth('created_at', $fecha->month)
                     ->count(),
-                'workflows' => 0, // Temporalmente 0 hasta implementar WorkflowDocumento
+                'workflows' => WorkflowInstancia::whereYear('created_at', $fecha->year)
+                    ->whereMonth('created_at', $fecha->month)
+                    ->count(),
             ];
         }
 
@@ -202,10 +213,10 @@ class DashboardEjecutivoController extends Controller
             ->selectRaw('
                 (SELECT COUNT(*) FROM documentos WHERE created_by = users.id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as documentos_creados,
                 (SELECT COUNT(*) FROM expedientes WHERE created_by = users.id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as expedientes_gestionados,
-                0 as workflows_iniciados
+                (SELECT COUNT(*) FROM workflow_instancias WHERE usuario_iniciador_id = users.id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as workflows_iniciados
             ')
-            ->having(DB::raw('documentos_creados + expedientes_gestionados'), '>', 0)
-            ->orderByDesc(DB::raw('documentos_creados + expedientes_gestionados'))
+            ->having(DB::raw('documentos_creados + expedientes_gestionados + workflows_iniciados'), '>', 0)
+            ->orderByDesc(DB::raw('documentos_creados + expedientes_gestionados + workflows_iniciados'))
             ->limit(10)
             ->get();
     }
@@ -230,18 +241,37 @@ class DashboardEjecutivoController extends Controller
                 ->limit(10)
                 ->get(),
             
-            // Workflows por estado (temporalmente vacío)
-            'workflows_por_estado' => [],
+            // Workflows por estado
+            'workflows_por_estado' => WorkflowInstancia::select('estado')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('estado')
+                ->get(),
         ];
     }
 
     /**
-     * Calcular almacenamiento total en GB
+     * Calcular almacenamiento total (retorna array con valor y unidad)
      */
     private function calcularAlmacenamientoTotal()
     {
         $total_bytes = Documento::sum('tamano_bytes') ?? 0;
-        return round($total_bytes / (1024 * 1024 * 1024), 2); // Convertir a GB
+        $total_mb = $total_bytes / (1024 * 1024);
+        $total_gb = $total_mb / 1024;
+        
+        // Si es menor a 1 GB, mostrar en MB
+        if ($total_gb < 1) {
+            return [
+                'valor' => round($total_mb, 2),
+                'unidad' => 'MB',
+                'bytes' => $total_bytes,
+            ];
+        }
+        
+        return [
+            'valor' => round($total_gb, 2),
+            'unidad' => 'GB',
+            'bytes' => $total_bytes,
+        ];
     }
 
     /**
@@ -259,13 +289,40 @@ class DashboardEjecutivoController extends Controller
         }
 
         $promedio_crecimiento = array_sum($crecimiento_mensual) / 3;
-        $almacenamiento_actual = $this->calcularAlmacenamientoTotal();
+        $almacenamiento = $this->calcularAlmacenamientoTotal();
+        $actual_bytes = $almacenamiento['bytes'];
+        
+        // Calcular proyecciones en bytes y formatear
+        $proy_3m = $actual_bytes + ($promedio_crecimiento * 3);
+        $proy_6m = $actual_bytes + ($promedio_crecimiento * 6);
+        $proy_12m = $actual_bytes + ($promedio_crecimiento * 12);
 
         return [
-            'actual_gb' => $almacenamiento_actual,
-            'proyeccion_3_meses' => round($almacenamiento_actual + (($promedio_crecimiento * 3) / (1024 * 1024 * 1024)), 2),
-            'proyeccion_6_meses' => round($almacenamiento_actual + (($promedio_crecimiento * 6) / (1024 * 1024 * 1024)), 2),
-            'proyeccion_12_meses' => round($almacenamiento_actual + (($promedio_crecimiento * 12) / (1024 * 1024 * 1024)), 2),
+            'actual' => $almacenamiento,
+            'proyeccion_3_meses' => $this->formatearAlmacenamiento($proy_3m),
+            'proyeccion_6_meses' => $this->formatearAlmacenamiento($proy_6m),
+            'proyeccion_12_meses' => $this->formatearAlmacenamiento($proy_12m),
+        ];
+    }
+    
+    /**
+     * Formatear bytes a MB o GB según corresponda
+     */
+    private function formatearAlmacenamiento($bytes)
+    {
+        $mb = $bytes / (1024 * 1024);
+        $gb = $mb / 1024;
+        
+        if ($gb < 1) {
+            return [
+                'valor' => round($mb, 2),
+                'unidad' => 'MB',
+            ];
+        }
+        
+        return [
+            'valor' => round($gb, 2),
+            'unidad' => 'GB',
         ];
     }
 
