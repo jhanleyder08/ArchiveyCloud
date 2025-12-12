@@ -639,7 +639,7 @@ Copyright © 2025 ArchiveyCloud
 ---
 
 <p align="center">
-  <strong>Desarrollado con ❤️ para la gestión documental colombiana</strong>
+  <strong>Desarrollado con amor para la gestión documental colombiana</strong>
 </p>
 
 <p align="center">
