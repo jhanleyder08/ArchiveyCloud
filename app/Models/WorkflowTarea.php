@@ -19,12 +19,27 @@ class WorkflowTarea extends Model
     {
         parent::boot();
 
-        // Enviar notificación cuando se crea una tarea
+        // Enviar notificación cuando se crea una tarea (usando sistema de notificaciones existente)
         static::created(function ($tarea) {
             if ($tarea->asignado_type === 'App\\Models\\User' && $tarea->asignado_id) {
-                $usuario = User::find($tarea->asignado_id);
-                if ($usuario) {
-                    $usuario->notify(new TareaAsignadaNotification($tarea));
+                try {
+                    \App\Models\Notificacion::create([
+                        'user_id' => $tarea->asignado_id,
+                        'tipo' => 'tarea_asignada',
+                        'titulo' => 'Nueva tarea asignada',
+                        'mensaje' => "Se te ha asignado la tarea: {$tarea->nombre}",
+                        'prioridad' => 'media',
+                        'estado' => 'pendiente',
+                        'accion_url' => "/admin/workflow/{$tarea->workflow_instancia_id}",
+                        'datos' => [
+                            'tarea_id' => $tarea->id,
+                            'nombre' => $tarea->nombre,
+                            'descripcion' => $tarea->descripcion,
+                        ],
+                        'es_automatica' => true,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error("Error enviando notificación de tarea: " . $e->getMessage());
                 }
             }
         });
@@ -130,14 +145,21 @@ class WorkflowTarea extends Model
     public function scopeAsignadasA($query, int $usuarioId)
     {
         return $query->where(function ($q) use ($usuarioId) {
-            $q->where('asignado_id', $usuarioId)
-              ->where('asignado_type', 'App\\Models\\User');
-        })->orWhereHas('asignado', function ($q) use ($usuarioId) {
-            // Si está asignado a un rol, verificar que el usuario tenga ese rol
-            $q->where('asignado_type', 'App\\Models\\Role')
-              ->whereHas('users', function ($userQuery) use ($usuarioId) {
-                  $userQuery->where('users.id', $usuarioId);
-              });
+            // Asignación directa al usuario
+            $q->where(function ($subQ) use ($usuarioId) {
+                $subQ->where('asignado_id', $usuarioId)
+                     ->where('asignado_type', 'App\\Models\\User');
+            });
+            
+            // O asignación a un rol que tenga el usuario
+            $q->orWhere(function ($subQ) use ($usuarioId) {
+                $subQ->where('asignado_type', 'App\\Models\\Role')
+                     ->whereIn('asignado_id', function ($roleQuery) use ($usuarioId) {
+                         $roleQuery->select('role_id')
+                                   ->from('user_roles')
+                                   ->where('user_id', $usuarioId);
+                     });
+            });
         });
     }
 

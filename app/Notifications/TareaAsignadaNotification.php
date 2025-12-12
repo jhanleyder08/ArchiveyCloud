@@ -32,7 +32,7 @@ class TareaAsignadaNotification extends Notification implements ShouldQueue
         $instancia = $this->tarea->instancia;
         $workflow = $instancia->workflow;
         
-        $url = route('workflows.tareas.show', $this->tarea->id);
+        $url = url('/admin/workflow/' . $this->tarea->workflow_instancia_id);
 
         return (new MailMessage)
             ->subject('Nueva tarea asignada: ' . $this->tarea->nombre)
@@ -61,7 +61,7 @@ class TareaAsignadaNotification extends Notification implements ShouldQueue
             'descripcion' => $this->tarea->descripcion,
             'fecha_vencimiento' => $this->tarea->fecha_vencimiento?->toISOString(),
             'prioridad' => $this->getPrioridad(),
-            'url' => route('workflows.tareas.show', $this->tarea->id),
+            'url' => url('/admin/workflow/' . $this->tarea->workflow_instancia_id),
         ];
     }
 

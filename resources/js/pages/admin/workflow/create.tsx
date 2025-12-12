@@ -30,34 +30,53 @@ interface Usuario {
     cargo: string;
 }
 
+interface Workflow {
+    id: number;
+    nombre: string;
+    descripcion: string;
+    tipo_entidad: string;
+}
+
 interface Props {
     documento?: Documento;
     usuarios_disponibles?: Usuario[];
     documentos_disponibles?: Documento[];
+    workflows_disponibles?: Workflow[];
+    tipo_entidad?: string;
 }
 
 interface FormData {
-    documento_id: string;
+    workflow_id: string;
+    entidad_tipo: string;
+    entidad_id: string;
     aprobadores: number[];
-    descripcion: string;
-    prioridad: number;
-    requiere_unanime: boolean;
-    dias_vencimiento: number;
+    prioridad: string;
+    dias_limite: number;
+    comentarios: string;
 }
 
-export default function WorkflowCreate({ documento, usuarios_disponibles = [], documentos_disponibles = [] }: Props) {
-    const usuariosDisponibles = usuarios_disponibles;
+export default function WorkflowCreate({ 
+    documento, 
+    usuarios_disponibles = [], 
+    documentos_disponibles = [],
+    workflows_disponibles = [],
+    tipo_entidad = 'documento'
+}: Props) {
     const [aprobadoresSeleccionados, setAprobadoresSeleccionados] = useState<Usuario[]>([]);
     const [documentoSeleccionado, setDocumentoSeleccionado] = useState<Documento | null>(documento || null);
+    const [workflowSeleccionado, setWorkflowSeleccionado] = useState<Workflow | null>(
+        workflows_disponibles.length > 0 ? workflows_disponibles[0] : null
+    );
     const [busquedaDocumento, setBusquedaDocumento] = useState('');
     
     const { data, setData, post, processing, errors } = useForm<FormData>({
-        documento_id: documento?.id.toString() || '',
+        workflow_id: workflows_disponibles.length > 0 ? workflows_disponibles[0].id.toString() : '',
+        entidad_tipo: tipo_entidad,
+        entidad_id: documento?.id.toString() || '',
         aprobadores: [],
-        descripcion: '',
-        prioridad: 2,
-        requiere_unanime: false,
-        dias_vencimiento: 7
+        prioridad: 'normal',
+        dias_limite: 7,
+        comentarios: ''
     });
 
     // Filtrar documentos por búsqueda
@@ -74,28 +93,34 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
 
     const seleccionarDocumento = (doc: Documento) => {
         setDocumentoSeleccionado(doc);
-        setData('documento_id', doc.id.toString());
+        setData('entidad_id', doc.id.toString());
         setBusquedaDocumento('');
     };
 
+    const seleccionarWorkflow = (workflowId: string) => {
+        const wf = workflows_disponibles.find(w => w.id.toString() === workflowId);
+        setWorkflowSeleccionado(wf || null);
+        setData('workflow_id', workflowId);
+    };
+
     const prioridades = [
-        { valor: 4, etiqueta: 'Crítica', color: 'text-red-600' },
-        { valor: 3, etiqueta: 'Alta', color: 'text-orange-600' },
-        { valor: 2, etiqueta: 'Media', color: 'text-blue-600' },
-        { valor: 1, etiqueta: 'Baja', color: 'text-gray-600' }
+        { valor: 'urgente', etiqueta: 'Urgente', color: 'text-red-600' },
+        { valor: 'alta', etiqueta: 'Alta', color: 'text-orange-600' },
+        { valor: 'normal', etiqueta: 'Normal', color: 'text-blue-600' },
+        { valor: 'baja', etiqueta: 'Baja', color: 'text-gray-600' }
     ];
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (aprobadoresSeleccionados.length === 0 || !documentoSeleccionado) {
+        if (!documentoSeleccionado || !workflowSeleccionado) {
             return;
         }
 
         post('/admin/workflow', {
             preserveScroll: true,
-            onBefore: () => {
-                // Los aprobadores ya están actualizados en data via agregarAprobador
+            onSuccess: () => {
+                // Redirigir se maneja en el backend
             }
         });
     };
@@ -176,7 +201,7 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                                     size="sm"
                                                     onClick={() => {
                                                         setDocumentoSeleccionado(null);
-                                                        setData('documento_id', '');
+                                                        setData('entidad_id', '');
                                                     }}
                                                 >
                                                     Cambiar
@@ -191,11 +216,11 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                                     placeholder="Buscar documento por nombre, código o expediente..."
                                                     value={busquedaDocumento}
                                                     onChange={(e) => setBusquedaDocumento(e.target.value)}
-                                                    className={`pl-10 ${errors.documento_id ? 'border-red-500' : ''}`}
+                                                    className={`pl-10 ${errors.entidad_id ? 'border-red-500' : ''}`}
                                                 />
                                             </div>
-                                            {errors.documento_id && (
-                                                <p className="text-sm text-red-600">{errors.documento_id}</p>
+                                            {errors.entidad_id && (
+                                                <p className="text-sm text-red-600">{errors.entidad_id}</p>
                                             )}
                                             
                                             {/* Lista de documentos */}
@@ -291,16 +316,16 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                     <div>
                                         <Label htmlFor="nuevo_aprobador">Agregar Aprobador</Label>
                                         <Select onValueChange={(value) => {
-                                            const usuario = usuariosDisponibles.find(u => u.id.toString() === value);
+                                            const usuario = usuarios_disponibles.find((u: Usuario) => u.id.toString() === value);
                                             if (usuario) agregarAprobador(usuario);
                                         }}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Seleccionar usuario..." />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {usuariosDisponibles
-                                                    .filter(u => !aprobadoresSeleccionados.find(a => a.id === u.id))
-                                                    .map((usuario) => (
+                                                {usuarios_disponibles
+                                                    .filter((u: Usuario) => !aprobadoresSeleccionados.find(a => a.id === u.id))
+                                                    .map((usuario: Usuario) => (
                                                     <SelectItem key={usuario.id} value={usuario.id.toString()}>
                                                         <div>
                                                             <p className="font-medium">{usuario.name}</p>
@@ -321,20 +346,7 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                         </Alert>
                                     )}
 
-                                    {/* Opción de aprobación unánime */}
-                                    {aprobadoresSeleccionados.length > 1 && (
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id="requiere_unanime"
-                                                checked={data.requiere_unanime}
-                                                onCheckedChange={(checked) => setData('requiere_unanime', !!checked)}
-                                            />
-                                            <Label htmlFor="requiere_unanime" className="text-sm">
-                                                Requiere aprobación unánime (todos deben aprobar)
-                                            </Label>
-                                        </div>
-                                    )}
-                                </CardContent>
+                                                                    </CardContent>
                             </Card>
 
                             {/* Descripción */}
@@ -348,13 +360,13 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                 <CardContent>
                                     <Textarea
                                         placeholder="Describe el motivo de la aprobación, contexto adicional, o instrucciones específicas..."
-                                        value={data.descripcion}
-                                        onChange={(e) => setData('descripcion', e.target.value)}
+                                        value={data.comentarios}
+                                        onChange={(e) => setData('comentarios', e.target.value)}
                                         rows={4}
-                                        className={errors.descripcion ? 'border-red-500' : ''}
+                                        className={errors.comentarios ? 'border-red-500' : ''}
                                     />
-                                    {errors.descripcion && (
-                                        <p className="text-sm text-red-600 mt-1">{errors.descripcion}</p>
+                                    {errors.comentarios && (
+                                        <p className="text-sm text-red-600 mt-1">{errors.comentarios}</p>
                                     )}
                                 </CardContent>
                             </Card>
@@ -376,7 +388,7 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                         <Label>Prioridad *</Label>
                                         <Select 
                                             value={data.prioridad.toString()} 
-                                            onValueChange={(value) => setData('prioridad', parseInt(value))}
+                                            onValueChange={(value) => setData('prioridad', value)}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue />
@@ -396,21 +408,21 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
 
                                     {/* Días de vencimiento */}
                                     <div>
-                                        <Label htmlFor="dias_vencimiento">Días para vencer *</Label>
+                                        <Label htmlFor="dias_limite">Días para vencer *</Label>
                                         <Input
-                                            id="dias_vencimiento"
+                                            id="dias_limite"
                                             type="number"
                                             min="1"
                                             max="30"
-                                            value={data.dias_vencimiento}
-                                            onChange={(e) => setData('dias_vencimiento', parseInt(e.target.value) || 7)}
-                                            className={errors.dias_vencimiento ? 'border-red-500' : ''}
+                                            value={data.dias_limite}
+                                            onChange={(e) => setData('dias_limite', parseInt(e.target.value) || 7)}
+                                            className={errors.dias_limite ? 'border-red-500' : ''}
                                         />
-                                        {errors.dias_vencimiento && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.dias_vencimiento}</p>
+                                        {errors.dias_limite && (
+                                            <p className="text-sm text-red-600 mt-1">{errors.dias_limite}</p>
                                         )}
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Fecha de vencimiento: {new Date(Date.now() + (data.dias_vencimiento * 24 * 60 * 60 * 1000)).toLocaleDateString()}
+                                            Fecha de vencimiento: {new Date(Date.now() + (data.dias_limite * 24 * 60 * 60 * 1000)).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </CardContent>
@@ -438,15 +450,9 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">Vencimiento:</span>
-                                        <span className="text-sm font-medium">{data.dias_vencimiento} días</span>
+                                        <span className="text-sm font-medium">{data.dias_limite} días</span>
                                     </div>
-                                    {data.requiere_unanime && (
-                                        <div className="flex justify-between">
-                                            <span className="text-sm text-gray-600">Tipo:</span>
-                                            <Badge variant="outline" className="text-orange-600">Unánime</Badge>
-                                        </div>
-                                    )}
-                                </CardContent>
+                                                                    </CardContent>
                             </Card>
 
                             {/* Acciones */}
@@ -454,7 +460,7 @@ export default function WorkflowCreate({ documento, usuarios_disponibles = [], d
                                 <Button 
                                     type="submit" 
                                     className="w-full" 
-                                    disabled={processing || !documentoSeleccionado || aprobadoresSeleccionados.length === 0}
+                                    disabled={processing || !documentoSeleccionado || !workflowSeleccionado}
                                 >
                                     {processing ? 'Creando...' : 'Iniciar Workflow'}
                                 </Button>

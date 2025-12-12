@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
     CheckCircle, 
     XCircle, 
@@ -413,50 +414,46 @@ export default function WorkflowAprobar({ workflow }: Props) {
                 </div>
 
                 {/* Modal de Confirmación */}
-                {mostrarConfirmacion && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white rounded-lg max-w-md w-full p-6">
-                            <div className="flex items-center gap-3 mb-4">
+                <Dialog open={mostrarConfirmacion} onOpenChange={setMostrarConfirmacion}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-3">
                                 {data.accion === 'aprobado' ? (
-                                    <CheckCircle className="w-8 h-8 text-green-600" />
+                                    <CheckCircle className="w-6 h-6 text-green-600" />
                                 ) : (
-                                    <XCircle className="w-8 h-8 text-red-600" />
+                                    <XCircle className="w-6 h-6 text-red-600" />
                                 )}
-                                <h3 className="text-lg font-medium">
-                                    Confirmar {data.accion === 'aprobado' ? 'Aprobación' : 'Rechazo'}
-                                </h3>
-                            </div>
-                            
-                            <p className="text-gray-600 mb-6">
+                                Confirmar {data.accion === 'aprobado' ? 'Aprobación' : 'Rechazo'}
+                            </DialogTitle>
+                            <DialogDescription>
                                 ¿Estás seguro de que deseas {data.accion === 'aprobado' ? 'aprobar' : 'rechazar'} este documento?
                                 {data.accion === 'aprobado' && workflow.nivel_actual === workflow.total_niveles && 
                                     ' Esta acción completará el workflow de aprobación.'
                                 }
-                            </p>
-
-                            <div className="flex gap-3">
-                                <Button
-                                    onClick={confirmarAccion}
-                                    disabled={processing}
-                                    className={
-                                        data.accion === 'aprobado' 
-                                            ? 'bg-green-600 hover:bg-green-700' 
-                                            : 'bg-red-600 hover:bg-red-700'
-                                    }
-                                >
-                                    {processing ? 'Procesando...' : 'Confirmar'}
-                                </Button>
-                                <Button 
-                                    variant="outline" 
-                                    onClick={() => setMostrarConfirmacion(false)}
-                                    disabled={processing}
-                                >
-                                    Cancelar
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                onClick={confirmarAccion}
+                                disabled={processing}
+                                className={
+                                    data.accion === 'aprobado' 
+                                        ? 'bg-green-600 hover:bg-green-700' 
+                                        : 'bg-red-600 hover:bg-red-700'
+                                }
+                            >
+                                {processing ? 'Procesando...' : 'Confirmar'}
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                onClick={() => setMostrarConfirmacion(false)}
+                                disabled={processing}
+                            >
+                                Cancelar
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

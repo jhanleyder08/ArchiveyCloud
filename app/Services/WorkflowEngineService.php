@@ -24,12 +24,11 @@ use Exception;
  */
 class WorkflowEngineService
 {
-    // Estados de instancia de workflow
-    const ESTADO_INICIADO = 'iniciado';
-    const ESTADO_EN_PROGRESO = 'en_progreso';
-    const ESTADO_COMPLETADO = 'completado';
+    // Estados de instancia de workflow (deben coincidir con el ENUM de la BD)
+    const ESTADO_EN_PROCESO = 'en_proceso';
+    const ESTADO_PAUSADO = 'pausado';
+    const ESTADO_FINALIZADO = 'finalizado';
     const ESTADO_CANCELADO = 'cancelado';
-    const ESTADO_SUSPENDIDO = 'suspendido';
     
     // Tipos de tarea
     const TAREA_MANUAL = 'manual';
@@ -67,7 +66,9 @@ class WorkflowEngineService
                 'entidad_type' => get_class($entidad),
                 'entidad_id' => $entidad->id,
                 'usuario_iniciador_id' => $iniciador->id,
-                'estado' => self::ESTADO_EN_PROGRESO,
+                'paso_actual' => 1,
+                'estado' => self::ESTADO_EN_PROCESO,
+                'fecha_inicio' => now(),
                 'datos' => array_merge($datosIniciales, [
                     'entidad_nombre' => $this->obtenerNombreEntidad($entidad),
                     'fecha_inicio' => now()->toISOString(),
@@ -230,27 +231,42 @@ class WorkflowEngineService
      */
     public function obtenerEstadoWorkflow(WorkflowInstancia $instancia): array
     {
-        $instancia->load(['workflow', 'tareas.asignado']);
+        $instancia->load(['workflow', 'tareas.asignado', 'usuarioIniciador']);
         
         $tareaActual = $instancia->tareas()->where('estado', 'pendiente')->first();
         
+        // Obtener la entidad (documento o expediente)
+        $entidad = $instancia->entidad;
+        $entidadData = null;
+        if ($entidad) {
+            $entidadData = [
+                'id' => $entidad->id,
+                'tipo' => class_basename($instancia->entidad_type),
+                'nombre' => $entidad->titulo ?? $entidad->nombre ?? "ID: {$entidad->id}",
+                'codigo' => $entidad->codigo ?? null,
+            ];
+        }
+        
         return [
+            'id' => $instancia->id,
             'instancia' => [
                 'id' => $instancia->id,
                 'estado' => $instancia->estado,
                 'progreso' => $this->calcularProgreso($instancia),
-                'fecha_inicio' => $instancia->fecha_inicio?->toDateString(),
-                'fecha_finalizacion' => $instancia->fecha_finalizacion?->toDateString(),
+                'fecha_inicio' => $instancia->fecha_inicio?->toDateTimeString(),
+                'fecha_finalizacion' => $instancia->fecha_finalizacion?->toDateTimeString(),
             ],
             'workflow' => [
                 'id' => $instancia->workflow->id,
                 'nombre' => $instancia->workflow->nombre,
                 'descripcion' => $instancia->workflow->descripcion,
             ],
-            'entidad' => [
-                'tipo' => $instancia->entidad_type,
-                'id' => $instancia->entidad_id,
-            ],
+            'documento' => $entidadData, // Para compatibilidad con el frontend
+            'entidad' => $entidadData,
+            'iniciador' => $instancia->usuarioIniciador ? [
+                'id' => $instancia->usuarioIniciador->id,
+                'name' => $instancia->usuarioIniciador->name,
+            ] : null,
             'tarea_actual' => $tareaActual ? [
                 'id' => $tareaActual->id,
                 'nombre' => $tareaActual->nombre,
@@ -262,7 +278,21 @@ class WorkflowEngineService
                     'id' => $tarea->id,
                     'nombre' => $tarea->nombre,
                     'estado' => $tarea->estado,
-                    'fecha_completado' => $tarea->fecha_completado?->toDateString(),
+                    'fecha_completado' => $tarea->fecha_completado?->toDateTimeString(),
+                ];
+            })->toArray(),
+            'tareas' => $instancia->tareas->map(function ($tarea) {
+                return [
+                    'id' => $tarea->id,
+                    'nombre' => $tarea->nombre,
+                    'descripcion' => $tarea->descripcion,
+                    'estado' => $tarea->estado,
+                    'paso_numero' => $tarea->paso_numero,
+                    'fecha_completado' => $tarea->fecha_completado?->toDateTimeString(),
+                    'asignado' => $tarea->asignado ? [
+                        'id' => $tarea->asignado->id,
+                        'name' => $tarea->asignado->name ?? $tarea->asignado->nombre ?? 'N/A',
+                    ] : null,
                 ];
             })->toArray(),
             'siguiente_acciones' => [],
@@ -313,8 +343,8 @@ class WorkflowEngineService
     private function obtenerNombreEntidad($entidad): string
     {
         return match(get_class($entidad)) {
-            Documento::class => $entidad->nombre,
-            Expediente::class => $entidad->nombre,
+            Documento::class => $entidad->titulo ?? "Documento ID: {$entidad->id}",
+            Expediente::class => $entidad->titulo ?? $entidad->codigo ?? "Expediente ID: {$entidad->id}",
             default => "Entidad ID: {$entidad->id}"
         };
     }
@@ -376,7 +406,7 @@ class WorkflowEngineService
     private function completarWorkflow(WorkflowInstancia $instancia, User $usuario): void
     {
         $instancia->update([
-            'estado' => self::ESTADO_COMPLETADO,
+            'estado' => self::ESTADO_FINALIZADO,
             'fecha_finalizacion' => now(),
         ]);
     }

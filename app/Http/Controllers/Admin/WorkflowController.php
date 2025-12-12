@@ -196,23 +196,14 @@ class WorkflowController extends Controller
             
             DB::commit();
             
-            return response()->json([
-                'success' => true,
-                'message' => 'Workflow iniciado exitosamente',
-                'instancia' => [
-                    'id' => $instancia->id,
-                    'codigo_seguimiento' => $instancia->codigo_seguimiento,
-                    'url' => route('admin.workflow.show', $instancia)
-                ]
-            ]);
+            return redirect()->route('admin.workflow.show', $instancia)
+                ->with('success', 'Workflow iniciado exitosamente');
             
         } catch (\Exception $e) {
             DB::rollback();
             
-            return response()->json([
-                'success' => false,
-                'message' => "Error al iniciar workflow: {$e->getMessage()}"
-            ], 500);
+            return redirect()->back()
+                ->withErrors(['error' => "Error al iniciar workflow: {$e->getMessage()}"]);
         }
     }
 
@@ -221,25 +212,228 @@ class WorkflowController extends Controller
      */
     public function show(WorkflowInstancia $instancia)
     {
-        // Obtener estado completo del workflow
-        $estadoWorkflow = $this->workflowEngine->obtenerEstadoWorkflow($instancia);
+        // Cargar relaciones necesarias
+        $instancia->load(['workflow', 'tareas.asignado', 'usuarioIniciador', 'entidad']);
         
         // Verificar permisos del usuario
         $user = auth()->user();
         $puedeVer = $instancia->usuario_iniciador_id === $user->id || 
-                   $instancia->tareas()->whereHas('asignado', function ($q) use ($user) {
-                       $q->where('id', $user->id);
+                   $instancia->tareas()->where(function ($q) use ($user) {
+                       $q->where('asignado_id', $user->id)
+                         ->where('asignado_type', 'App\\Models\\User');
                    })->exists();
         
         if (!$puedeVer) {
             abort(403, 'No tiene permisos para ver este workflow');
         }
         
+        // Obtener entidad (documento/expediente)
+        $entidad = $instancia->entidad;
+        
+        // Formatear datos para el frontend
+        $workflowData = [
+            'id' => $instancia->id,
+            'estado' => $instancia->estado,
+            'progreso' => $this->calcularProgreso($instancia),
+            'prioridad' => $instancia->datos['prioridad'] ?? 'normal',
+            'descripcion' => $instancia->workflow->descripcion ?? '',
+            'fecha_solicitud' => $instancia->fecha_inicio?->toDateTimeString(),
+            'fecha_vencimiento' => $instancia->datos['fecha_vencimiento'] ?? null,
+            'esta_vencido' => false,
+            'requiere_unanime' => $instancia->datos['requiere_unanime'] ?? false,
+            'documento' => $entidad ? [
+                'id' => $entidad->id,
+                'nombre' => $entidad->titulo ?? $entidad->nombre ?? "Documento #{$entidad->id}",
+                'codigo' => $entidad->codigo ?? '',
+            ] : [
+                'id' => $instancia->entidad_id,
+                'nombre' => 'Documento no encontrado',
+                'codigo' => '',
+            ],
+            'solicitante' => [
+                'name' => $instancia->usuarioIniciador->name ?? 'N/A',
+                'email' => $instancia->usuarioIniciador->email ?? '',
+            ],
+        ];
+        
+        // Obtener niveles de aprobación (tareas)
+        $nivelesAprobacion = $instancia->tareas->map(function ($tarea, $index) {
+            return [
+                'nivel' => $index + 1,
+                'usuario' => $tarea->asignado ? [
+                    'id' => $tarea->asignado->id,
+                    'name' => $tarea->asignado->name ?? $tarea->asignado->nombre ?? 'N/A',
+                    'email' => $tarea->asignado->email ?? '',
+                    'cargo' => $tarea->asignado->cargo ?? '',
+                ] : null,
+                'es_actual' => $tarea->estado === 'pendiente',
+                'completado' => $tarea->estado === 'completada',
+                'aprobacion' => $tarea->fecha_completado ? [
+                    'accion' => $tarea->resultado ?? 'completado',
+                    'comentarios' => $tarea->comentarios ?? '',
+                    'fecha' => $tarea->fecha_completado->toDateTimeString(),
+                    'tiempo_respuesta' => 0,
+                ] : null,
+            ];
+        })->toArray();
+        
+        // Verificar si el usuario puede aprobar
+        $puedeAprobar = $instancia->tareas()
+            ->where('estado', 'pendiente')
+            ->where('asignado_id', $user->id)
+            ->where('asignado_type', 'App\\Models\\User')
+            ->exists();
+        
         return Inertia::render('admin/workflow/show', [
-            'workflow' => $estadoWorkflow,
-            'puede_completar_tarea' => $this->usuarioPuedeCompletarTareaActual($instancia, $user),
-            'es_iniciador' => $instancia->usuario_iniciador_id === $user->id
+            'workflow' => $workflowData,
+            'nivelesAprobacion' => $nivelesAprobacion,
+            'puedeAprobar' => $puedeAprobar,
+            'esSolicitante' => $instancia->usuario_iniciador_id === $user->id
         ]);
+    }
+    
+    /**
+     * Calcular progreso del workflow
+     */
+    private function calcularProgreso(WorkflowInstancia $instancia): int
+    {
+        $totalTareas = $instancia->tareas()->count();
+        if ($totalTareas === 0) return 0;
+        
+        $tareasCompletadas = $instancia->tareas()->where('estado', 'completada')->count();
+        return (int) round(($tareasCompletadas / $totalTareas) * 100);
+    }
+    
+    /**
+     * Mostrar formulario de aprobación
+     */
+    public function aprobar($workflow)
+    {
+        // Buscar instancia de workflow
+        $instancia = WorkflowInstancia::with(['workflow', 'tareas.asignado', 'usuarioIniciador', 'entidad'])
+            ->findOrFail($workflow);
+        
+        $user = auth()->user();
+        
+        // Verificar que tiene una tarea pendiente asignada
+        $tareaPendiente = $instancia->tareas()
+            ->where('estado', 'pendiente')
+            ->where('asignado_id', $user->id)
+            ->where('asignado_type', 'App\\Models\\User')
+            ->first();
+            
+        if (!$tareaPendiente) {
+            return redirect()->route('admin.workflow.show', $instancia->id)
+                ->with('error', 'No tienes tareas pendientes para este workflow');
+        }
+        
+        // Obtener entidad
+        $entidad = $instancia->entidad;
+        
+        return Inertia::render('admin/workflow/aprobar', [
+            'workflow' => [
+                'id' => $instancia->id,
+                'nombre' => $instancia->workflow->nombre,
+                'descripcion' => $instancia->workflow->descripcion ?? '',
+                'estado' => $instancia->estado,
+                'prioridad' => $instancia->datos['prioridad'] ?? 'normal',
+                'fecha_solicitud' => $instancia->fecha_inicio?->toDateTimeString(),
+                'fecha_vencimiento' => $instancia->datos['fecha_vencimiento'] ?? now()->addDays(7)->toDateTimeString(),
+                'documento' => $entidad ? [
+                    'id' => $entidad->id,
+                    'nombre' => $entidad->titulo ?? $entidad->nombre ?? "Documento #{$entidad->id}",
+                    'codigo' => $entidad->codigo ?? '',
+                    'url' => $entidad->ruta_archivo ?? null,
+                ] : [
+                    'id' => $instancia->entidad_id,
+                    'nombre' => 'Documento no encontrado',
+                    'codigo' => '',
+                ],
+                'solicitante' => $instancia->usuarioIniciador->name ?? 'N/A',
+                'nivel_actual' => $instancia->paso_actual,
+                'total_niveles' => $instancia->tareas()->count(),
+            ],
+            'tarea' => [
+                'id' => $tareaPendiente->id,
+                'nombre' => $tareaPendiente->nombre,
+                'descripcion' => $tareaPendiente->descripcion,
+            ],
+        ]);
+    }
+    
+    /**
+     * Procesar decisión de aprobación
+     */
+    public function procesarAprobacion(Request $request, $workflow)
+    {
+        $request->validate([
+            'accion' => 'required|in:aprobado,rechazado',
+            'comentarios' => 'nullable|string|max:1000',
+        ]);
+        
+        // Buscar instancia
+        $instancia = WorkflowInstancia::with(['tareas'])
+            ->findOrFail($workflow);
+        
+        $user = auth()->user();
+        
+        // Buscar tarea pendiente del usuario
+        $tarea = $instancia->tareas()
+            ->where('estado', 'pendiente')
+            ->where('asignado_id', $user->id)
+            ->where('asignado_type', 'App\\Models\\User')
+            ->first();
+            
+        if (!$tarea) {
+            return redirect()->back()
+                ->withErrors(['error' => 'No tienes tareas pendientes para este workflow']);
+        }
+        
+        DB::beginTransaction();
+        
+        try {
+            // Actualizar tarea
+            $tarea->update([
+                'estado' => 'completada',
+                'resultado' => $request->accion,
+                'comentarios' => $request->comentarios,
+                'fecha_completado' => now(),
+            ]);
+            
+            // Si fue rechazado, cancelar el workflow
+            if ($request->accion === 'rechazado') {
+                $instancia->update([
+                    'estado' => 'cancelado',
+                    'fecha_finalizacion' => now(),
+                    'resultado' => 'rechazado',
+                ]);
+            } else {
+                // Verificar si hay más tareas pendientes
+                $tareasPendientes = $instancia->tareas()
+                    ->where('estado', 'pendiente')
+                    ->count();
+                    
+                if ($tareasPendientes === 0) {
+                    // Workflow completado
+                    $instancia->update([
+                        'estado' => 'finalizado',
+                        'fecha_finalizacion' => now(),
+                        'resultado' => 'aprobado',
+                    ]);
+                }
+            }
+            
+            DB::commit();
+            
+            return redirect()->route('admin.workflow.show', $instancia->id)
+                ->with('success', 'Decisión registrada correctamente');
+                
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            return redirect()->back()
+                ->withErrors(['error' => 'Error al procesar la aprobación: ' . $e->getMessage()]);
+        }
     }
     
     /**
@@ -366,15 +560,7 @@ class WorkflowController extends Controller
         ]);
     }
     
-    // Métodos auxiliares
-    private function calcularProgreso(WorkflowInstancia $instancia): float
-    {
-        $totalTareas = $instancia->tareas()->count();
-        $tareasCompletadas = $instancia->tareas()->whereIn('estado', ['completada', 'cancelada'])->count();
-        
-        return $totalTareas > 0 ? round(($tareasCompletadas / $totalTareas) * 100, 2) : 0;
-    }
-    
+    // Métodos auxiliares    
     private function calcularPromedioTiempo(int $usuarioId): float
     {
         $instanciasCompletadas = WorkflowInstancia::where('usuario_iniciador_id', $usuarioId)
