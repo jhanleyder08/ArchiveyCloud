@@ -5,7 +5,7 @@
  */
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Users, Plus, Search, Filter, Edit, Trash2, UserCheck, UserX, Shield, AlertCircle } from 'lucide-react';
+import { Users, Plus, Search, Filter, Edit, Trash2, UserCheck, UserX, Shield, AlertCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -112,10 +112,31 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
         role_id: '',  // ← Rol seleccionado
         password: '', 
         password_confirmation: '', 
-        verify_email: false 
+        verify_email: false,
+        // Campos adicionales de información personal y laboral
+        documento_identidad: '',
+        tipo_documento: 'cedula_ciudadania',
+        telefono: '',
+        cargo: '',
+        dependencia: '',
+        fecha_ingreso: '',
+        fecha_vencimiento_cuenta: ''
     });
     const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
-    const [editForm, setEditForm] = useState({ name: '', email: '', role_id: '', active: true });
+    const [editForm, setEditForm] = useState({ 
+        name: '', 
+        email: '', 
+        role_id: '', 
+        active: true,
+        // Campos adicionales
+        documento_identidad: '',
+        tipo_documento: 'cedula_ciudadania',
+        telefono: '',
+        cargo: '',
+        dependencia: '',
+        fecha_ingreso: '',
+        fecha_vencimiento_cuenta: ''
+    });
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
 
@@ -374,6 +395,22 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                                 <td className="py-4 px-6">
                                                     <TooltipProvider>
                                                         <div className="flex items-center gap-2">
+                                                            {/* Botón Ver */}
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Link 
+                                                                        href={`/admin/users/${user.id}`}
+                                                                        className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors inline-flex"
+                                                                    >
+                                                                        <Eye className="h-4 w-4" />
+                                                                    </Link>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Ver detalles del usuario</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+
+                                                            {/* Botón Editar */}
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <Link 
@@ -526,7 +563,21 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                 // Si el backend responde con éxito:
                                 onSuccess: () => {
                                     setShowCreateModal(false);
-                                    setCreateForm({ name: '', email: '', role_id: '', password: '', password_confirmation: '', verify_email: false });
+                                    setCreateForm({ 
+                                        name: '', 
+                                        email: '', 
+                                        role_id: '', 
+                                        password: '', 
+                                        password_confirmation: '', 
+                                        verify_email: false,
+                                        documento_identidad: '',
+                                        tipo_documento: 'cedula_ciudadania',
+                                        telefono: '',
+                                        cargo: '',
+                                        dependencia: '',
+                                        fecha_ingreso: '',
+                                        fecha_vencimiento_cuenta: ''
+                                    });
                                     // Recargar lista de usuarios
                                     router.reload({ only: ['users', 'stats'] });
                                 },
@@ -619,6 +670,98 @@ export default function AdminUsers({ users, stats, roles, filters }: Props) {
                                     <Label htmlFor="create-verify-email" className="text-sm font-normal">
                                         Marcar email como verificado
                                     </Label>
+                                </div>
+
+                                {/* INFORMACIÓN PERSONAL Y LABORAL */}
+                                <div className="col-span-2 border-t pt-4 mt-2">
+                                    <h3 className="font-semibold mb-3">Información Personal y Laboral</h3>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="create-documento">Documento de Identidad</Label>
+                                        <Input
+                                            id="create-documento"
+                                            value={createForm.documento_identidad}
+                                            onChange={(e) => setCreateForm({ ...createForm, documento_identidad: e.target.value })}
+                                            placeholder="Ej: 1234567890"
+                                        />
+                                        {createErrors.documento_identidad && <InputError message={createErrors.documento_identidad} />}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="create-tipo-documento">Tipo de Documento</Label>
+                                        <Select
+                                            value={createForm.tipo_documento}
+                                            onValueChange={(value) => setCreateForm({ ...createForm, tipo_documento: value })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="cedula_ciudadania">Cédula de Ciudadanía</SelectItem>
+                                                <SelectItem value="cedula_extranjeria">Cédula de Extranjería</SelectItem>
+                                                <SelectItem value="pasaporte">Pasaporte</SelectItem>
+                                                <SelectItem value="tarjeta_identidad">Tarjeta de Identidad</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="create-telefono">Teléfono</Label>
+                                        <Input
+                                            id="create-telefono"
+                                            value={createForm.telefono}
+                                            onChange={(e) => setCreateForm({ ...createForm, telefono: e.target.value })}
+                                            placeholder="Ej: 3001234567"
+                                        />
+                                        {createErrors.telefono && <InputError message={createErrors.telefono} />}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="create-cargo">Cargo</Label>
+                                        <Input
+                                            id="create-cargo"
+                                            value={createForm.cargo}
+                                            onChange={(e) => setCreateForm({ ...createForm, cargo: e.target.value })}
+                                            placeholder="Ej: Analista"
+                                        />
+                                        {createErrors.cargo && <InputError message={createErrors.cargo} />}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="create-dependencia">Dependencia</Label>
+                                    <Input
+                                        id="create-dependencia"
+                                        value={createForm.dependencia}
+                                        onChange={(e) => setCreateForm({ ...createForm, dependencia: e.target.value })}
+                                        placeholder="Ej: Recursos Humanos"
+                                    />
+                                    {createErrors.dependencia && <InputError message={createErrors.dependencia} />}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="create-fecha-ingreso">Fecha de Ingreso</Label>
+                                        <Input
+                                            id="create-fecha-ingreso"
+                                            type="date"
+                                            value={createForm.fecha_ingreso}
+                                            onChange={(e) => setCreateForm({ ...createForm, fecha_ingreso: e.target.value })}
+                                        />
+                                        {createErrors.fecha_ingreso && <InputError message={createErrors.fecha_ingreso} />}
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="create-fecha-vencimiento">Fecha de Vencimiento de Cuenta (Opcional)</Label>
+                                        <Input
+                                            id="create-fecha-vencimiento"
+                                            type="date"
+                                            value={createForm.fecha_vencimiento_cuenta}
+                                            onChange={(e) => setCreateForm({ ...createForm, fecha_vencimiento_cuenta: e.target.value })}
+                                        />
+                                        {createErrors.fecha_vencimiento_cuenta && <InputError message={createErrors.fecha_vencimiento_cuenta} />}
+                                    </div>
                                 </div>
                             </div>
                             <DialogFooter>

@@ -23,6 +23,14 @@ interface User {
     active: boolean;
     created_at: string;
     role: Role;
+    // Campos adicionales
+    documento_identidad?: string;
+    tipo_documento?: string;
+    telefono?: string;
+    cargo?: string;
+    dependencia?: string;
+    fecha_ingreso?: string;
+    fecha_vencimiento_cuenta?: string;
 }
 
 interface Props {
@@ -41,6 +49,14 @@ export default function EditUser({ user, roles }: Props) {
         password_confirmation: '',
         role_id: user.role?.id?.toString() || '',
         active: user.active,
+        // Campos adicionales
+        documento_identidad: user.documento_identidad || '',
+        tipo_documento: user.tipo_documento || 'cedula_ciudadania',
+        telefono: user.telefono || '',
+        cargo: user.cargo || '',
+        dependencia: user.dependencia || '',
+        fecha_ingreso: user.fecha_ingreso || '',
+        fecha_vencimiento_cuenta: user.fecha_vencimiento_cuenta || '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -228,8 +244,151 @@ export default function EditUser({ user, roles }: Props) {
                             </div>
                         </div>
 
+                        {/* INFORMACIÓN PERSONAL Y LABORAL */}
+                        <div className="border-t pt-6">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">Información Personal y Laboral</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Documento de Identidad */}
+                                <div className="space-y-2">
+                                    <label htmlFor="documento_identidad" className="text-sm font-medium text-gray-700">
+                                        Documento de Identidad
+                                    </label>
+                                    <input
+                                        id="documento_identidad"
+                                        type="text"
+                                        value={data.documento_identidad}
+                                        onChange={(e) => setData('documento_identidad', e.target.value)}
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] ${
+                                            errors.documento_identidad ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                        placeholder="Ej: 1234567890"
+                                    />
+                                    {errors.documento_identidad && (
+                                        <p className="text-sm text-red-600">{errors.documento_identidad}</p>
+                                    )}
+                                </div>
+
+                                {/* Tipo de Documento */}
+                                <div className="space-y-2">
+                                    <label htmlFor="tipo_documento" className="text-sm font-medium text-gray-700">
+                                        Tipo de Documento
+                                    </label>
+                                    <select
+                                        id="tipo_documento"
+                                        value={data.tipo_documento}
+                                        onChange={(e) => setData('tipo_documento', e.target.value)}
+                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] border-gray-300"
+                                    >
+                                        <option value="cedula_ciudadania">Cédula de Ciudadanía</option>
+                                        <option value="cedula_extranjeria">Cédula de Extranjería</option>
+                                        <option value="pasaporte">Pasaporte</option>
+                                        <option value="tarjeta_identidad">Tarjeta de Identidad</option>
+                                    </select>
+                                </div>
+
+                                {/* Teléfono */}
+                                <div className="space-y-2">
+                                    <label htmlFor="telefono" className="text-sm font-medium text-gray-700">
+                                        Teléfono
+                                    </label>
+                                    <input
+                                        id="telefono"
+                                        type="text"
+                                        value={data.telefono}
+                                        onChange={(e) => setData('telefono', e.target.value)}
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] ${
+                                            errors.telefono ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                        placeholder="Ej: 3001234567"
+                                    />
+                                    {errors.telefono && (
+                                        <p className="text-sm text-red-600">{errors.telefono}</p>
+                                    )}
+                                </div>
+
+                                {/* Cargo */}
+                                <div className="space-y-2">
+                                    <label htmlFor="cargo" className="text-sm font-medium text-gray-700">
+                                        Cargo
+                                    </label>
+                                    <input
+                                        id="cargo"
+                                        type="text"
+                                        value={data.cargo}
+                                        onChange={(e) => setData('cargo', e.target.value)}
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] ${
+                                            errors.cargo ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                        placeholder="Ej: Analista"
+                                    />
+                                    {errors.cargo && (
+                                        <p className="text-sm text-red-600">{errors.cargo}</p>
+                                    )}
+                                </div>
+
+                                {/* Dependencia */}
+                                <div className="space-y-2 md:col-span-2">
+                                    <label htmlFor="dependencia" className="text-sm font-medium text-gray-700">
+                                        Dependencia
+                                    </label>
+                                    <input
+                                        id="dependencia"
+                                        type="text"
+                                        value={data.dependencia}
+                                        onChange={(e) => setData('dependencia', e.target.value)}
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] ${
+                                            errors.dependencia ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                        placeholder="Ej: Recursos Humanos"
+                                    />
+                                    {errors.dependencia && (
+                                        <p className="text-sm text-red-600">{errors.dependencia}</p>
+                                    )}
+                                </div>
+
+                                {/* Fecha de Ingreso */}
+                                <div className="space-y-2">
+                                    <label htmlFor="fecha_ingreso" className="text-sm font-medium text-gray-700">
+                                        Fecha de Ingreso
+                                    </label>
+                                    <input
+                                        id="fecha_ingreso"
+                                        type="date"
+                                        value={data.fecha_ingreso}
+                                        onChange={(e) => setData('fecha_ingreso', e.target.value)}
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] ${
+                                            errors.fecha_ingreso ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                    />
+                                    {errors.fecha_ingreso && (
+                                        <p className="text-sm text-red-600">{errors.fecha_ingreso}</p>
+                                    )}
+                                </div>
+
+                                {/* Fecha de Vencimiento de Cuenta */}
+                                <div className="space-y-2">
+                                    <label htmlFor="fecha_vencimiento_cuenta" className="text-sm font-medium text-gray-700">
+                                        Fecha de Vencimiento de Cuenta
+                                        <span className="text-gray-500 font-normal"> (opcional)</span>
+                                    </label>
+                                    <input
+                                        id="fecha_vencimiento_cuenta"
+                                        type="date"
+                                        value={data.fecha_vencimiento_cuenta}
+                                        onChange={(e) => setData('fecha_vencimiento_cuenta', e.target.value)}
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#2a3d83] focus:border-[#2a3d83] ${
+                                            errors.fecha_vencimiento_cuenta ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                    />
+                                    {errors.fecha_vencimiento_cuenta && (
+                                        <p className="text-sm text-red-600">{errors.fecha_vencimiento_cuenta}</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Rol y Estado */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
                             {/* Rol */}
                             <div className="space-y-2">
                                 <label htmlFor="role_id" className="text-sm font-medium text-gray-700">

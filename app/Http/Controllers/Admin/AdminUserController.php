@@ -97,6 +97,15 @@ class AdminUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()], // Contraseña confirmada
             'role_id' => 'required|exists:roles,id',       // Rol debe existir en la tabla roles
             'verify_email' => 'nullable|boolean',
+            
+            // Campos adicionales de información personal y laboral
+            'documento_identidad' => 'nullable|string|unique:users,documento_identidad,NULL,id,deleted_at,NULL',
+            'tipo_documento' => 'nullable|in:cedula_ciudadania,cedula_extranjeria,pasaporte,tarjeta_identidad',
+            'telefono' => 'nullable|string|max:20',
+            'cargo' => 'nullable|string|max:255',
+            'dependencia' => 'nullable|string|max:255',
+            'fecha_ingreso' => 'nullable|date',
+            'fecha_vencimiento_cuenta' => 'nullable|date|after:today',
         ], [
             'name.required' => 'El nombre es obligatorio',
             'email.required' => 'El email es obligatorio',
@@ -127,6 +136,30 @@ class AdminUserController extends Controller
             'active' => true,
             'estado_cuenta' => User::ESTADO_ACTIVO,
             'email_verified_at' => $verifyEmail ? now() : null,
+            
+            // Información personal y laboral
+            'documento_identidad' => $validated['documento_identidad'] ?? null,
+            'tipo_documento' => $validated['tipo_documento'] ?? 'cedula_ciudadania',
+            'telefono' => $validated['telefono'] ?? null,
+            'cargo' => $validated['cargo'] ?? null,
+            'dependencia' => $validated['dependencia'] ?? null,
+            'fecha_ingreso' => $validated['fecha_ingreso'] ?? now(),
+            'fecha_vencimiento_cuenta' => $validated['fecha_vencimiento_cuenta'] ?? null,
+            
+            // Campos de seguridad (valores por defecto)
+            'intentos_fallidos' => 0,
+            'cambio_password_requerido' => false,
+            'fecha_ultimo_cambio_password' => now(),
+        ]);
+
+        // 3. SINCRONIZAR ROL en tabla user_roles (REQ-CS-004: Auditoría de roles)
+        $user->roles()->attach($roleId, [
+            'vigencia_desde' => now(),
+            'vigencia_hasta' => null,  // Rol permanente
+            'temporal' => false,
+            'activo' => true,
+            'asignado_por' => auth()->id(),
+            'observaciones' => 'Rol inicial asignado al crear usuario',
         ]);
 
         // Disparar evento Registered para enviar correo de verificación
@@ -184,6 +217,15 @@ class AdminUserController extends Controller
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'role_id' => 'required|exists:roles,id',
             'active' => 'boolean',
+            
+            // Campos adicionales de información personal y laboral
+            'documento_identidad' => 'nullable|string|unique:users,documento_identidad,' . $user->id . ',id,deleted_at,NULL',
+            'tipo_documento' => 'nullable|in:cedula_ciudadania,cedula_extranjeria,pasaporte,tarjeta_identidad',
+            'telefono' => 'nullable|string|max:20',
+            'cargo' => 'nullable|string|max:255',
+            'dependencia' => 'nullable|string|max:255',
+            'fecha_ingreso' => 'nullable|date',
+            'fecha_vencimiento_cuenta' => 'nullable|date|after:today',
         ]);
 
         // 2. DETECTAR si se cambió el rol
@@ -196,6 +238,15 @@ class AdminUserController extends Controller
             'email' => $request->email,
             'role_id' => $request->role_id,  // ← AQUÍ SE CAMBIA EL ROL
             'active' => $request->boolean('active', true),
+            
+            // Información personal y laboral
+            'documento_identidad' => $request->documento_identidad,
+            'tipo_documento' => $request->tipo_documento ?? 'cedula_ciudadania',
+            'telefono' => $request->telefono,
+            'cargo' => $request->cargo,
+            'dependencia' => $request->dependencia,
+            'fecha_ingreso' => $request->fecha_ingreso,
+            'fecha_vencimiento_cuenta' => $request->fecha_vencimiento_cuenta,
         ];
 
         // Solo actualizar contraseña si se proporciona una nueva
@@ -208,9 +259,23 @@ class AdminUserController extends Controller
 
         $message = 'Usuario actualizado exitosamente.';
         
-        // Si se cambió el rol, agregar mensaje adicional
+        // Si se cambió el rol, sincronizar también en tabla user_roles
+        // REQ-CS-004: Gestión de roles con auditoría completa
         if ($roleChanged) {
             $newRole = \App\Models\Role::find($request->role_id);
+            
+            // Sincronizar con tabla user_roles (mantiene historial y auditoría)
+            $user->roles()->sync([
+                $request->role_id => [
+                    'vigencia_desde' => now(),
+                    'vigencia_hasta' => null,  // Rol permanente (sin fecha de expiración)
+                    'temporal' => false,
+                    'activo' => true,
+                    'asignado_por' => auth()->id(),
+                    'observaciones' => 'Rol asignado desde panel de administración',
+                ]
+            ]);
+            
             $message .= " Nuevo rol: {$newRole->name}";
             
             // Si el usuario editó su propio rol, recargar completamente la página
