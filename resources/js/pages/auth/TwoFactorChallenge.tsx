@@ -238,8 +238,12 @@ export default function TwoFactorChallenge({ method }: Props) {
                         <Button
                             variant="link"
                             onClick={() => {
-                                // Logout del usuario
-                                window.location.href = '/logout';
+                                // Logout usando POST con Inertia
+                                router.post('/logout', {}, {
+                                    onFinish: () => {
+                                        window.location.href = '/login';
+                                    }
+                                });
                             }}
                             className="text-sm text-muted-foreground hover:text-foreground"
                         >
