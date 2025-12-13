@@ -338,7 +338,7 @@ export default function ServiciosExternosTesting({ usuarios }: Props) {
                                                     <SelectItem value="baja">🔵 Baja</SelectItem>
                                                     <SelectItem value="media">🟡 Media</SelectItem>
                                                     <SelectItem value="alta">🟠 Alta</SelectItem>
-                                                    <SelectItem value="urgente">🔴 Urgente</SelectItem>
+                                                    <SelectItem value="critica">🔴 Crítica</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>

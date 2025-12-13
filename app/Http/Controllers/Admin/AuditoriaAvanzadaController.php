@@ -88,7 +88,7 @@ class AuditoriaAvanzadaController extends Controller
         }
 
         $eventos = $query->orderBy('fecha_hora', 'desc')
-            ->paginate(50)
+            ->paginate(10)
             ->withQueryString();
 
         // Estadísticas generales

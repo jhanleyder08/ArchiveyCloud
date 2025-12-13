@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApiPermissionMiddleware;
 use App\Http\Middleware\ApiTokenAuthentication;
+use App\Http\Middleware\AuditMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PerformanceOptimization;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
             TrackUserActivity::class, // Trackear actividad del usuario
             VerifyUserActive::class, // Verificar usuarios activos en todas las rutas web
+            AuditMiddleware::class, // Auditoría de navegación y acciones
         ]);
 
         // Registrar middleware de roles y API
@@ -46,6 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.permission' => ApiPermissionMiddleware::class,
             'two-factor' => TwoFactorAuthentication::class,
             'validate.business' => ValidateBusinessRules::class,
+            'audit' => AuditMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

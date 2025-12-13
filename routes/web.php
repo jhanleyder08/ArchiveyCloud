@@ -7,6 +7,21 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// Rutas de 2FA Challenge - FUERA del middleware two-factor para evitar loops
+// Requieren autenticación pero NO verificación 2FA
+Route::middleware(['auth'])->prefix('two-factor')->name('two-factor.')->group(function () {
+    Route::get('/challenge', [App\Http\Controllers\TwoFactorChallengeController::class, 'show'])->name('challenge');
+    Route::post('/verify', [App\Http\Controllers\TwoFactorChallengeController::class, 'verify'])->name('verify');
+    Route::post('/resend', [App\Http\Controllers\TwoFactorChallengeController::class, 'resend'])->name('resend');
+    
+    Route::get('/settings', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'index'])->name('settings');
+    Route::post('/enable', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'enable'])->name('enable');
+    Route::post('/confirm', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'confirm'])->name('confirm');
+    Route::post('/disable', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'disable'])->name('disable');
+    Route::post('/recovery-codes/regenerate', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'regenerateRecoveryCodes'])->name('recovery-codes.regenerate');
+    Route::get('/recovery-codes', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'showRecoveryCodes'])->name('recovery-codes.show');
+});
+
 Route::middleware(['auth', 'verified', 'two-factor'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
@@ -40,20 +55,6 @@ Route::middleware(['auth', 'verified', 'two-factor'])->group(function () {
         Route::post('/asistente', [App\Http\Controllers\ValidationController::class, 'generarAsistente'])->name('asistente');
         Route::post('/completa', [App\Http\Controllers\ValidationController::class, 'validacionCompleta'])->name('completa');
         Route::get('/options', [App\Http\Controllers\ValidationController::class, 'getValidationOptions'])->name('options');
-    });
-
-    // Autenticación de Dos Factores (MFA)
-    Route::prefix('two-factor')->name('two-factor.')->group(function () {
-        Route::get('/challenge', [App\Http\Controllers\TwoFactorChallengeController::class, 'show'])->name('challenge');
-        Route::post('/verify', [App\Http\Controllers\TwoFactorChallengeController::class, 'verify'])->name('verify');
-        Route::post('/resend', [App\Http\Controllers\TwoFactorChallengeController::class, 'resend'])->name('resend');
-        
-        Route::get('/settings', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'index'])->name('settings');
-        Route::post('/enable', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'enable'])->name('enable');
-        Route::post('/confirm', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'confirm'])->name('confirm');
-        Route::post('/disable', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'disable'])->name('disable');
-        Route::post('/recovery-codes/regenerate', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'regenerateRecoveryCodes'])->name('recovery-codes.regenerate');
-        Route::get('/recovery-codes', [App\Http\Controllers\TwoFactorAuthenticationController::class, 'showRecoveryCodes'])->name('recovery-codes.show');
     });
 
     // OCR (Optical Character Recognition)

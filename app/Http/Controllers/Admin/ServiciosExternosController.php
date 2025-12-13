@@ -125,7 +125,7 @@ class ServiciosExternosController extends Controller
             'email_manual' => 'nullable|email',
             'asunto' => 'required|string|max:200',
             'mensaje' => 'required|string|max:5000',
-            'prioridad' => 'required|in:baja,media,alta,urgente'
+            'prioridad' => 'required|in:baja,media,alta,critica'
         ]);
 
         // Determinar destinatario
@@ -216,7 +216,7 @@ class ServiciosExternosController extends Controller
         try {
             \Mail::send([], [], function ($mail) use ($email, $asunto, $mensaje, $prioridad) {
                 $prioridadEmoji = match($prioridad) {
-                    'urgente' => '🔴',
+                    'critica' => '🔴',
                     'alta' => '🟠',
                     'media' => '🟡',
                     default => '🔵'

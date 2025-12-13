@@ -53,7 +53,12 @@ interface Props {
     eventos: {
         data: PistaAuditoria[];
         links: any[];
-        meta: any;
+        current_page: number;
+        from: number;
+        to: number;
+        total: number;
+        last_page: number;
+        per_page: number;
     };
     estadisticas: Estadisticas;
     usuarios: Usuario[];
@@ -151,7 +156,6 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
         setIsRefreshing(true);
         router.reload({ 
             only: ['eventos', 'estadisticas'],
-            preserveScroll: true,
             onFinish: () => setIsRefreshing(false)
         });
     };
@@ -399,11 +403,37 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
 
                         {/* Lista de Eventos */}
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Eventos de Auditoría ({eventos.meta?.total || 0})</CardTitle>
-                                <CardDescription>
-                                    Mostrando {eventos.meta?.from || 0} a {eventos.meta?.to || 0} de {eventos.meta?.total || 0} eventos
-                                </CardDescription>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                                <div>
+                                    <CardTitle>Eventos de Auditoría ({eventos.total || 0})</CardTitle>
+                                    <CardDescription>
+                                        Mostrando {eventos.from || 0} a {eventos.to || 0} de {eventos.total || 0} eventos
+                                    </CardDescription>
+                                </div>
+                                {/* Paginación Superior */}
+                                {(eventos.last_page || 0) > 1 && (
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => eventos.current_page > 1 && router.get(route('admin.auditoria.index'), { ...filtros, page: eventos.current_page - 1 })}
+                                            disabled={eventos.current_page <= 1}
+                                        >
+                                            ← Anterior
+                                        </Button>
+                                        <span className="text-sm text-muted-foreground px-2">
+                                            Página {eventos.current_page} de {eventos.last_page}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => eventos.current_page < eventos.last_page && router.get(route('admin.auditoria.index'), { ...filtros, page: eventos.current_page + 1 })}
+                                            disabled={eventos.current_page >= eventos.last_page}
+                                        >
+                                            Siguiente →
+                                        </Button>
+                                    </div>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto">
@@ -496,24 +526,52 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
                                     </div>
                                 )}
 
-                                {/* Paginación */}
-                                {(eventos.meta?.last_page || 0) > 1 && (
-                                    <div className="flex items-center justify-between mt-6">
-                                        <div className="text-sm text-gray-700">
-                                            Mostrando {eventos.meta?.from || 0} a {eventos.meta?.to || 0} de {eventos.meta?.total || 0} resultados
+                                {/* Paginación Inferior Simplificada */}
+                                {(eventos.last_page || 0) > 1 && (
+                                    <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => eventos.current_page > 1 && router.get(route('admin.auditoria.index'), { ...filtros, page: eventos.current_page - 1 })}
+                                            disabled={eventos.current_page <= 1}
+                                        >
+                                            ← Anterior
+                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            {eventos.current_page > 2 && (
+                                                <>
+                                                    <Button variant="outline" size="sm" onClick={() => router.get(route('admin.auditoria.index'), { ...filtros, page: 1 })}>1</Button>
+                                                    {eventos.current_page > 3 && <span className="px-1 text-muted-foreground">...</span>}
+                                                </>
+                                            )}
+                                            {eventos.current_page > 1 && (
+                                                <Button variant="outline" size="sm" onClick={() => router.get(route('admin.auditoria.index'), { ...filtros, page: eventos.current_page - 1 })}>
+                                                    {eventos.current_page - 1}
+                                                </Button>
+                                            )}
+                                            <Button variant="default" size="sm">{eventos.current_page}</Button>
+                                            {eventos.current_page < eventos.last_page && (
+                                                <Button variant="outline" size="sm" onClick={() => router.get(route('admin.auditoria.index'), { ...filtros, page: eventos.current_page + 1 })}>
+                                                    {eventos.current_page + 1}
+                                                </Button>
+                                            )}
+                                            {eventos.current_page < eventos.last_page - 1 && (
+                                                <>
+                                                    {eventos.current_page < eventos.last_page - 2 && <span className="px-1 text-muted-foreground">...</span>}
+                                                    <Button variant="outline" size="sm" onClick={() => router.get(route('admin.auditoria.index'), { ...filtros, page: eventos.last_page })}>
+                                                        {eventos.last_page}
+                                                    </Button>
+                                                </>
+                                            )}
                                         </div>
-                                        <div className="flex space-x-1">
-                                            {(eventos.links || []).map((link: any, index: number) => (
-                                                <Button
-                                                    key={index}
-                                                    variant={link.active ? 'default' : 'outline'}
-                                                    size="sm"
-                                                    onClick={() => link.url && router.get(link.url)}
-                                                    disabled={!link.url}
-                                                    dangerouslySetInnerHTML={{ __html: link.label }}
-                                                />
-                                            ))}
-                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => eventos.current_page < eventos.last_page && router.get(route('admin.auditoria.index'), { ...filtros, page: eventos.current_page + 1 })}
+                                            disabled={eventos.current_page >= eventos.last_page}
+                                        >
+                                            Siguiente →
+                                        </Button>
                                     </div>
                                 )}
                             </CardContent>
@@ -535,7 +593,7 @@ export default function AuditoriaIndex({ eventos, estadisticas, usuarios, accion
                                                 cx="50%"
                                                 cy="50%"
                                                 labelLine={false}
-                                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                label={(props: any) => `${props.name} ${(props.percent * 100).toFixed(0)}%`}
                                                 outerRadius={80}
                                                 fill="#8884d8"
                                                 dataKey="value"
